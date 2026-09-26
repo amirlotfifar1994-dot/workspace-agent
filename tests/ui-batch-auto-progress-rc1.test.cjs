@@ -11,9 +11,9 @@ assert(app.includes("control.mode='cancel'"),'safe cancel request must be serial
 assert(app.includes("control.mode='pause'"),'safe pause request must stop future chunk resumes');
 assert(app.includes("d==='approve'&&isAutoBatchCheckpoint(c)"),'approved batch must auto-continue after the first checkpoint');
 assert(app.includes('autoRunning={batchAutoRunning&&batchPumpRef.current.cycleId===cycle?.id}'),'timeline must receive current auto-run state');
-assert(timeline.includes('ادامه خودکار از Checkpoint'),'manual resume should restart automatic continuation');
-assert(timeline.includes('مکث پس از Chunk جاری'),'running batch must expose safe-boundary pause');
-assert(timeline.includes('لغو امن پس از Chunk جاری'),'running batch must expose safe-boundary cancel');
+assert(timeline.includes('ادامه خودکار از آخرین نقطه ذخیره'),'manual resume should restart automatic continuation');
+assert(timeline.includes('مکث بعد از بخش جاری'),'running batch must expose safe-boundary pause');
+assert(timeline.includes('لغو امن بعد از بخش جاری'),'running batch must expose safe-boundary cancel');
 assert(app.includes('<span className="version">v1.0.0-rc1</span>'),'main UI version must match RC source');
 assert(app.includes('<b>v1.0.0-rc1</b>'),'Explorer UI version must match RC source');
 assert(!app.includes('<span className="version">v0.9.4</span>'),'stale app version label remains');
