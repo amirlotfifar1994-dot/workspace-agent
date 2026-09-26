@@ -38,3 +38,6 @@ aside .navgroup>button:not(.navtitle){display:block;width:100%;text-align:right}
 aside .navgroup>button:not(.navtitle){background:transparent;color:#dbe6ff;border:0;border-radius:10px;margin:2px 0}
 aside .navgroup>button:not(.navtitle):hover{background:#18244a}
 aside .navgroup>button.active{background:#243a72;color:#fff}
+
+.providers{display:flex;align-items:center;gap:12px;margin:10px 0}
+.providers select{background:#111a35;color:#eaf0ff;border:1px solid #2b3a70;border-radius:10px;padding:6px 10px;font-size:14px}
