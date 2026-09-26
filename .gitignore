@@ -5,3 +5,4 @@ release/
 .env
 *.pfx
 *.p12
+screenshots/
