@@ -1,0 +1,113 @@
+/* Light theme — generated from app.css by lightness inversion (brand/accent colours are kept). */
+html[data-theme="light"]{color:#020d27;background:#eaedf7}
+html[data-theme="light"] .app{background:radial-gradient(circle at 75% -10%,#b2bfe4 0,transparent 35%),#e6eaf6}
+html[data-theme="light"] aside{border-left:1px solid #bec7dd;background:#e0e5f3}
+html[data-theme="light"] .brand small,html[data-theme="light"] .step small,html[data-theme="light"] .cycle-head small{color:#54627c}
+html[data-theme="light"] aside>button{color:#3d495f}
+html[data-theme="light"] aside>button.active{background:#cad3e8;color:#141414}
+html[data-theme="light"] .safety{border:1px solid #b6c0d7;background:#d7deef}
+html[data-theme="light"] .safety small{color:#59667e}
+html[data-theme="light"] header p,html[data-theme="light"] .panel p{color:#546279}
+html[data-theme="light"] .version{border:1px solid #a8b4d0;color:#31415e}
+html[data-theme="light"] .picker,html[data-theme="light"] .panel,html[data-theme="light"] .cycle-card{background:rgba(212,220,237,0.78);border:1px solid #b6c0d8}
+html[data-theme="light"] .picker span,html[data-theme="light"] .path{color:#42526e}
+html[data-theme="light"] .task{border:1px solid #abb7d2;background:linear-gradient(145deg,#d1d9ec,#d8dfef);color:#141414}
+html[data-theme="light"] .task span{color:#53627b}
+html[data-theme="light"] .primary,html[data-theme="light"] main button:not(.task):not(.history):not(.file-row){border:1px solid #939eb8;background:#c7d0e6;color:#141414}
+html[data-theme="light"] .danger{color:#5f0505!important;border-color:#cfa5b0!important}
+html[data-theme="light"] .badge{background:#b3bed7}
+html[data-theme="light"] .badge.completed{background:#c4ebe2}
+html[data-theme="light"] .badge.failed{background:#ddb4bb;color:#600513}
+html[data-theme="light"] .badge.waiting-confirmation{background:#e6d9b9}
+html[data-theme="light"] .badge.rolled-back{background:#accde5;color:#05405f}
+html[data-theme="light"] .dot{background:#b6c0d8;color:#354054}
+html[data-theme="light"] .dot.completed,html[data-theme="light"] .dot.approved{background:#aee4d6}
+html[data-theme="light"] .dot.running{color:#041c52}
+html[data-theme="light"] .dot.waiting-confirmation{background:#e0ca98}
+html[data-theme="light"] .dot.failed{background:#d29eaa;color:#4f040f}
+html[data-theme="light"] .endbox,html[data-theme="light"] .preview-box{background:#d9e1f1;border:1px solid #aebcd7}
+html[data-theme="light"] .endbox>span,html[data-theme="light"] .endbox>small{color:#3d4b63}
+html[data-theme="light"] .quality{background:#bccae0;color:#05265b}
+html[data-theme="light"] .quality.verified{background:#c4e6df}
+html[data-theme="light"] .preview-box p{color:#3f4c61}
+html[data-theme="light"] .preview-row{border-top:1px solid #bdc7dd}
+html[data-theme="light"] .stats>div{background:#dae2f2}
+html[data-theme="light"] .stats span{color:#54637c}
+html[data-theme="light"] .dup.selected{border-color:#7d96c8;background:#d6dff1}
+html[data-theme="light"] .dup>button{background:#d9e1f1!important}
+html[data-theme="light"] .dup-head>span{color:#384d6e}
+html[data-theme="light"] .selectbar{background:#dae2f2}
+html[data-theme="light"] .selectbar small{color:#51627e}
+html[data-theme="light"] .panel pre{background:#e8ecf6;color:#1c2a44}
+html[data-theme="light"] .note{border-color:#8294c1}
+html[data-theme="light"] .history{border-bottom:1px solid #b9c4db;color:#141414}
+html[data-theme="light"] .history small{color:#63728c}
+html[data-theme="light"] .history em{color:#3c4d6d}
+html[data-theme="light"] .empty{color:#59677f}
+html[data-theme="light"] .path{background:#e0e6f4}
+html[data-theme="light"] .toolbar>span{color:#54647e}
+html[data-theme="light"] .meter{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .meter span{color:#3c4c65}
+html[data-theme="light"] .file-row{border-bottom:1px solid #bdc7dd;color:#061023}
+html[data-theme="light"] .file-row:hover{background:#d7dff1}
+html[data-theme="light"] .cap{background:#d9e1f1;border:1px solid #b3bed7}
+html[data-theme="light"] .cap span{color:#5d6e8b}
+html[data-theme="light"] .cap em{color:#30425e}
+html[data-theme="light"] .cap.active{border-color:#aed9cd}
+html[data-theme="light"] .cap.beta{border-color:#dbcea8}
+html[data-theme="light"] .mini-stats span{color:#54647e}
+html[data-theme="light"] .command{background:#e0e6f4;border:1px solid #a2afca;color:#020d27}
+html[data-theme="light"] .inline input,html[data-theme="light"] .formgrid input{background:#e0e6f4;border:1px solid #a2afca;color:#020d27}
+html[data-theme="light"] .snapshot{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .snapshot span{color:#42526e}
+html[data-theme="light"] .formgrid select{background:#e0e6f4;border:1px solid #a2afca;color:#020d27}
+html[data-theme="light"] .rule{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .rule small{color:#53627b}
+html[data-theme="light"] .recommend{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .recommend small{color:#54637c}
+html[data-theme="light"] .confidence{background:#b7c1d6;color:#121d32}
+html[data-theme="light"] .confidence.high{background:#c3e8df}
+html[data-theme="light"] .confidence.medium{background:#e0d0ad;color:#604405}
+html[data-theme="light"] .confidence.low{background:#d2b6be;color:#490410}
+html[data-theme="light"] .linkish{color:#05235b!important}
+html[data-theme="light"] .review-row{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .review-row p{color:#4c5c76}
+html[data-theme="light"] .review-row.applied{border-right:3px solid #81d0b9}
+html[data-theme="light"] .review-row.reverted{border-right:3px solid #7195b7}
+html[data-theme="light"] .zone-row,html[data-theme="light"] .startup-row{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .zone-row small,html[data-theme="light"] .startup-row small{color:#54637c}
+html[data-theme="light"] .startup-row p{color:#54637c}
+html[data-theme="light"] .priority{background:#b7c1d6;color:#121d32}
+html[data-theme="light"] .priority.high{background:#d9aeba;color:#4e040e}
+html[data-theme="light"] .priority.medium{background:#e0d0ad;color:#604405}
+html[data-theme="light"] .priority.low{background:#c4e6df}
+html[data-theme="light"] .trend-row{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .trend-row span{color:#52617a}
+html[data-theme="light"] .uia-row{border-bottom:1px solid #bdc7dd}
+html[data-theme="light"] .uia-row small{color:#54637c}
+html[data-theme="light"] .uia-row>span{background:#c4d1e6}
+html[data-theme="light"] .uia-row.selected{background:#d0daed}
+html[data-theme="light"] .uia-actions>span{background:#c4d1e6}
+html[data-theme="light"] .uia-composer{border-color:#6e87bb;background:linear-gradient(145deg,#d0d9ed,#dae2f2)}
+html[data-theme="light"] .uia-composer>small{color:#4c5c76}
+html[data-theme="light"] .action-error{border-color:#c897a4;background:#e8d8e1}
+html[data-theme="light"] .action-error b{color:#490410}
+html[data-theme="light"] .navtitle{color:#2e406e}
+html[data-theme="light"] button.navtitle.toggle{color:#2e406e}
+html[data-theme="light"] button.navtitle.toggle:hover{color:#030e33}
+html[data-theme="light"] aside .navgroup>button.active{background:#91a5d7;color:#141414}
+html[data-theme="light"] main header p{color:#172344}
+html[data-theme="light"] .panel p,html[data-theme="light"] .panel small{color:#172344}
+html[data-theme="light"] .hint{background:#adbbe2;border:1px solid #5571bc;color:#020d27}
+html[data-theme="light"] .steps li{background:#ccd4ec;color:#2e406e;border:1px solid #a6b2d9}
+html[data-theme="light"] .steps li b{background:#a6b2d9;color:#030e33}
+html[data-theme="light"] .steps li.now{background:#93a6df;color:#141414}
+html[data-theme="light"] .steps li.now b{color:#d1d8f3}
+html[data-theme="light"] .steps li.done{border-color:#97d0b3}
+html[data-theme="light"] .steps li.done b{background:#97d0b3;color:#022713}
+html[data-theme="light"] .chip{background:#ccd4ec;border:1px solid #92a0d1;color:#030e33}
+html[data-theme="light"] .chip:hover{background:#b2bde2}
+html[data-theme="light"] aside .navgroup>button:not(.navtitle){color:#020d27}
+html[data-theme="light"] aside .navgroup>button:not(.navtitle):hover{background:#b8c2e4}
+html[data-theme="light"] aside .navgroup>button.active{background:#91a5d7;color:#141414}
+html[data-theme="light"] .providers select{background:#ccd4ec;color:#020d27;border:1px solid #92a0d1}

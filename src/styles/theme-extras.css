@@ -1,0 +1,37 @@
+/* Shared visuals + light-theme polish (loaded after theme-light.css). */
+:root{--hero-a:#6d5dfc;--hero-b:#22c1c3;--hero-c:#3b82f6;--hero-bg:#0d1629;--hero-line:#25304b}
+html[data-theme="light"]{--hero-a:#5b4cf0;--hero-b:#0fa9ab;--hero-c:#2f6fe0;--hero-bg:#f4f7ff;--hero-line:#c3cdea}
+
+.hero-art{display:block;width:100%;max-width:640px;height:auto;margin:6px auto 14px;filter:drop-shadow(0 12px 26px rgba(80,90,220,.22))}
+
+aside .navgroup>button:not(.navtitle){display:flex;align-items:center;gap:10px}
+aside .navgroup>button .navicon{flex:none;opacity:.85}
+aside .navgroup>button.active .navicon{opacity:1;color:#8db4ff}
+.theme-toggle{margin:14px 0 0;border:1px solid #2b3a70;background:transparent;color:inherit;border-radius:12px;padding:9px 12px;font-size:14px;cursor:pointer;font-family:inherit}
+.theme-toggle:hover{background:rgba(110,161,255,.14)}
+
+/* light theme polish */
+html[data-theme="light"] body{background:#f3f6fd}
+html[data-theme="light"] .app{background:radial-gradient(circle at 80% -10%,#dfe6ff 0,transparent 42%),radial-gradient(circle at 5% 105%,#d9f4f2 0,transparent 38%),#f4f7fd}
+html[data-theme="light"] aside{background:#ffffff;border-left:1px solid #dbe2f3;box-shadow:-6px 0 24px rgba(60,80,160,.06)}
+html[data-theme="light"] .picker,html[data-theme="light"] .panel,html[data-theme="light"] .cycle-card{background:#ffffff;border:1px solid #dbe2f3;box-shadow:0 6px 22px rgba(60,80,160,.07);backdrop-filter:none}
+html[data-theme="light"] .task{background:linear-gradient(145deg,#ffffff,#f1f5ff);border:1px solid #d3dcf2;color:#101a33}
+html[data-theme="light"] main button:not(.task):not(.history):not(.file-row):not(.primary){background:#eef2fc;border:1px solid #cdd7ef;color:#16213d}
+html[data-theme="light"] .primary{color:#fff!important}
+html[data-theme="light"] input,html[data-theme="light"] textarea,html[data-theme="light"] select{background:#fbfcff;color:#101a33;border:1px solid #cdd7ef}
+html[data-theme="light"] .chip{background:#eef2fc;color:#2a3a66;border-color:#cdd7ef}
+html[data-theme="light"] .steps li{background:#eef2fc;color:#5a6a92;border-color:#d3dcf2}
+html[data-theme="light"] .steps li.now{background:#e2e9ff;color:#14214d;border-color:#5b4cf0}
+html[data-theme="light"] .steps li.now b{background:#5b4cf0;color:#fff}
+html[data-theme="light"] .steps li.done{color:#0d7a55;border-color:#9bd9bf;background:#e6f7ef}
+html[data-theme="light"] .steps li.done b{background:#0d7a55;color:#fff}
+html[data-theme="light"] .hint{background:#e8eeff;border-color:#b7c6f2;color:#1a2a5c}
+html[data-theme="light"] aside .navgroup>button:not(.navtitle){color:#26355f}
+html[data-theme="light"] aside .navgroup>button:not(.navtitle):hover{background:#eef2fc}
+html[data-theme="light"] aside .navgroup>button.active{background:#e2e9ff;color:#14214d}
+html[data-theme="light"] aside .navgroup>button.active .navicon{color:#5b4cf0}
+html[data-theme="light"] .navtitle,html[data-theme="light"] button.navtitle.toggle{color:#5a6a92}
+html[data-theme="light"] .theme-toggle{border-color:#cdd7ef;color:#26355f}
+html[data-theme="light"] .theme-toggle:hover{background:#eef2fc}
+html[data-theme="light"] .command,html[data-theme="light"] textarea.command{background:#fbfcff;color:#101a33;border:1px solid #cdd7ef}
+html[data-theme="light"] .providers select{background:#fbfcff;color:#101a33;border-color:#cdd7ef}
