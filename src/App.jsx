@@ -30,7 +30,7 @@ export default function App(){
  const refreshReviews=async r=>{const target=r||root;if(!target){setReviewItems([]);return}setReviewItems(await api.reviewList(target));};
  const refreshIndex=async r=>{const target=r||root;if(!target){setIndexStatus(null);setIndexErrors([]);setIndexHealth(null);return}setIndexStatus(await api.indexStatus(target));setIndexErrors(await api.indexErrors(target,100));setIndexHealth(await api.indexHealth(false));};
  useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();refreshBackups();refreshAI();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
- const indexReady=()=>!['not-indexed','unavailable'].includes(indexStatus?.status);
+ const indexReady=()=>indexStatus?.status==='completed';
  async function doSearch(){if(indexReady())await run('indexed-file-search',{filters:{query},limit:500});else await run('file-search',{filters:{query}})}
  async function findDups(){if(indexReady())await run('indexed-duplicates');else await run('duplicates')}
  async function pick(){const p=await api.selectFolder();if(p){setRoot(p);setCycle(null);setHealth(null);setDup(null);setSearchResult(null);setIntel(null);setSimilarImages(null);setSimilarTexts(null);setSelectedReview([]);await refreshSnaps(p);await refreshReviews(p);await refreshIndex(p)}}

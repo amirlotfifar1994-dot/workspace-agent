@@ -19,6 +19,8 @@ function normalizeDisplayPath(input='',{platform=process.platform,cwd=process.cw
 function toFsPath(input='',{platform=process.platform,cwd=process.cwd()}={}){
   const display=normalizeDisplayPath(input,{platform,cwd});
   if(platform!=='win32'||!display)return display;
+  // A bare drive root must stay un-prefixed: stat/readdir on \\?\C:\ fails with EISDIR on Windows.
+  if(/^[A-Za-z]:[\\/]?$/.test(display))return display.slice(0,2)+'\\';
   return path.win32.toNamespacedPath(display);
 }
 function keyPath(input='',options={}){
