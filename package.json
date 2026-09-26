@@ -13,7 +13,7 @@
     "test": "node scripts/run-source-tests.cjs",
     "check": "npm run check:dependency-pins && npm run check:stable-certification-policy && npm run check:rc1-source && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
-    "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+    "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/components/AgentPanel.jsx src/main.jsx",
     "test:windows-uia-uat": "node tests/windows-uia-action.uat.cjs",
     "test:index": "node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/index-freshness-guard-rc1.test.cjs",
     "test:index-scale": "node --expose-gc tests/persistent-index-scale-v080.cjs",
@@ -103,6 +103,7 @@
     "test:windows-safe-handoff-transport-rc1-uat": "node tests/windows-safe-handoff-transport-rc1.uat.cjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

@@ -8,6 +8,7 @@ const { capabilitySummary } = require('./services/capability-registry.cjs');
 const { registrySummary } = require('./services/skill-registry.cjs');
 const { planGoal } = require('./services/goal-planner.cjs');
 const {trustedSender}=require('./services/runtime-trust-policy.cjs');
+const {ClaudeFileAgent,applyPlan}=require('./services/claude-file-agent.cjs');
 function deny(){ return {ok:false,code:'UNTRUSTED_IPC'}; }
 
 function imageDataUrlForVision(file,{windowRect=null,candidateRects=[],displays=[],maxDimension=2048}={}){
@@ -77,6 +78,26 @@ function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, a
     if(!trusted(e))return deny();
     const session=windowsActionSessionStore.create(request);if(!session.ok)return session;
     try{const r=session.redacted;const c=engine.create('windows-ui-action',{sessionToken:session.token,action:r.action,selector:r.selector,valueHash:r.valueHash||null,valueLength:r.valueLength||0},{source:'interactive-uia',budget:{maxIterations:4,maxWallTimeMs:10*60*1000}});return engine.run(c.id);}catch(error){windowsActionSessionStore.forget(session.token);return{ok:false,code:error.code||'UIA_ACTION_START_FAILED',message:error.message};}
+  });
+  const claudeAgent=new ClaudeFileAgent();const agentPlans=new Map();
+  ipcMain.handle('wa:agent-status', e => trusted(e) ? {ok:true,keyPresent:Boolean(process.env.ANTHROPIC_API_KEY),model:claudeAgent.model} : deny());
+  ipcMain.handle('wa:agent-run', async (e,command='',root='') => {
+    if(!trusted(e))return deny();
+    try{
+      const out=await claudeAgent.run({command:String(command),root:String(root)});
+      for(const [k,v] of agentPlans)if(v.expiresAt<=Date.now())agentPlans.delete(k);
+      if(out.plan)agentPlans.set(out.id,{plan:out.plan,root:path.resolve(String(root)),expiresAt:Date.now()+30*60*1000});
+      return {ok:true,planId:out.plan?out.id:null,plan:out.plan,message:out.message,usage:out.usage,model:out.model};
+    }catch(error){return {ok:false,code:error.code||'AGENT_FAILED',message:error.message};}
+  });
+  ipcMain.handle('wa:agent-apply', async (e,planId='') => {
+    if(!trusted(e))return deny();
+    const rec=agentPlans.get(String(planId));if(!rec||rec.expiresAt<=Date.now())return {ok:false,code:'AGENT_PLAN_EXPIRED',message:'Plan منقضی شده است؛ دوباره اجرا کنید.'};
+    agentPlans.delete(String(planId));
+    let results=[];
+    try{
+      const out=await applyPlan({engine,root:rec.root,plan:rec.plan});results=out.results;return out;
+    }catch(error){return {ok:false,code:error.code||'AGENT_APPLY_FAILED',message:error.message,results};}
   });
   ipcMain.handle('wa:confirm-cycle', async (e,id,decision='approve') => trusted(e) ? engine.confirm(id,decision) : deny());
   ipcMain.handle('wa:undo-cycle', async (e,id) => trusted(e) ? engine.rollback(id) : deny());
