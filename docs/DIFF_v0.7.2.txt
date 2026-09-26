@@ -1,0 +1,24 @@
+# Diff summary v0.7.1 -> v0.7.2
+
+Files v0.7.1/README_FA.md and v0.7.2/README_FA.md differ
+Files v0.7.1/docs/ARCHITECTURE_FA.md and v0.7.2/docs/ARCHITECTURE_FA.md differ
+Only in v0.7.2/docs: CHANGELOG_v0.7.2_FA.md
+Only in v0.7.2/docs: DIFF_v0.7.2.txt
+Files v0.7.1/docs/ROADMAP_FA.md and v0.7.2/docs/ROADMAP_FA.md differ
+Only in v0.7.2/docs: VALIDATION_v0.7.2_FA.md
+Only in v0.7.2/docs: WINDOWS_UIA_ACTION_MODEL_FA.md
+Files v0.7.1/electron/ipc.cjs and v0.7.2/electron/ipc.cjs differ
+Files v0.7.1/electron/main.cjs and v0.7.2/electron/main.cjs differ
+Files v0.7.1/electron/preload.cjs and v0.7.2/electron/preload.cjs differ
+Files v0.7.1/electron/services/capability-registry.cjs and v0.7.2/electron/services/capability-registry.cjs differ
+Files v0.7.1/electron/services/skill-registry.cjs and v0.7.2/electron/services/skill-registry.cjs differ
+Only in v0.7.2/electron/services: windows-action-policy.cjs
+Only in v0.7.2/electron/services: windows-action-session-store.cjs
+Only in v0.7.2/electron/services: windows-uia-actions.cjs
+Files v0.7.1/electron/services/windows-uia.cjs and v0.7.2/electron/services/windows-uia.cjs differ
+Files v0.7.1/electron/services/workspace-cycles.cjs and v0.7.2/electron/services/workspace-cycles.cjs differ
+Files v0.7.1/package.json and v0.7.2/package.json differ
+Files v0.7.1/src/App.jsx and v0.7.2/src/App.jsx differ
+Files v0.7.1/src/styles/app.css and v0.7.2/src/styles/app.css differ
+Only in v0.7.2/tests: windows-uia-action-v072.test.cjs
+Only in v0.7.2/tests: windows-uia-action.uat.cjs

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "workspace-agent-release-readiness-v1",
+  "version": "0.9.8",
+  "core": "READY",
+  "regression": "PASS",
+  "rcSelfCheck": "PASS",
+  "versionUpdateGuard": "PASS",
+  "dataEpochGuard": "PASS",
+  "stateBackupRestore": "PASS",
+  "diagnosticsPrivacy": "PASS",
+  "packagedSmokeRcGate": "SOURCE_VALIDATED",
+  "packageLock": "PENDING_REGISTRY_ENVIRONMENT",
+  "windows10Certification": "PENDING_WINDOWS",
+  "windows11Certification": "PENDING_WINDOWS",
+  "twoVolumeNtfs": "PENDING_WINDOWS",
+  "scale100kTo1m": "PENDING_WINDOWS",
+  "nsis": "PENDING_WINDOWS",
+  "portable": "PENDING_WINDOWS",
+  "authenticode": "PENDING_CERTIFICATE",
+  "binaryRollback": "DEFERRED_TO_V1_RC_RELEASE_PIPELINE"
+}

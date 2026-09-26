@@ -1,0 +1,13 @@
+const assert=require('assert');
+const {classifyGate,overallStatus,evidenceId,summarize}=require('../electron/services/certification-core.cjs');
+assert.equal(classifyGate({exitCode:0,output:'PASS',required:true}),'PASS');
+assert.equal(classifyGate({exitCode:0,output:'SKIP (set WA_CERT_ROOT_A)',required:true}),'INCOMPLETE');
+assert.equal(classifyGate({exitCode:0,output:'SKIP optional',required:false}),'SKIP');
+assert.equal(classifyGate({exitCode:3,required:true}),'INCOMPLETE');
+assert.equal(classifyGate({exitCode:2,output:'boom',required:true}),'FAIL');
+assert.equal(overallStatus([{required:true,status:'PASS'},{required:false,status:'SKIP'}]),'PASS');
+assert.equal(overallStatus([{required:true,status:'PASS'},{required:true,status:'INCOMPLETE'}]),'INCOMPLETE');
+assert.equal(overallStatus([{required:true,status:'FAIL'}]),'FAIL');
+const r={version:'0.9.7',gates:[{name:'x',status:'PASS',required:true}]};assert.equal(evidenceId(r),evidenceId({...r}));
+assert.deepEqual(summarize([{status:'PASS'},{status:'INCOMPLETE'},{status:'PASS'}]),{PASS:2,FAIL:0,INCOMPLETE:1,SKIP:0,PENDING_MANUAL:0});
+console.log('certification-core-v097.test.cjs PASS');

@@ -1,0 +1,1005 @@
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/README_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/README_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/README_FA.md	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/README_FA.md	2026-08-16 10:02:31.768556394 +0000
+@@ -51,15 +51,19 @@
+ جزئیات در `docs/RC1_ACCEPTANCE_MODEL_FA.md` و `docs/RELEASE_READINESS_v1.0.0-rc1.json` است.
+ 
+ 
+-## cert-kit16 — Frozen Source + Release Identity Hardening
++## cert-kit17 — Certification Execution Recovery / Resume Hardening
+ 
+-Core همچنان Feature-Frozen است. cert-kit16 ambiguity بین هویت سورس frozen و `package-lock.json` رسمی Release را می‌بندد. Source Fingerprint به v2 ارتقا یافته و lockfile را عمداً از scope سورس خارج می‌کند؛ در مقابل `releaseIdentitySha256` جدید Source Fingerprint + SHA-256 دقیق lockfile + Node/npm/packageManager pins + version/tooling + x64 lane را یک‌جا bind می‌کند.
++Core همچنان Feature-Frozen است. cert-kit17 Recovery Plan قابل ممیزی برای crash/restart خود Windows Certification اضافه می‌کند. فقط PASS boundaryهای کامل که به version/tooling و `releaseIdentitySha256` فعلی bind هستند reuse می‌شوند؛ خروجی ناقص Primary/Peer archive و فقط همان phase rerun می‌شود. State history hash-chain و latest state هر دو مستقل verify می‌شوند.
+ 
+-Windows preflight fingerprint را قبل و بعد از lock resolution مقایسه می‌کند. Certification report، Release Manifest v8، Primary/Peer Handoff، Final Envelope و Stable Promotion همگی باید همان Release Identity را داشته باشند؛ هر drift در lockfile، source یا runtime pins fail-closed است.
++Modeهای `Recover` و `Resume` به Execution Kit اضافه شده‌اند و Finalize نیز قبل از شروع ورودی‌های واقعی خود را در `FINALIZE_RUNNING` ثبت می‌کند. جزئیات در `docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md` و `docs/GAP_AUDIT_v1.0.0-rc1-cert-kit17_FA.md` است.
+ 
+-Validation Source این revision: **91/91 test files PASS** در یک اجرای کامل Source Suite، Syntax روی **229 فایل PASS**، Source Fingerprint v2/lockfile invariance PASS و dual-Windows identity contract PASS. Windows-only UAT همچنان فقط روی Windows 10/11 واقعی قابل PASS شدن است.
++## cert-kit16 — Windows Execution Hardening
+ 
+-جزئیات: `docs/RELEASE_IDENTITY_CHAIN_v1.0.0-rc1-cert-kit16_FA.md`، `docs/GAP_AUDIT_v1.0.0-rc1-cert-kit16_FA.md` و `docs/VALIDATION_v1.0.0-rc1-cert-kit16-release-identity-hardening_FA.md`.
++cert-kit16 Windows RC1 Doctor، validation امن `ExecutionId`، isolation مربوط به ExecutionRoot، continuity مربوط به PrepareEvidence، state atomic + chained history و triage صریح `PRIMARY_INCOMPLETE/PEER_INCOMPLETE` را اضافه کرد. Validation آن revision: **93/93 Source tests PASS** و Syntax **231 فایل PASS**؛ Windows evidence همچنان pending بود.
++
++## cert-kit15 — Frozen Source + Release Identity Hardening
++
++cert-kit15 ambiguity بین هویت frozen source و `package-lock.json` رسمی Release را بست. Source Fingerprint v2 lockfile را از identity سورس خارج می‌کند و `releaseIdentitySha256` Source + exact lockfile + runtime pins + version/tooling + x64 lane را bind می‌کند. Primary/Peer/Manifest/Envelope/Promotion باید همین identity را داشته باشند. Validation آن revision: **91/91 Source tests PASS** و Syntax **229 فایل PASS**.
+ 
+ ## cert-kit14 — Runtime Provenance + Bounded Journal Retention
+ 
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md	2026-08-16 10:05:47.717430210 +0000
+@@ -0,0 +1,19 @@
++# Changelog — v1.0.0-rc1 cert-kit17
++
++این revision فقط Certification Execution recovery hardening است و Feature Freeze را نمی‌شکند.
++
++- اضافه شدن `scripts/rc1-execution-recovery.cjs` با Recovery Plan hash-bound.
++- اضافه شدن Modeهای `Recover` و `Resume` به Windows RC1 Execution Kit.
++- verify کامل `execution-history.jsonl` و re-hash مستقل latest state.
++- reuse فقط برای Certification result/report کامل PASS و Release Identity منطبق.
++- archive fail-closed خروجی ناقص Primary/Peer به `recovery-invalidated` پیش از rerun.
++- جلوگیری از invalidation path خارج Execution Root یا phase ناشناخته.
++- Resume بسته‌بندی Primary Handoff بدون تکرار Certification PASS کامل.
++- Resume بسته‌بندی Peer Return بدون تکرار Peer Certification PASS کامل.
++- ثبت `FINALIZE_RUNNING` با inputهای واقعی برای continuation deterministic پس از restart.
++- بازیابی state برای Primary/Peer/Promotion کامل بدون اجرای مجدد UAT.
++- دو تست Source جدید برای recovery planner و PowerShell recovery contract.
++
++- رفع P0 در Execution flow: exit code 2 مورد انتظارِ pre-Final دیگر Primary/Peer را deadlock نمی‌کند؛ Phase Readiness فقط دلیل‌های incomplete مجاز را می‌پذیرد.
++- verify مجدد Evidence Bundle و Primary Release Manifest/Artifact قبل از reuse یا Handoff.
++- canonical state hash با Node هم در write و هم verify، برای حذف اختلاف serializer بین PowerShell و Node.
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit17_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit17_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit17_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit17_FA.md	2026-08-16 10:05:47.717304713 +0000
+@@ -0,0 +1,33 @@
++# Gap Audit — v1.0.0-rc1 cert-kit17
++
++## بسته‌شده در این revision
++
++### P0 — EXPECTED_INCOMPLETE_HANDOFF_DEADLOCK
++بسته شد: Primary و Peer دیگر exit code 2 را کورکورانه blocker فرض نمی‌کنند. `rc1-phase-readiness.cjs` ثابت می‌کند certification report/evidence واقعاً PASS است و فقط incompleteness مورد انتظار Final (`DUAL_WINDOWS_EVIDENCE_REQUIRED` / `MANUAL_EVIDENCE_REQUIRED`) باقی مانده؛ سپس Handoff/Peer Return مجاز می‌شود. هر incompleteness دیگر fail-closed است.
++
++### P1 — CERTIFICATION_EXECUTION_CRASH_RECOVERY
++بسته شد: Execution Kit اکنون Recovery Plan مستقل دارد و می‌تواند پس از crash/restart بین PASS boundaryهای کامل ادامه دهد، بدون اینکه کل Primary/Peer کورکورانه تکرار شود.
++
++### P1 — PARTIAL_EVIDENCE_REUSE_RISK
++بسته شد: result/report ناقص یا Release Identity نامنطبق reusable نیست. partial phase به `recovery-invalidated` منتقل می‌شود و فقط همان phase rerun می‌شود.
++
++### P1 — EXECUTION_STATE_LATEST_TAMPER
++بسته شد: علاوه بر history chain، خود `execution-state.json` دوباره hash می‌شود و باید با tail history تطابق داشته باشد. تغییر محتوا با hash قدیمی fail-closed است.
++
++### P1 — FINALIZATION_RESTART_TRACEABILITY
++بسته شد: `FINALIZE_RUNNING` ورودی‌های Primary Handoff، Peer Return و Manual Evidence را قبل از final verification ثبت می‌کند تا Resume از همان inputs ادامه دهد.
++
++## باز
++
++### P0 — REAL_WINDOWS_CERTIFICATION
++تنها blocker اصلی Stable باقی‌مانده است: Windows 10 + Windows 11 واقعی، دو Volume NTFS واقعی، Scale 100k/1M، locks، ACL/Junction/Reparse، NTFS metadata fidelity، sleep/resume، USB/removable، disk-full، unclean shutdown/power interruption، packaging، real 0.9.8→RC1 upgrade و evidence chain نهایی.
++
++### P2 — COREL_SKILL_PACK
++Post-v1 core stabilization.
++
++### P2 — FULL_DR_AND_1M_UI_PROFILE
++Disaster-recovery bundle کامل و Electron UI responsiveness profiling در 1M post-certification باقی می‌ماند.
++
++## Stable status
++
++`BLOCKED_PENDING_WINDOWS_CERTIFICATION`
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md	2026-08-16 10:07:58.509317550 +0000
+@@ -0,0 +1,81 @@
++# RC1 Execution Recovery / Resume — cert-kit17
++
++این revision قابلیت محصولی جدیدی به Core اضافه نمی‌کند. هدف فقط این است که crash/restart یا قطع اجرای Certification باعث تکرار کورکورانه‌ی کل Run یا reuse ناامن Evidence ناقص نشود.
++
++## اصل اصلی
++
++Recovery فقط از **مرز کامل و قابل‌اثبات** ادامه می‌دهد. یک phase فقط زمانی reusable است که result و report هر دو وجود داشته باشند، `overall=PASS` باشند، version/tooling revision درست باشد و `releaseIdentitySha256` با frozen source + lockfile فعلی تطبیق کند.
++
++اگر crash داخل UAT یا Certification phase رخ داده باشد و PASS کامل وجود نداشته باشد، آن phase resume داخلی نمی‌شود. خروجی ناقص به مسیر زیر منتقل می‌شود و فقط همان phase دوباره اجرا می‌شود:
++
++`rc1-execution/<ExecutionId>/recovery-invalidated/<UTC timestamp>/...`
++
++این archive حذف نمی‌شود تا برای audit/debug باقی بماند.
++
++
++## Phase readiness پیش از reuse
++
++Recovery برای Primary/Peer از همان validator رسمی `rc1-phase-readiness.cjs` استفاده می‌کند؛ در نتیجه یک `INCOMPLETE` کلی فقط زمانی reusable است که incompleteness صرفاً مربوط به evidence نهاییِ هنوز نرسیده باشد. Evidence Bundle با metadata ثبت‌شده در report دوباره verify می‌شود.
++
++## State integrity
++
++قبل از هر Recovery، `execution-history.jsonl` و `execution-state.json` بررسی می‌شوند:
++
++- hash هر state دوباره محاسبه می‌شود؛
++- `previousStateSha256` باید زنجیره‌ی بدون شکست بسازد؛
++- latest state باید دقیقاً tail همان history باشد؛
++- خود latest state نیز مستقل re-hash می‌شود تا تغییر محتوا با hash قدیمی پذیرفته نشود.
++
++در صورت شکست این زنجیره، Action برابر `BLOCK_STATE_CHAIN_INVALID` است و هیچ مسیر ثبت‌شده یا Evidence قبلی مورد اعتماد قرار نمی‌گیرد.
++
++## Recover — فقط تشخیص
++
++```powershell
++npm run certify:execution:rc1 -- `
++  -Mode Recover `
++  -ExecutionId <ExecutionId>
++```
++
++این Mode هیچ UAT یا Artifact را تغییر نمی‌دهد و `recovery-plan.json` تولید می‌کند.
++
++Actionهای اصلی:
++
++- `RESUME_PRIMARY_HANDOFF`: Primary PASS کامل است؛ فقط Handoff دوباره ساخته شود.
++- `RERUN_PRIMARY_CERTIFICATION`: Primary PASS معتبر وجود ندارد؛ partial archive و Primary فقط از phase Certification تکرار شود.
++- `PRIMARY_COMPLETE_AWAIT_PEER`: Primary Handoff کامل است؛ هیچ Primary rerun لازم نیست.
++- `RESUME_PEER_RETURN`: Peer PASS کامل است؛ فقط Peer Return دوباره ساخته شود.
++- `RERUN_PEER_CERTIFICATION`: Peer ناقص/نامعتبر است؛ فقط Peer phase تکرار شود.
++- `PEER_COMPLETE_RETURN_TO_PRIMARY`: Peer Return کامل است؛ فقط به Primary برگردانده شود.
++- `RESUME_FINALIZE`: Finalize قطع شده؛ verification/promotion deterministic دوباره اجرا شود.
++- `PROMOTION_COMPLETE`: Final decision و delivery کامل‌اند؛ Certification دوباره اجرا نمی‌شود.
++- `BLOCK_STATE_CHAIN_INVALID`: state/history قابل اعتماد نیست و Resume ممنوع است.
++
++## Resume — اجرای bounded plan
++
++```powershell
++npm run certify:execution:rc1 -- `
++  -Mode Resume `
++  -ExecutionId <ExecutionId>
++```
++
++Resume ابتدا همان Recovery Plan را می‌سازد و سپس فقط Action مجاز را اجرا می‌کند. Partial output فقط برای دو phase شناخته‌شده `primary-certification` و `peer-certification` archive می‌شود؛ path خارج Execution Root یا نام phase ناشناخته fail-closed است.
++
++## Finalize recovery
++
++Finalize قبل از verification یک state `FINALIZE_RUNNING` با سه input واقعی ثبت می‌کند:
++
++- Primary Handoff
++- Peer Return
++- Manual Evidence
++
++اگر crash بعد از آن رخ دهد، Resume فقط deterministic final verification / envelope / decision را دوباره اجرا می‌کند و Windows Certification سنگین را تکرار نمی‌کند.
++
++## محدودیت آگاهانه
++
++cert-kit17 ادعا نمی‌کند که یک UAT چندمرحله‌ای در وسط عملیات transactionally resumable است. چنین ادامه‌ای می‌تواند Evidence اشتباه بسازد. مرز امن v1 این است:
++
++**phase کامل PASS → reuse**
++
++**phase ناقص/مشکوک → archive + rerun همان phase**
++
++Windows 10/11 Certification واقعی همچنان شرط نهایی Stable است.
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-16 09:52:38.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-16 10:07:58.509196510 +0000
+@@ -1,12 +1,12 @@
+-# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit16
++# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit17
+ 
+-این revision قابلیت محصولی جدیدی به Core اضافه نمی‌کند. Core همچنان Feature-Frozen است. هدف cert-kit16 این است که اجرای Certification واقعی Windows از یک مجموعه دستور پراکنده به یک **Execution Kit مرحله‌بندی‌شده، قابل انتقال بین دو سیستم‌عامل و قابل Finalize** تبدیل شود.
++این revision قابلیت محصولی جدیدی به Core اضافه نمی‌کند. Core همچنان Feature-Frozen است. هدف cert-kit17 این است که اجرای Certification واقعی Windows از یک مجموعه دستور پراکنده به یک **Execution Kit مرحله‌بندی‌شده، قابل انتقال بین دو سیستم‌عامل و قابل Finalize** تبدیل شود.
+ 
+ ## قرارداد Final PASS
+ 
+ Final PASS فقط وقتی ممکن است که Windows 10 و Windows 11 هر دو با همان Source Fingerprint، همان `package-lock.json` و همان `releaseIdentitySha256` PASS شوند، Scale واقعی 100k و 1M کامل باشد، NSIS و Portable معتبر ساخته شوند، Evidence Bundle هر دو Run سالم باشد، Manual Evidence v2 کامل شود و upgrade واقعی `0.9.8 → 1.0.0-rc1` دقیقاً با NSIS متعلق به Artifact Owner انجام شده باشد.
+ 
+-## مسیر پیشنهادی cert-kit16
++## مسیر پیشنهادی cert-kit17
+ 
+ ### 1) Primary / Artifact Owner
+ 
+@@ -32,6 +32,10 @@
+ 
+ Result کلی Primary می‌تواند در Orchestrator داخلی `INCOMPLETE` باشد چون Peer/Manual Evidence هنوز وجود ندارد؛ اما Execution Kit فقط وقتی Handoff قابل استفاده می‌سازد که **خود `certification-report.json` Primary برابر PASS باشد**.
+ 
++### Phase Readiness قبل از Handoff
++
++Primary/Peer ممکن است در Orchestrator کلی `INCOMPLETE` باشند چون Final evidence هنوز کامل نیست. cert-kit17 با `rc1-phase-readiness.cjs` بین این incompleteness مورد انتظار و یک blocker واقعی فرق می‌گذارد. Evidence Bundle، Source/Release Identity و دلایل incomplete دوباره verify می‌شوند؛ هر دلیل خارج allowlist یا هر tamper باعث توقف Handoff می‌شود.
++
+ ### 2) Manual Evidence
+ 
+ فایل `MANUAL_EVIDENCE.prefilled.json` هیچ Evidence را خودکار PASS نمی‌کند. فقط metadata و SHA256 NSIS متعلق به Primary را از `release-manifest.json` وارد می‌کند تا خطای دستی در artifact binding کمتر شود.
+@@ -49,7 +53,7 @@
+ 
+ ### 3) Peer Windows Family
+ 
+-همان Source cert-kit16 را روی خانواده دیگر Windows باز کنید و Primary Handoff را منتقل کنید:
++همان Source cert-kit17 را روی خانواده دیگر Windows باز کنید و Primary Handoff را منتقل کنید:
+ 
+ ```powershell
+ npm run certify:execution:rc1 -- `
+@@ -97,6 +101,10 @@
+ 
+ وجود `PROMOTE_ALLOWED` به معنی این است که Evidence لازم برای promotion همین RC به Stable طبق Contract فعلی کامل است؛ Stable binary باید همچنان از همین frozen source و release process مصوب ساخته شود.
+ 
++## Recovery پس از قطع اجرا
++
++cert-kit17 برای Runهای قطع‌شده Modeهای `Recover` و `Resume` دارد. اگر Primary یا Peer Certification کامل PASS شده باشد ولی crash در packaging رخ داده باشد، همان PASS boundary با Release Identity فعلی verify و فقط packaging ادامه داده می‌شود. اگر phase ناقص باشد، partial evidence archive و فقط همان phase rerun می‌شود.
++
+ ## Status
+ 
+ برای دیدن آخرین مرحله:
+@@ -125,5 +133,5 @@
+ 
+ Execution Kit خودش disk format، disk initialization، USB eject اجباری، پرکردن عمدی کامل دیسک، shutdown/restart ناگهانی یا تغییر ACL سیستم را انجام نمی‌دهد. سناریوهای فیزیکی فقط توسط اپراتور در محیط تست انجام و Evidence آن ثبت می‌شود.
+ 
+-## cert-kit16 — Local AI Runtime provenance input
++## cert-kit17 — Local AI Runtime provenance input
+ پیش از اجرای Certification روی هر Windows، `WA_LLAMA_SERVER_PATH` و `WA_LLAMA_SERVER_EXPECTED_SHA256` باید به یک `llama-server.exe` واقعی اشاره کنند. اگر signer pin نیز در Release Policy لازم است، `WA_LLAMA_SERVER_EXPECTED_SIGNER_THUMBPRINT` را هم تنظیم کنید. نبود این ورودی‌ها Gate `test:windows-local-ai-provenance-rc1-uat` را `INCOMPLETE` می‌کند و Stable promotion مجاز نیست.
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md	2026-08-16 09:52:38.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md	2026-08-16 10:07:58.509022741 +0000
+@@ -1,11 +1,11 @@
+-# Windows Certification Execution Kit — cert-kit16
++# Windows Certification Execution Kit — cert-kit17
+ 
+ هدف: کاهش خطای عملیاتی هنگام انتقال RC1 بین Windows 10 و Windows 11 و جلوگیری از ترکیب شدن Report، lockfile، Release Identity، Artifact یا Manual Evidence متعلق به Runهای متفاوت.
+ 
+ 
+ ## Doctor — قبل از Primary/Peer
+ 
+-برای کاهش خطای اپراتور، cert-kit16 یک preflight مستقل دارد:
++برای کاهش خطای اپراتور، cert-kit17 یک preflight مستقل دارد:
+ 
+ ```powershell
+ npm run certify:execution:rc1 -- -Mode Doctor
+@@ -15,12 +15,41 @@
+ 
+ ExecutionId فقط یک path component محدود است و ID دریافت‌شده از Handoff قبل از استفاده در مسیر validate می‌شود. `PrepareEvidence` نیز همان ID متعلق به Primary را ادامه می‌دهد. Execution State با atomic replace نوشته می‌شود و `execution-history.jsonl` مسیر stageها را حفظ می‌کند.
+ 
++## Recovery / Resume پس از crash یا restart
++
++برای inspect بدون تغییر:
++
++```powershell
++npm run certify:execution:rc1 -- -Mode Recover -ExecutionId <ExecutionId>
++```
++
++برای اجرای bounded recovery plan:
++
++```powershell
++npm run certify:execution:rc1 -- -Mode Resume -ExecutionId <ExecutionId>
++```
++
++Recovery فقط PASS boundary کامل و Release-Identity-bound را reuse می‌کند. UAT ناقص archive می‌شود و فقط همان Primary/Peer phase دوباره اجرا می‌شود. state/history نامعتبر باعث `BLOCK_STATE_CHAIN_INVALID` می‌شود. جزئیات در `docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md` است.
++
+ ## State machine
+ 
+ `PRIMARY_RUNNING → PRIMARY_READY → PEER_RUNNING → PEER_READY → PROMOTE_ALLOWED`
+ 
+ هر Failure به stage صریح `*_FAILED` یا `PROMOTION_BLOCKED` می‌رود. هیچ stage شکست‌خورده‌ای به‌صورت خودکار PASS نمی‌شود.
+ 
++## Phase Readiness و `INCOMPLETE` مورد انتظار
++
++`windows-rc1-certify.ps1` قبل از Finalize عمداً می‌تواند exit code 2 بدهد، چون Manual Evidence و/یا خانواده دوم Windows هنوز کامل نشده‌اند. cert-kit17 این وضعیت را کورکورانه failure تلقی نمی‌کند. `rc1-phase-readiness.cjs` فقط وقتی ادامه را مجاز می‌کند که:
++
++- certification report واقعاً `PASS` باشد؛
++- Evidence Bundle دوباره hash/aggregate verify شود؛
++- Source Fingerprint و Release Identity فعلی منطبق باشند؛
++- Primary فقط `DUAL_WINDOWS_EVIDENCE_REQUIRED` و `MANUAL_EVIDENCE_REQUIRED` را به‌عنوان incompleteness قابل انتظار داشته باشد؛
++- Peer فقط `MANUAL_EVIDENCE_REQUIRED` را تا Finalize تحمل کند؛
++- هیچ hard failure یا incomplete دلیل دیگری وجود نداشته باشد.
++
++Primary پیش از ساخت Handoff، Release Manifest و Artifactها را نیز دوباره verify می‌کند تا mutation بعد از Certification وارد transport نشود.
++
+ ## بسته Primary
+ 
+ Primary Handoff مالک Artifact نهایی است. در آن Report و Evidence Bundle کامل Primary، release manifest، SHA256SUMS، NSIS، Portable، lockfile دقیق و Manual Evidence prefill نگه‌داری می‌شود.
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-16 09:53:54.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-16 10:09:45.262605901 +0000
+@@ -1,8 +1,8 @@
+ {
+-  "schemaVersion": "workspace-agent-release-readiness-v9",
++  "schemaVersion": "workspace-agent-release-readiness-v10",
+   "version": "1.0.0-rc1",
+   "channel": "rc",
+-  "toolingRevision": "cert-kit16",
++  "toolingRevision": "cert-kit17",
+   "featureFreeze": true,
+   "baselineVersion": "0.9.8",
+   "dataEpoch": 1,
+@@ -29,12 +29,12 @@
+   "authenticode": "PENDING_CERTIFICATE_POLICY",
+   "finalDualWindowsEnvelope": "PENDING_WINDOWS_EVIDENCE",
+   "stablePromotion": "BLOCKED_UNTIL_WINDOWS_FINAL_DECISION",
+-  "regression": "PASS_93_93_SINGLE_RUN",
+-  "syntax": "PASS_231_FILES",
++  "regression": "PASS_97_97_SINGLE_RUN",
++  "syntax": "PASS_237_FILES",
+   "jsx": "PASS",
+   "sourceHygiene": "PASS",
+   "dependencyPins": "PASS",
+-  "rc1CertKitSuite": "PASS_CERT_KIT16",
++  "rc1CertKitSuite": "PASS_CERT_KIT17",
+   "windowsNativeUat": "SKIP_NON_WINDOWS",
+   "releaseInputGate": "LOCKFILE_REQUIRED_EXPECTED",
+   "currentValidationRuntime": {
+@@ -70,5 +70,11 @@
+   "windowsExecutionDoctor": "SOURCE_TESTED_NON_DESTRUCTIVE_PREFLIGHT",
+   "executionIdPathSafety": "SOURCE_HARDENED",
+   "executionStateTraceability": "SOURCE_HARDENED_ATOMIC_LATEST_CHAINED_HISTORY",
+-  "prepareEvidenceExecutionContinuity": "SOURCE_HARDENED_PRIMARY_ID_BOUND"
++  "prepareEvidenceExecutionContinuity": "SOURCE_HARDENED_PRIMARY_ID_BOUND",
++  "executionRecoveryResume": "SOURCE_HARDENED_BOUNDED_PASS_BOUNDARY_REUSE",
++  "executionStateHashChain": "SOURCE_HARDENED_CANONICAL_NODE_HASH_LATEST_REHASHED",
++  "phaseReadinessExpectedIncompleteGate": "SOURCE_HARDENED_PRIMARY_DUAL_MANUAL_PEER_MANUAL_ONLY",
++  "partialEvidenceInvalidation": "SOURCE_HARDENED_ARCHIVE_BEFORE_RERUN",
++  "finalizationResumeTraceability": "SOURCE_HARDENED_INPUTS_RECORDED",
++  "expectedIncompleteHandoffDeadlock": "SOURCE_CLOSED_PHASE_READINESS_GATE"
+ }
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md	2026-08-16 10:09:45.262749745 +0000
+@@ -0,0 +1,31 @@
++# اعتبارسنجی v1.0.0-rc1 — cert-kit17 Execution Recovery/Resume
++
++## وضعیت Source
++
++- Full source regression: `PASS_97_97_SINGLE_RUN`
++- Syntax: `PASS_237_FILES`
++- JSX: `PASS`
++- Source hygiene: `PASS`
++- Dependency pins: `PASS`
++- RC1 source contract: `PASS_CERT_KIT17`
++- RC1 execution suite: `PASS`
++- RC1 certification-kit suite: `PASS`
++
++## Hardening این مرحله
++
++- Recovery/Resume محدود به مرزهای کامل و immutable است؛ UAT نیمه‌کاره reuse نمی‌شود.
++- خروجی ناقص قبل از rerun به `recovery-invalidated/<timestamp>/` منتقل می‌شود.
++- زنجیره‌ی state/history با canonical Node hashing تولید و دوباره محاسبه می‌شود؛ latest state نیز مستقل re-hash می‌شود.
++- Primary/Peer می‌توانند `INCOMPLETE` مورد انتظارِ ناشی از evidence مرحله‌ی بعد را از failure واقعی جدا کنند.
++- Primary فقط کمبود `DUAL_WINDOWS_EVIDENCE_REQUIRED` و `MANUAL_EVIDENCE_REQUIRED` را برای handoff مجاز می‌داند.
++- Peer فقط `MANUAL_EVIDENCE_REQUIRED` را برای return مجاز می‌داند.
++- Release manifest/evidence bundle/release identity قبل از reuse یا handoff دوباره verify می‌شوند.
++- Finalize ورودی‌های Primary/Peer/Manual Evidence را قبل از ادامه در state ثبت می‌کند تا restart قابل ردیابی باشد.
++
++## Release-input gate
++
++در محیط اعتبارسنجی Linux، `npm run check:release-inputs` عمداً با `LOCKFILE_REQUIRED` متوقف شد. این نتیجه مورد انتظار است؛ `package-lock.json` رسمی نباید در این محیط جعل شود و باید در Windows Release Lane با Node `24.14.1` و npm `11.11.0` تولید/تأیید شود.
++
++## محدودیت اعتبارسنجی
++
++هیچ PASS برای Windows-only UAT در این محیط ادعا نمی‌شود. Windows 10/11 واقعی، دو NTFS volume، scale، USB، disk-full، power/sleep، packaging و upgrade evidence همچنان برای Stable لازم‌اند.
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit17_FA.md /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit17_FA.md
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit17_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit17_FA.md	2026-08-16 10:02:30.709386490 +0000
+@@ -0,0 +1,46 @@
++# Windows RC1 Doctor — cert-kit17
++
++هدف Doctor این است که خطاهای محیطی قبل از شروع Certification واقعی پیدا شوند، بدون اینکه Build، npm ci، package-lock generation یا UAT مخرب/طولانی اجرا شود.
++
++## چه چیزهایی بررسی می‌شود
++
++- Source contract دقیق RC1 / cert-kit17
++- Node `24.14.1` و npm `11.11.0`
++- Windows 10 یا Windows 11 client و معماری x64
++- وجود و writable بودن RootA/RootB/ScaleRoot
++- NTFS بودن Rootها و متفاوت بودن Volume UniqueId برای RootA و RootB
++- عدم overlap مسیرهای Certification با frozen Source tree
++- حداقل فضای آزاد ScaleRoot برای ماتریس 100k + 1M، مگر `-SkipScale`
++- وجود `llama-server.exe`، تطابق SHA-256 pin و در صورت تعریف، Authenticode signer thumbprint
++- وجود signing credential در صورت `-RequireSigning`
++- اگر package-lock وجود دارد: `verify-release-inputs`
++- اگر package-lock هنوز ساخته نشده: قابل دسترس بودن npm registry بدون ساختن lockfile
++
++## اجرا
++
++```powershell
++$env:WA_CERT_ROOT_A='C:\WA-Cert'
++$env:WA_CERT_ROOT_B='D:\WA-Cert'
++$env:WA_CERT_SCALE_ROOT='C:\WA-Cert'
++$env:WA_LLAMA_SERVER_PATH='C:\Tools\llama.cpp\llama-server.exe'
++$env:WA_LLAMA_SERVER_EXPECTED_SHA256='<64-hex-sha256>'
++
++npm run doctor:windows:rc1
++```
++
++یا از Execution Kit:
++
++```powershell
++npm run certify:execution:rc1 -- -Mode Doctor
++```
++
++خروجی JSON به‌صورت atomic نوشته می‌شود. `PASS` فقط به معنی آماده بودن پیش‌نیازهای قبل از Certification است؛ Doctor جای Windows UAT، Scale، artifact build، manual evidence یا dual-Windows evidence را نمی‌گیرد.
++
++## Safety
++
++Doctor فایل probe موقت را فقط در Rootهای صریح کاربر می‌سازد و حذف می‌کند. هیچ format، disk initialization، shutdown، USB eject، disk-full injection یا ACL destructive scenario اجرا نمی‌کند.
++
++
++## ارتباط با Recovery
++
++در cert-kit17، Doctor همچنان قبل از Primary/Peer جدید اجرا می‌شود؛ اما اگر Recovery یک PASS boundary کامل را برای صرفاً packaging قابل reuse تشخیص دهد، Resume آن phase سنگین را دوباره اجرا نمی‌کند.
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/package.json /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/package.json
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/package.json	2026-08-16 09:51:42.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/package.json	2026-08-16 10:05:46.117474542 +0000
+@@ -2,7 +2,7 @@
+   "name": "windows-workspace-agent",
+   "version": "1.0.0-rc1",
+   "private": true,
+-  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit16 release identity hardening: Source Fingerprint v2 excludes the release lockfile from frozen source identity while a deterministic releaseIdentitySha256 binds source, exact package-lock, runtime pins, version/tooling, and x64 release lane; retains cert-kit14 runtime provenance/journal retention and cert-kit13 NTFS/transactional restore hardening.",
++  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit17 certification execution recovery/resume hardening; reuses only complete release-identity-bound PASS boundaries, archives partial Primary/Peer evidence before bounded reruns, verifies chained execution history plus latest-state hash, and retains cert-kit16 Windows execution hardening, cert-kit15 release identity, cert-kit14 runtime provenance/journal retention, and cert-kit13 NTFS/transactional restore hardening.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+@@ -74,7 +74,7 @@
+     "verify:manual-evidence:rc1": "node scripts/verify-manual-evidence-rc1.cjs",
+     "certify:envelope:rc1": "node scripts/rc1-certification-envelope.cjs",
+     "certify:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-certify.ps1",
+-    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs && node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/windows-native-edge-hardening-rc1.test.cjs && node tests/certification-evidence-integrity-rc1.test.cjs && node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/runtime-trust-boundary-rc1.test.cjs && node tests/journal-durability-rc1.test.cjs && node tests/durable-state-rc1.test.cjs && node tests/hash-cache-freshness-rc1.test.cjs && node tests/ntfs-metadata-fidelity-rc1.test.cjs && node tests/state-restore-transactional-rc1.test.cjs && node tests/local-ai-runtime-provenance-rc1.test.cjs && node tests/journal-retention-anchor-rc1.test.cjs && node tests/source-fingerprint-lockfile-invariance-rc1.test.cjs && node tests/release-identity-chain-rc1.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs",
++    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs && node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/windows-native-edge-hardening-rc1.test.cjs && node tests/certification-evidence-integrity-rc1.test.cjs && node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/runtime-trust-boundary-rc1.test.cjs && node tests/journal-durability-rc1.test.cjs && node tests/durable-state-rc1.test.cjs && node tests/hash-cache-freshness-rc1.test.cjs && node tests/ntfs-metadata-fidelity-rc1.test.cjs && node tests/state-restore-transactional-rc1.test.cjs && node tests/local-ai-runtime-provenance-rc1.test.cjs && node tests/journal-retention-anchor-rc1.test.cjs && node tests/source-fingerprint-lockfile-invariance-rc1.test.cjs && node tests/release-identity-chain-rc1.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs && node tests/rc1-execution-recovery-resume.test.cjs && node tests/rc1-execution-recovery-contract.test.cjs && node tests/rc1-phase-readiness.test.cjs && node tests/rc1-execution-expected-incomplete-gate.test.cjs",
+     "verify:release-manifest:rc1": "node scripts/verify-release-manifest-rc1.cjs",
+     "finalize:rc1": "node scripts/rc1-finalize.cjs",
+     "test:concurrency": "node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs",
+@@ -85,7 +85,7 @@
+     "handoff:rc1": "node scripts/rc1-execution-handoff.cjs",
+     "manual:prefill:rc1": "node scripts/prefill-manual-evidence-rc1.cjs",
+     "stable:decision:rc1": "node scripts/rc1-stable-readiness.cjs",
+-    "test:rc1-execution": "node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs",
++    "test:rc1-execution": "node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs && node tests/rc1-execution-recovery-resume.test.cjs && node tests/rc1-execution-recovery-contract.test.cjs && node tests/rc1-phase-readiness.test.cjs && node tests/rc1-execution-expected-incomplete-gate.test.cjs",
+     "test:runtime-trust-integrity": "node tests/runtime-trust-boundary-rc1.test.cjs && node tests/local-ai-runtime-provenance-rc1.test.cjs && node tests/journal-durability-rc1.test.cjs && node tests/journal-retention-anchor-rc1.test.cjs && node tests/durable-state-rc1.test.cjs && node tests/hash-cache-freshness-rc1.test.cjs && node tests/ntfs-metadata-fidelity-rc1.test.cjs && node tests/state-restore-transactional-rc1.test.cjs",
+     "test:ntfs-metadata": "node tests/ntfs-metadata-fidelity-rc1.test.cjs",
+     "test:state-restore": "node tests/state-restore-transactional-rc1.test.cjs",
+@@ -93,7 +93,9 @@
+     "test:windows-local-ai-provenance-rc1-uat": "node tests/windows-local-ai-provenance-rc1.uat.cjs",
+     "release:identity": "node scripts/release-identity.cjs",
+     "test:release-identity": "node tests/source-fingerprint-lockfile-invariance-rc1.test.cjs && node tests/release-identity-chain-rc1.test.cjs",
+-    "doctor:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-doctor.ps1"
++    "doctor:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-doctor.ps1",
++    "recover:execution:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-execution.ps1 -Mode Recover",
++    "resume:execution:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-execution.ps1 -Mode Resume"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+@@ -152,6 +154,6 @@
+     "dataEpoch": 1,
+     "releaseCandidate": "rc1",
+     "coreFeatureAdditionsAllowed": false,
+-    "toolingRevision": "cert-kit16"
++    "toolingRevision": "cert-kit17"
+   }
+ }
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-execution-recovery.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-execution-recovery.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-execution-recovery.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-execution-recovery.cjs	2026-08-16 10:07:07.097126941 +0000
+@@ -0,0 +1,84 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++const {computeFingerprint}=require('./source-tree-fingerprint.cjs');
++const {computeReleaseIdentity}=require('./release-identity.cjs');
++const {evaluatePhase}=require('./rc1-phase-readiness.cjs');
++const {verifyHandoff}=require('./rc1-execution-handoff.cjs');
++const {evaluateVerdict}=require('./rc1-stable-readiness.cjs');
++
++const root=path.resolve(__dirname,'..');
++const PLAN_SCHEMA='workspace-agent-rc1-execution-recovery-plan-v1';
++
++function arg(name){const p=`--${name}=`;const v=process.argv.find(x=>x.startsWith(p));return v?v.slice(p.length):'';}
++function shaText(text){return crypto.createHash('sha256').update(text,'utf8').digest('hex');}
++function canonical(v){if(Array.isArray(v))return v.map(canonical);if(v&&typeof v==='object'){const o={};for(const k of Object.keys(v).sort())o[k]=canonical(v[k]);return o;}return v;}
++function stable(v){return JSON.stringify(canonical(v));}
++function shaFile(file){const h=crypto.createHash('sha256');const fd=fs.openSync(file,'r');try{const b=Buffer.allocUnsafe(1024*1024);let n;while((n=fs.readSync(fd,b,0,b.length,null))>0)h.update(b.subarray(0,n));}finally{fs.closeSync(fd);}return h.digest('hex');}
++function hashState(state){const copy={...state};delete copy.stateSha256;return shaText(stable(copy));}
++function readJson(file){try{return JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));}catch{return null;}}
++function inside(base,target){const b=path.resolve(base)+path.sep;const t=path.resolve(target);return t===path.resolve(base)||t.startsWith(b);}
++function latestFile(dir,name){if(!fs.existsSync(dir))return null;let best=null;const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(e.isFile()&&e.name===name){const s=fs.statSync(p);if(!best||s.mtimeMs>best.mtimeMs)best={file:p,mtimeMs:s.mtimeMs};}}};walk(dir);return best?.file||null;}
++function verifyStateChain(execDir){
++  const history=path.join(execDir,'execution-history.jsonl'),latest=path.join(execDir,'execution-state.json');
++  if(!fs.existsSync(history)||!fs.existsSync(latest))return{ok:false,errors:['EXECUTION_STATE_OR_HISTORY_MISSING'],states:[]};
++  const lines=fs.readFileSync(history,'utf8').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);const states=[],errors=[];let previous=null;
++  for(let i=0;i<lines.length;i++){
++    let s;try{s=JSON.parse(lines[i]);}catch{errors.push(`HISTORY_JSON_INVALID:${i+1}`);continue;}
++    const expected=hashState(s);if(String(s.stateSha256||'').toLowerCase()!==expected)errors.push(`STATE_HASH_INVALID:${i+1}`);
++    const declared=s.previousStateSha256==null?null:String(s.previousStateSha256).toLowerCase();
++    if((previous==null?declared!==null:declared!==previous))errors.push(`STATE_CHAIN_INVALID:${i+1}`);
++    previous=String(s.stateSha256||'').toLowerCase();states.push(s);
++  }
++  const l=readJson(latest);if(!l)errors.push('LATEST_STATE_INVALID_JSON');else{if(String(l.stateSha256||'').toLowerCase()!==hashState(l))errors.push('LATEST_STATE_HASH_INVALID');if(previous!==String(l.stateSha256||'').toLowerCase())errors.push('LATEST_STATE_NOT_HISTORY_TAIL');}
++  return{ok:errors.length===0,errors,states,latest:l};
++}
++function findRecordedPath(states,key){for(let i=states.length-1;i>=0;i--){const v=states[i]?.paths?.[key];if(v)return String(v);}return'';}
++function validateCertificationResult({phaseDir,role,projectRoot=root,expectedIdentity}){
++  const resultPath=latestFile(phaseDir,'rc1-certification-result.json');if(!resultPath)return{ok:false,errors:['CERTIFICATION_RESULT_MISSING']};
++  return evaluatePhase({resultPath,role,projectRoot,expectedReleaseIdentity:expectedIdentity});
++}
++function validateHandoffDir(dir,role,executionId,expectedIdentity){
++  const mpath=path.join(dir,'handoff-manifest.json');if(!fs.existsSync(mpath))return{ok:false,reason:'HANDOFF_MANIFEST_MISSING'};
++  const verified=verifyHandoff({dir,manifestPath:mpath,requireCurrentSource:true});const errors=[...(verified.errors||[])];
++  if(String(verified.role||'')!==role)errors.push('HANDOFF_ROLE_MISMATCH');if(String(verified.executionId||'')!==String(executionId))errors.push('HANDOFF_EXECUTION_ID_MISMATCH');
++  const m=readJson(mpath);if(expectedIdentity&&String(m?.releaseIdentitySha256||'').toLowerCase()!==String(expectedIdentity).toLowerCase())errors.push('HANDOFF_RELEASE_IDENTITY_MISMATCH');
++  return{ok:errors.length===0,errors,manifestPath:mpath,handoffId:verified.handoffId||m?.handoffId||null};
++}
++function validateFinal(execDir,executionId,states,projectRoot,identity,sourceFingerprint){
++  const finalDir=path.join(execDir,'final-certification');const decisionPath=path.join(finalDir,'stable-promotion-decision.json');const verdictPath=path.join(finalDir,'rc1-final-verdict.json');if(!fs.existsSync(decisionPath)||!fs.existsSync(verdictPath))return{ok:false,reason:'FINAL_DECISION_OR_VERDICT_MISSING'};const decision=readJson(decisionPath),verdict=readJson(verdictPath);if(!decision||!verdict)return{ok:false,reason:'FINAL_JSON_INVALID'};const pkg=readJson(path.join(projectRoot,'package.json'));const errors=[];
++  if(String(decision.decision||'')!=='PROMOTE_ALLOWED'||decision.ok!==true)errors.push('FINAL_DECISION_NOT_ALLOW');if(String(decision.version||'')!==String(pkg.version||''))errors.push('FINAL_DECISION_VERSION_MISMATCH');if(String(decision.toolingRevision||'')!==String(pkg.workspaceAgentRelease?.toolingRevision||''))errors.push('FINAL_DECISION_TOOLING_MISMATCH');if(String(decision.sourceFingerprint||'')!==String(sourceFingerprint||''))errors.push('FINAL_DECISION_SOURCE_MISMATCH');if(identity&&String(decision.releaseIdentitySha256||'').toLowerCase()!==String(identity).toLowerCase())errors.push('FINAL_DECISION_RELEASE_IDENTITY_MISMATCH');
++  if(decision.verdict?.sha256&&String(decision.verdict.sha256).toLowerCase()!==shaFile(verdictPath))errors.push('FINAL_VERDICT_HASH_MISMATCH');const envelopePath=decision.envelope?.path?path.resolve(String(decision.envelope.path)):'';if(!envelopePath||!fs.existsSync(envelopePath))errors.push('FINAL_ENVELOPE_MISSING');else if(decision.envelope?.sha256&&String(decision.envelope.sha256).toLowerCase()!==shaFile(envelopePath))errors.push('FINAL_ENVELOPE_HASH_MISMATCH');
++  if(envelopePath&&fs.existsSync(envelopePath)){const envelope=readJson(envelopePath);const ev=evaluateVerdict(verdict,{expectedVersion:pkg.version,expectedTooling:pkg.workspaceAgentRelease?.toolingRevision||'',envelope,currentFingerprint:sourceFingerprint,currentReleaseIdentity:identity||''});if(!ev.ok)errors.push(...ev.reasons.map(x=>`FINAL_VERDICT_RECHECK:${x}`));}
++  const delivery=findRecordedPath(states,'finalDelivery'),expectedDeliverySha=findRecordedPath(states,'finalDeliverySha256');if(!delivery||!expectedDeliverySha||!fs.existsSync(delivery))errors.push('FINAL_DELIVERY_STATE_BINDING_MISSING');else if(shaFile(delivery)!==String(expectedDeliverySha).toLowerCase())errors.push('FINAL_DELIVERY_HASH_MISMATCH');
++  if(errors.length)return{ok:false,reason:'FINAL_REVALIDATION_FAILED',errors};return{ok:true,decisionPath,verdictPath,envelopePath,delivery,deliverySha256:shaFile(delivery)};
++}
++function inspectExecution({executionDir,projectRoot=root,expectedReleaseIdentity,requireCurrentIdentity=true}={}){
++  if(!executionDir)throw new Error('EXECUTION_DIR_REQUIRED');const execDir=path.resolve(executionDir);if(!fs.existsSync(execDir)||!fs.statSync(execDir).isDirectory())throw new Error('EXECUTION_DIR_NOT_FOUND');
++  const pkg=JSON.parse(fs.readFileSync(path.join(projectRoot,'package.json'),'utf8'));const fp=computeFingerprint(projectRoot);let identity=expectedReleaseIdentity===undefined?null:expectedReleaseIdentity;
++  if(expectedReleaseIdentity===undefined){try{identity=computeReleaseIdentity(projectRoot).releaseIdentitySha256;}catch{identity=null;}}
++  const chain=verifyStateChain(execDir);const executionId=chain.latest?.executionId||path.basename(execDir);const base={schemaVersion:PLAN_SCHEMA,version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,executionId,createdAt:new Date().toISOString(),sourceFingerprint:fp.sha256,releaseIdentitySha256:identity||null,stateChain:{ok:chain.ok,errors:chain.errors,latestStage:chain.latest?.stage||null,latestStateSha256:chain.latest?.stateSha256||null},action:'BLOCK',reason:'UNKNOWN',resumeRole:null,invalidatePaths:[],context:{}};
++  if(!chain.ok){base.action='BLOCK_STATE_CHAIN_INVALID';base.reason='Execution state/history integrity failed; do not trust recorded paths or reuse evidence.';return sealPlan(base);}
++  if(requireCurrentIdentity&&!identity){base.action='RERUN_PRIMARY_CERTIFICATION';base.reason='Current release identity is unavailable; PASS evidence cannot be reused safely.';base.resumeRole='primary';const p=path.join(execDir,'primary-certification');if(fs.existsSync(p))base.invalidatePaths.push(p);return sealPlan(base);}
++  const final=validateFinal(execDir,executionId,chain.states,projectRoot,identity,fp.sha256);if(final.ok){base.action='PROMOTION_COMPLETE';base.reason='Final promotion evidence and delivery are already complete.';base.context={...base.context,...final};return sealPlan(base);}
++  const recordedFinalizePrimary=findRecordedPath(chain.states,'primaryHandoff'),recordedFinalizePeer=findRecordedPath(chain.states,'peerReturn'),recordedManual=findRecordedPath(chain.states,'manualEvidence');
++  if(recordedFinalizePrimary&&recordedFinalizePeer&&recordedManual&&String(chain.latest?.stage||'').match(/^(FINALIZE|PROMOTION)/)){base.action='RESUME_FINALIZE';base.reason='A finalization attempt was interrupted; rerun only deterministic final verification/promotion from the recorded inputs.';base.resumeRole='finalize';base.context={primaryHandoff:recordedFinalizePrimary,peerReturn:recordedFinalizePeer,manualEvidence:recordedManual};return sealPlan(base);}
++  const primaryHandoffDir=path.join(execDir,'primary-handoff');const primaryHandoff=validateHandoffDir(primaryHandoffDir,'primary',executionId,identity);const recordedPrimaryZip=findRecordedPath(chain.states,'primaryHandoff');
++  const peerReturnDir=path.join(execDir,'peer-return');const peerReturn=validateHandoffDir(peerReturnDir,'peer',executionId,identity);const recordedPeerZip=findRecordedPath(chain.states,'peerReturn');
++  const finalPrimaryImport=path.join(execDir,'final-primary-import'),finalPeerImport=path.join(execDir,'final-peer-import');
++  if(fs.existsSync(finalPrimaryImport)&&fs.existsSync(finalPeerImport)){base.action='RESUME_FINALIZE';base.reason='Finalization imports exist but promotion is incomplete; rerun only deterministic final verification/promotion.';base.resumeRole='finalize';base.context={primaryHandoff:findRecordedPath(chain.states,'primaryHandoff')||'',peerReturn:findRecordedPath(chain.states,'peerReturn')||'',manualEvidence:findRecordedPath(chain.states,'manualEvidence')||''};return sealPlan(base);}
++  if(peerReturn.ok){base.action='PEER_COMPLETE_RETURN_TO_PRIMARY';base.reason='Peer return package is complete; no peer certification rerun is needed.';base.resumeRole='peer';base.context={peerReturn:recordedPeerZip||'',peerReturnDir};return sealPlan(base);}
++  const peerCert=validateCertificationResult({phaseDir:path.join(execDir,'peer-certification'),role:'peer',projectRoot,expectedIdentity:identity});
++  if(peerCert.ok){base.action='RESUME_PEER_RETURN';base.reason='Peer certification PASS is complete; reuse it and rebuild only peer return packaging.';base.resumeRole='peer';base.context={primaryHandoff:recordedPrimaryZip||findRecordedPath(chain.states,'primaryHandoff')||'',peerResult:peerCert.resultPath,peerReport:peerCert.reportPath};return sealPlan(base);}
++  if(primaryHandoff.ok){base.action='PRIMARY_COMPLETE_AWAIT_PEER';base.reason='Primary handoff is complete; no Primary rerun is needed. Move the handoff to the other Windows family.';base.resumeRole='primary';base.context={primaryHandoff:recordedPrimaryZip||'',primaryHandoffDir};return sealPlan(base);}
++  if(findRecordedPath(chain.states,'primaryHandoff')){
++    const p=path.join(execDir,'peer-certification');if(fs.existsSync(p))base.invalidatePaths.push(p);base.action='RERUN_PEER_CERTIFICATION';base.reason='Primary handoff was imported but peer PASS evidence is absent/invalid; archive partial peer evidence and rerun peer certification only.';base.resumeRole='peer';base.context={primaryHandoff:recordedPrimaryZip||''};return sealPlan(base);
++  }
++  const primaryCert=validateCertificationResult({phaseDir:path.join(execDir,'primary-certification'),role:'primary',projectRoot,expectedIdentity:identity});
++  if(primaryCert.ok){base.action='RESUME_PRIMARY_HANDOFF';base.reason='Primary certification PASS is complete; reuse it and rebuild only handoff packaging.';base.resumeRole='primary';base.context={primaryResult:primaryCert.resultPath,primaryReport:primaryCert.reportPath};return sealPlan(base);}
++  const p=path.join(execDir,'primary-certification');if(fs.existsSync(p))base.invalidatePaths.push(p);base.action='RERUN_PRIMARY_CERTIFICATION';base.reason='No reusable Primary PASS boundary exists; archive partial Primary evidence and rerun certification.';base.resumeRole='primary';return sealPlan(base);
++}
++function sealPlan(plan){const copy={...plan};delete copy.planSha256;plan.planSha256=shaText(stable(copy));return plan;}
++function main(){try{const hashFile=arg('hash-state-file');if(hashFile){const state=readJson(path.resolve(hashFile));if(!state)throw new Error('HASH_STATE_FILE_INVALID');console.log(hashState(state));return;}const dir=arg('dir');if(!dir)throw new Error('Use --dir=<execution-directory>');const plan=inspectExecution({executionDir:path.resolve(dir)});const out=arg('out');if(out){const p=path.resolve(out);fs.mkdirSync(path.dirname(p),{recursive:true});const tmp=p+'.tmp-'+process.pid+'-'+Date.now();fs.writeFileSync(tmp,JSON.stringify(plan,null,2));fs.renameSync(tmp,p);}console.log(JSON.stringify(plan,null,2));if(String(plan.action).startsWith('BLOCK_'))process.exitCode=1;}catch(e){console.error(JSON.stringify({ok:false,code:'RECOVERY_INSPECTION_FAILED',message:String(e.message||e)},null,2));process.exitCode=1;}}
++if(require.main===module)main();
++module.exports={PLAN_SCHEMA,hashState,verifyStateChain,validateCertificationResult,inspectExecution,sealPlan};
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-finalize.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-finalize.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-finalize.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-finalize.cjs	2026-08-16 10:00:54.847867057 +0000
+@@ -8,7 +8,7 @@
+ function meta(p){const a=path.resolve(root,p),s=fs.statSync(a);return{path:a,bytes:s.size,sha256:shaFile(a)}}
+ function fail(code,message,extra={}){console.error(JSON.stringify({ok:false,code,message,...extra},null,2));process.exit(1)}
+ const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+-if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit16'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT15_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit16 معتبر است.');
++if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit17'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT15_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit17 معتبر است.');
+ const artifactReport=arg('artifact-report'),peerReport=arg('peer-report'),releaseManifest=arg('release-manifest'),manualEvidence=arg('manual-evidence');
+ for(const [name,value] of Object.entries({artifactReport,peerReport,releaseManifest,manualEvidence}))if(!value||!fs.existsSync(path.resolve(root,value)))fail('FINALIZATION_INPUT_REQUIRED',`${name} معتبر لازم است.`,{name,value});
+ const requireSigning=process.argv.includes('--require-signing');
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-phase-readiness.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-phase-readiness.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-phase-readiness.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-phase-readiness.cjs	2026-08-16 10:06:46.039250267 +0000
+@@ -0,0 +1,57 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++const {computeFingerprint}=require('./source-tree-fingerprint.cjs');
++const {computeReleaseIdentity}=require('./release-identity.cjs');
++const {verifyBundle}=require('./certification-evidence-bundle.cjs');
++const root=path.resolve(__dirname,'..');
++function arg(name){const p=`--${name}=`;const v=process.argv.find(x=>x.startsWith(p));return v?v.slice(p.length):'';}
++function readJson(file){try{return JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));}catch{return null;}}
++function shaFile(file){return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');}
++function resolveRecorded(value,base){if(!value)return'';return path.isAbsolute(String(value))?path.resolve(String(value)):path.resolve(base,String(value));}
++function allowedIncomplete(role){return new Set(role==='primary'?['DUAL_WINDOWS_EVIDENCE_REQUIRED','MANUAL_EVIDENCE_REQUIRED']:role==='peer'?['MANUAL_EVIDENCE_REQUIRED']:[]);}
++function evaluatePhase({resultPath,role,projectRoot=root,expectedReleaseIdentity}={}){
++  if(!['primary','peer'].includes(role))return{ok:false,errors:['PHASE_ROLE_INVALID']};
++  if(!resultPath||!fs.existsSync(resultPath))return{ok:false,errors:['PHASE_RESULT_MISSING'],resultPath};
++  const pkg=readJson(path.join(projectRoot,'package.json'));const result=readJson(resultPath);if(!pkg||!result)return{ok:false,errors:['PHASE_RESULT_OR_PACKAGE_INVALID_JSON'],resultPath};
++  const errors=[],warnings=[];let identity=expectedReleaseIdentity;
++  if(identity===undefined){try{identity=computeReleaseIdentity(projectRoot).releaseIdentitySha256;}catch{identity='';}}
++  const fp=computeFingerprint(projectRoot);const resultDir=path.dirname(path.resolve(resultPath));
++  if(String(result.version||'')!==String(pkg.version||''))errors.push('RESULT_VERSION_MISMATCH');
++  if(String(result.toolingRevision||'')!==String(pkg.workspaceAgentRelease?.toolingRevision||''))errors.push('RESULT_TOOLING_MISMATCH');
++  if(!['PASS','INCOMPLETE'].includes(String(result.overall||'')))errors.push(`RESULT_STATUS_INVALID:${String(result.overall||'')}`);
++  if(!identity)errors.push('CURRENT_RELEASE_IDENTITY_UNAVAILABLE');else if(String(result.releaseIdentitySha256||'').toLowerCase()!==String(identity).toLowerCase())errors.push('RESULT_RELEASE_IDENTITY_MISMATCH');
++  const reportPath=resolveRecorded(result.certificationReport,resultDir);const report=reportPath&&fs.existsSync(reportPath)?readJson(reportPath):null;
++  if(!report)errors.push('CERTIFICATION_REPORT_MISSING_OR_INVALID');else{
++    if(String(report.overall||'')!=='PASS')errors.push(`REPORT_NOT_PASS:${String(report.overall||'')}`);
++    if(String(report.workspaceAgentVersion||'')!==String(pkg.version||''))errors.push('REPORT_VERSION_MISMATCH');
++    if(String(report.toolingRevision||'')!==String(pkg.workspaceAgentRelease?.toolingRevision||''))errors.push('REPORT_TOOLING_MISMATCH');
++    if(report.featureFreeze!==true)errors.push('REPORT_FEATURE_FREEZE_MISMATCH');
++    if(String(report.sourceFingerprint?.sha256||report.sourceFingerprint||'')!==String(fp.sha256||''))errors.push('REPORT_SOURCE_FINGERPRINT_MISMATCH');
++    if(identity&&String(report.releaseIdentitySha256||'').toLowerCase()!==String(identity).toLowerCase())errors.push('REPORT_RELEASE_IDENTITY_MISMATCH');
++  }
++  if(report&&result.certificationEvidenceId&&report.evidenceId&&String(result.certificationEvidenceId)!==String(report.evidenceId))errors.push('CERTIFICATION_EVIDENCE_ID_MISMATCH');
++  const lockPath=path.join(projectRoot,'package-lock.json');if(fs.existsSync(lockPath)){const lockSha=shaFile(lockPath);if(result.packageLockSha256&&String(result.packageLockSha256).toLowerCase()!==lockSha)errors.push('RESULT_LOCK_HASH_MISMATCH');if(report?.packageLockSha256&&String(report.packageLockSha256).toLowerCase()!==lockSha)errors.push('REPORT_LOCK_HASH_MISMATCH');}
++  const bundlePath=resolveRecorded(result.certificationEvidenceBundle,resultDir);let bundleVerification=null;
++  if(!bundlePath||!fs.existsSync(bundlePath))errors.push('CERTIFICATION_EVIDENCE_BUNDLE_MISSING');else{
++    const declared=report?.evidenceBundle||{};const reportDir=reportPath?path.dirname(reportPath):path.dirname(bundlePath);const declaredPath=declared.file?path.resolve(reportDir,String(declared.file)):bundlePath;if(path.resolve(bundlePath)!==declaredPath)errors.push('RESULT_REPORT_EVIDENCE_BUNDLE_PATH_MISMATCH');
++    bundleVerification=verifyBundle(bundlePath,{sessionDir:reportDir,expectedSha256:String(declared.sha256||''),expectedFiles:declared.files??null,expectedAggregate:String(declared.aggregateSha256||'')});if(!bundleVerification.ok)errors.push(...bundleVerification.errors.map(x=>`EVIDENCE_${x}`));
++  }
++  const envelopePath=resolveRecorded(result.envelope,resultDir);const envelope=envelopePath&&fs.existsSync(envelopePath)?readJson(envelopePath):null;
++  if(!envelope)errors.push('RC1_ENVELOPE_MISSING_OR_INVALID');else{
++    if(String(envelope.version||'')!==String(pkg.version||''))errors.push('ENVELOPE_VERSION_MISMATCH');
++    if(String(envelope.toolingRevision||'')!==String(pkg.workspaceAgentRelease?.toolingRevision||''))errors.push('ENVELOPE_TOOLING_MISMATCH');
++    if(identity&&String(envelope.releaseIdentity?.sha256||'').toLowerCase()!==String(identity).toLowerCase())errors.push('ENVELOPE_RELEASE_IDENTITY_MISMATCH');
++    if(String(result.overall||'')!==String(envelope.overall||''))errors.push('RESULT_ENVELOPE_STATUS_MISMATCH');
++    if(envelope.inputs?.certificationReport?.sha256&&reportPath&&String(envelope.inputs.certificationReport.sha256).toLowerCase()!==shaFile(reportPath))errors.push('ENVELOPE_REPORT_HASH_MISMATCH');
++    if(envelope.inputs?.certificationEvidenceBundle?.sha256&&bundlePath&&String(envelope.inputs.certificationEvidenceBundle.sha256).toLowerCase()!==shaFile(bundlePath))errors.push('ENVELOPE_EVIDENCE_HASH_MISMATCH');
++    const hard=Array.isArray(envelope.checks?.hardFailures)?envelope.checks.hardFailures:[];if(hard.length)errors.push(...hard.map(x=>`ENVELOPE_HARD_FAILURE:${x}`));
++    const inc=Array.isArray(envelope.checks?.incomplete)?envelope.checks.incomplete:[];const allowed=allowedIncomplete(role);for(const reason of inc)if(!allowed.has(String(reason)))errors.push(`UNEXPECTED_INCOMPLETE:${reason}`);
++    if(role==='primary'&&String(envelope.overall||'')==='INCOMPLETE'&&!inc.includes('DUAL_WINDOWS_EVIDENCE_REQUIRED'))warnings.push('PRIMARY_ENVELOPE_WITHOUT_DUAL_WINDOWS_MARKER');
++    if(!['PASS','INCOMPLETE'].includes(String(envelope.overall||'')))errors.push(`ENVELOPE_STATUS_INVALID:${String(envelope.overall||'')}`);
++  }
++  const ready=errors.length===0;return{ok:ready,status:ready?'READY_FOR_HANDOFF':'BLOCKED',role,resultPath:path.resolve(resultPath),reportPath,envelopePath,bundlePath,releaseIdentitySha256:identity||null,sourceFingerprint:fp.sha256,resultOverall:result?.overall||null,envelopeOverall:envelope?.overall||null,expectedIncomplete:[...allowedIncomplete(role)],actualIncomplete:Array.isArray(envelope?.checks?.incomplete)?envelope.checks.incomplete:[],warnings,errors,resultSha256:shaFile(resultPath),reportSha256:reportPath&&fs.existsSync(reportPath)?shaFile(reportPath):null,bundleVerification};
++}
++function main(){try{const result=arg('result'),role=arg('role');const r=evaluatePhase({resultPath:path.resolve(result),role});const out=arg('out');if(out){const p=path.resolve(out);fs.mkdirSync(path.dirname(p),{recursive:true});const tmp=p+'.tmp-'+process.pid+'-'+Date.now();fs.writeFileSync(tmp,JSON.stringify(r,null,2));fs.renameSync(tmp,p);}console.log(JSON.stringify(r,null,2));if(!r.ok)process.exitCode=2;}catch(e){console.error(JSON.stringify({ok:false,status:'BLOCKED',errors:['PHASE_READINESS_EXCEPTION'],message:String(e.message||e)},null,2));process.exitCode=1;}}
++if(require.main===module)main();
++module.exports={evaluatePhase,allowedIncomplete};
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-stable-readiness.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-stable-readiness.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-stable-readiness.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/rc1-stable-readiness.cjs	2026-08-16 10:00:54.847914577 +0000
+@@ -6,6 +6,6 @@
+ const root=path.resolve(__dirname,'..');
+ function arg(name){const p=`--${name}=`;const v=process.argv.find(x=>x.startsWith(p));return v?v.slice(p.length):''}
+ function shaFile(p){return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')}
+-function evaluateVerdict(verdict,{expectedVersion='1.0.0-rc1',expectedTooling='cert-kit16',envelope=null,currentFingerprint='',currentReleaseIdentity=''}={}){const reasons=[];if(!verdict||verdict.overall!=='PASS')reasons.push('FINAL_VERDICT_NOT_PASS');if(String(verdict?.version||'')!==expectedVersion)reasons.push('FINAL_VERDICT_VERSION_MISMATCH');if(String(verdict?.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_VERDICT_TOOLING_MISMATCH');const copy=verdict?{...verdict}:{};delete copy.finalizationId;const id=crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');if(!verdict?.finalizationId||id!==String(verdict.finalizationId))reasons.push('FINALIZATION_ID_MISMATCH');if(envelope){if(envelope.overall!=='PASS')reasons.push('FINAL_ENVELOPE_NOT_PASS');if(String(envelope.version||'')!==expectedVersion)reasons.push('FINAL_ENVELOPE_VERSION_MISMATCH');if(String(envelope.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_ENVELOPE_TOOLING_MISMATCH');if(currentFingerprint&&String(envelope.source?.fingerprint||'')!==String(currentFingerprint))reasons.push('FINAL_ENVELOPE_SOURCE_MISMATCH');if(currentReleaseIdentity&&String(envelope.releaseIdentity?.sha256||'')!==String(currentReleaseIdentity))reasons.push('FINAL_ENVELOPE_RELEASE_IDENTITY_MISMATCH')}return{ok:reasons.length===0,decision:reasons.length?'BLOCKED':'PROMOTE_ALLOWED',reasons,finalizationId:verdict?.finalizationId||null,evidenceId:envelope?.evidenceId||verdict?.envelope?.evidenceId||null}}
++function evaluateVerdict(verdict,{expectedVersion='1.0.0-rc1',expectedTooling='cert-kit17',envelope=null,currentFingerprint='',currentReleaseIdentity=''}={}){const reasons=[];if(!verdict||verdict.overall!=='PASS')reasons.push('FINAL_VERDICT_NOT_PASS');if(String(verdict?.version||'')!==expectedVersion)reasons.push('FINAL_VERDICT_VERSION_MISMATCH');if(String(verdict?.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_VERDICT_TOOLING_MISMATCH');const copy=verdict?{...verdict}:{};delete copy.finalizationId;const id=crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');if(!verdict?.finalizationId||id!==String(verdict.finalizationId))reasons.push('FINALIZATION_ID_MISMATCH');if(envelope){if(envelope.overall!=='PASS')reasons.push('FINAL_ENVELOPE_NOT_PASS');if(String(envelope.version||'')!==expectedVersion)reasons.push('FINAL_ENVELOPE_VERSION_MISMATCH');if(String(envelope.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_ENVELOPE_TOOLING_MISMATCH');if(currentFingerprint&&String(envelope.source?.fingerprint||'')!==String(currentFingerprint))reasons.push('FINAL_ENVELOPE_SOURCE_MISMATCH');if(currentReleaseIdentity&&String(envelope.releaseIdentity?.sha256||'')!==String(currentReleaseIdentity))reasons.push('FINAL_ENVELOPE_RELEASE_IDENTITY_MISMATCH')}return{ok:reasons.length===0,decision:reasons.length?'BLOCKED':'PROMOTE_ALLOWED',reasons,finalizationId:verdict?.finalizationId||null,evidenceId:envelope?.evidenceId||verdict?.envelope?.evidenceId||null}}
+ function main(){const verdictPath=path.resolve(root,arg('verdict')||'final-certification/rc1-final-verdict.json');const out=path.resolve(root,arg('out')||path.join(path.dirname(verdictPath),'stable-promotion-decision.json'));if(!fs.existsSync(verdictPath)){console.error(JSON.stringify({ok:false,decision:'BLOCKED',reasons:['FINAL_VERDICT_MISSING'],verdictPath},null,2));process.exit(1)}const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));const verdict=JSON.parse(fs.readFileSync(verdictPath,'utf8'));const envelopePath=path.resolve(verdict.envelope?.path||'');if(!envelopePath||!fs.existsSync(envelopePath)){console.error(JSON.stringify({ok:false,decision:'BLOCKED',reasons:['FINAL_ENVELOPE_MISSING']},null,2));process.exit(1)}if(verdict.envelope?.sha256&&String(verdict.envelope.sha256).toLowerCase()!==shaFile(envelopePath)){console.error(JSON.stringify({ok:false,decision:'BLOCKED',reasons:['FINAL_ENVELOPE_HASH_MISMATCH']},null,2));process.exit(1)}const envelope=JSON.parse(fs.readFileSync(envelopePath,'utf8'));let fp='';try{fp=JSON.parse(cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd:root,encoding:'utf8'})).sha256}catch{}let releaseIdentity='';try{releaseIdentity=computeReleaseIdentity(root).releaseIdentitySha256}catch{}const result=evaluateVerdict(verdict,{expectedVersion:pkg.version,expectedTooling:pkg.workspaceAgentRelease?.toolingRevision,envelope,currentFingerprint:fp,currentReleaseIdentity:releaseIdentity});const decision={schemaVersion:'workspace-agent-stable-promotion-decision-v1',createdAt:new Date().toISOString(),version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision,decision:result.decision,ok:result.ok,reasons:result.reasons,finalizationId:result.finalizationId,evidenceId:result.evidenceId,sourceFingerprint:fp,releaseIdentitySha256:releaseIdentity,verdict:{path:verdictPath,sha256:shaFile(verdictPath)},envelope:{path:envelopePath,sha256:shaFile(envelopePath)}};fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(decision,null,2));console.log(JSON.stringify({...result,out},null,2));if(!result.ok)process.exit(1)}
+ if(require.main===module)main();module.exports={evaluateVerdict};
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/verify-rc1-source.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/verify-rc1-source.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/verify-rc1-source.cjs	2026-08-16 09:52:04.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/verify-rc1-source.cjs	2026-08-16 10:09:45.819129420 +0000
+@@ -7,12 +7,12 @@
+ const rc=pkg.workspaceAgentRelease||{};
+ if(pkg.version!=='1.0.0-rc1')fail('RC1_VERSION_REQUIRED','Source candidate باید دقیقاً version=1.0.0-rc1 باشد.',{version:pkg.version});
+ if(rc.channel!=='rc'||rc.releaseCandidate!=='rc1'||rc.featureFreeze!==true||rc.coreFeatureAdditionsAllowed!==false)fail('RC1_FREEZE_CONTRACT_INVALID','RC channel / feature-freeze contract نامعتبر است.',{workspaceAgentRelease:rc});
+-if(rc.toolingRevision!=='cert-kit16')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit16 باشد.',{toolingRevision:rc.toolingRevision});
++if(rc.toolingRevision!=='cert-kit17')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit17 باشد.',{toolingRevision:rc.toolingRevision});
+ if(rc.baselineVersion!=='0.9.8'||compareVersions(pkg.version,rc.baselineVersion)<=0)fail('RC1_BASELINE_INVALID','Baseline باید 0.9.8 و RC جدیدتر از آن باشد.',{baseline:rc.baselineVersion,version:pkg.version});
+ if(Number(rc.dataEpoch)!==Number(DATA_EPOCH))fail('RC1_DATA_EPOCH_MISMATCH','Data Epoch package با Update Guard تطابق ندارد.',{packageEpoch:rc.dataEpoch,runtimeEpoch:DATA_EPOCH});
+ if(pkg.build?.appId!=='com.workspaceagent.windows')fail('RC1_APP_ID_CHANGED','App ID در RC نباید تغییر کند.',{appId:pkg.build?.appId});
+ if(pkg.engines?.node!=='24.14.1'||pkg.engines?.npm!=='11.11.0'||pkg.packageManager!=='npm@11.11.0')fail('RC1_RUNTIME_PINS_CHANGED','Runtime pins RC با lane مصوب تطابق ندارد.',{engines:pkg.engines,packageManager:pkg.packageManager});
+-for(const file of ['scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/rc1-finalize.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/verify-release-manifest-rc1.cjs','scripts/check-source-syntax.cjs','scripts/certification-evidence-bundle.cjs','scripts/run-source-tests.cjs','scripts/windows-rc1-execution.ps1','scripts/windows-rc1-doctor.ps1','scripts/rc1-execution-handoff.cjs','scripts/prefill-manual-evidence-rc1.cjs','scripts/rc1-stable-readiness.cjs','scripts/release-identity.cjs','tests/windows-native-edge-hardening-rc1.test.cjs','tests/windows-native-edge-rc1.uat.cjs','tests/runtime-trust-boundary-rc1.test.cjs','tests/local-ai-runtime-provenance-rc1.test.cjs','tests/windows-local-ai-provenance-rc1.uat.cjs','tests/journal-durability-rc1.test.cjs','tests/journal-retention-anchor-rc1.test.cjs','tests/durable-state-rc1.test.cjs','tests/hash-cache-freshness-rc1.test.cjs','tests/ntfs-metadata-fidelity-rc1.test.cjs','tests/state-restore-transactional-rc1.test.cjs','tests/windows-ntfs-metadata-rc1.uat.cjs','electron/services/windows-ntfs-metadata.cjs','electron/services/runtime-trust-policy.cjs','electron/services/local-ai-runtime-provenance.cjs','electron/services/durable-state.cjs','docs/LOCAL_AI_RUNTIME_PROVENANCE_v1.0.0-rc1-cert-kit14_FA.md','docs/JOURNAL_RETENTION_MODEL_v1.0.0-rc1-cert-kit14_FA.md','docs/V1_PRODUCT_CONTRACTS_v1.0.0-rc1-cert-kit14_FA.md','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json','docs/RELEASE_IDENTITY_CHAIN_v1.0.0-rc1-cert-kit15_FA.md','docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit16_FA.md','tests/source-fingerprint-lockfile-invariance-rc1.test.cjs','tests/release-identity-chain-rc1.test.cjs'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
+-for(const s of ['check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','finalize:rc1','verify:manual-evidence:rc1','verify:release-manifest:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit','test:windows-native-edge-rc1-uat','test:windows-ntfs-metadata-rc1-uat','test:windows-local-ai-provenance-rc1-uat','test:ntfs-metadata','test:state-restore','verify:cert-evidence:rc1','certify:execution:rc1','handoff:rc1','manual:prefill:rc1','stable:decision:rc1','doctor:windows:rc1','test:rc1-execution','test:runtime-trust-integrity','release:identity','test:release-identity'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
++for(const file of ['scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/rc1-finalize.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/verify-release-manifest-rc1.cjs','scripts/check-source-syntax.cjs','scripts/certification-evidence-bundle.cjs','scripts/run-source-tests.cjs','scripts/windows-rc1-execution.ps1','scripts/windows-rc1-doctor.ps1','scripts/rc1-execution-handoff.cjs','scripts/prefill-manual-evidence-rc1.cjs','scripts/rc1-stable-readiness.cjs','scripts/release-identity.cjs','scripts/rc1-execution-recovery.cjs','scripts/rc1-phase-readiness.cjs','tests/windows-native-edge-hardening-rc1.test.cjs','tests/windows-native-edge-rc1.uat.cjs','tests/runtime-trust-boundary-rc1.test.cjs','tests/local-ai-runtime-provenance-rc1.test.cjs','tests/windows-local-ai-provenance-rc1.uat.cjs','tests/journal-durability-rc1.test.cjs','tests/journal-retention-anchor-rc1.test.cjs','tests/durable-state-rc1.test.cjs','tests/hash-cache-freshness-rc1.test.cjs','tests/ntfs-metadata-fidelity-rc1.test.cjs','tests/state-restore-transactional-rc1.test.cjs','tests/windows-ntfs-metadata-rc1.uat.cjs','electron/services/windows-ntfs-metadata.cjs','electron/services/runtime-trust-policy.cjs','electron/services/local-ai-runtime-provenance.cjs','electron/services/durable-state.cjs','docs/LOCAL_AI_RUNTIME_PROVENANCE_v1.0.0-rc1-cert-kit14_FA.md','docs/JOURNAL_RETENTION_MODEL_v1.0.0-rc1-cert-kit14_FA.md','docs/V1_PRODUCT_CONTRACTS_v1.0.0-rc1-cert-kit14_FA.md','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json','docs/RELEASE_IDENTITY_CHAIN_v1.0.0-rc1-cert-kit15_FA.md','docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit17_FA.md','docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md','tests/rc1-execution-recovery-resume.test.cjs','tests/rc1-execution-recovery-contract.test.cjs','tests/rc1-phase-readiness.test.cjs','tests/rc1-execution-expected-incomplete-gate.test.cjs','tests/source-fingerprint-lockfile-invariance-rc1.test.cjs','tests/release-identity-chain-rc1.test.cjs'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
++for(const s of ['check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','finalize:rc1','verify:manual-evidence:rc1','verify:release-manifest:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit','test:windows-native-edge-rc1-uat','test:windows-ntfs-metadata-rc1-uat','test:windows-local-ai-provenance-rc1-uat','test:ntfs-metadata','test:state-restore','verify:cert-evidence:rc1','certify:execution:rc1','handoff:rc1','manual:prefill:rc1','stable:decision:rc1','doctor:windows:rc1','test:rc1-execution','test:runtime-trust-integrity','release:identity','test:release-identity','recover:execution:rc1','resume:execution:rc1'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
+ if(compareVersions('1.0.0-rc1','1.0.0')>=0)fail('RC1_SEMVER_ORDER_INVALID','RC باید از نسخه stable همان ورژن کوچک‌تر باشد.');
+ console.log('verify-rc1-source PASS',{version:pkg.version,channel:rc.channel,featureFreeze:rc.featureFreeze,baseline:rc.baselineVersion,dataEpoch:DATA_EPOCH,toolingRevision:rc.toolingRevision,lockfile:fs.existsSync(path.join(root,'package-lock.json'))?'present':'pending'});
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-doctor.ps1 /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-doctor.ps1
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-doctor.ps1	2026-08-16 09:51:12.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-doctor.ps1	2026-08-16 10:00:54.847991422 +0000
+@@ -11,7 +11,7 @@
+ Set-Location (Split-Path -Parent $PSScriptRoot)
+ $project=(Get-Location).Path
+ $pkg=Get-Content package.json -Raw|ConvertFrom-Json
+-if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit16'){throw 'Doctor فقط برای v1.0.0-rc1 / cert-kit16 معتبر است.'}
++if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit17'){throw 'Doctor فقط برای v1.0.0-rc1 / cert-kit17 معتبر است.'}
+ $checks=New-Object System.Collections.Generic.List[object]
+ function Add-Check([string]$name,[string]$status,[object]$detail=$null){
+   $checks.Add([pscustomobject]@{name=$name;status=$status;detail=$detail})
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-execution.ps1 /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-execution.ps1
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-execution.ps1	2026-08-16 09:50:54.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/scripts/windows-rc1-execution.ps1	2026-08-16 10:05:34.250919552 +0000
+@@ -1,5 +1,5 @@
+ param(
+-  [ValidateSet('Status','Doctor','Primary','Peer','PrepareEvidence','Finalize')][string]$Mode='Status',
++  [ValidateSet('Status','Doctor','Recover','Resume','Primary','Peer','PrepareEvidence','Finalize')][string]$Mode='Status',
+   [string]$RootA=$env:WA_CERT_ROOT_A,
+   [string]$RootB=$env:WA_CERT_ROOT_B,
+   [string]$ScaleRoot=$env:WA_CERT_SCALE_ROOT,
+@@ -19,7 +19,7 @@
+ Set-Location (Split-Path -Parent $PSScriptRoot)
+ $project=(Get-Location).Path
+ $pkg=Get-Content package.json -Raw|ConvertFrom-Json
+-if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit16'){throw 'Execution Kit فقط برای v1.0.0-rc1 / cert-kit16 معتبر است.'}
++if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit17'){throw 'Execution Kit فقط برای v1.0.0-rc1 / cert-kit17 معتبر است.'}
+ function New-ExecutionId { return (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss-fff')+'-'+$env:COMPUTERNAME }
+ function Assert-ExecutionId([string]$id){if(-not $id -or $id.Length -gt 128 -or $id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $id -in @('.','..')){throw 'ExecutionId نامعتبر است؛ فقط A-Z/a-z/0-9/._- و حداکثر 128 کاراکتر مجاز است.'};return $id}
+ function Get-WindowsFamily { $o=Get-CimInstance Win32_OperatingSystem -ErrorAction Stop; if([string]$o.Caption -match 'Windows 11'){return 'Windows11'};if([string]$o.Caption -match 'Windows 10'){return 'Windows10'};return 'UNKNOWN' }
+@@ -36,7 +36,7 @@
+   New-Item -ItemType Directory -Path $dir -Force|Out-Null
+   $previousStateSha256=$null;$existing=Join-Path $dir 'execution-state.json';if(Test-Path -LiteralPath $existing){try{$previousStateSha256=[string]((Get-Content -LiteralPath $existing -Raw|ConvertFrom-Json).stateSha256)}catch{$previousStateSha256=$null}}
+   $state=[ordered]@{schemaVersion='workspace-agent-rc1-execution-state-v2';executionId=$ExecutionId;version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;updatedAt=(Get-Date).ToUniversalTime().ToString('o');windowsFamily=Get-WindowsFamily;stage=$stage;overall=$overall;previousStateSha256=$previousStateSha256;nextStep=$next;paths=$paths;detail=$detail}
+-  $json=$state|ConvertTo-Json -Depth 12 -Compress;$stateHash=[Security.Cryptography.SHA256]::Create();try{$bytes=[Text.Encoding]::UTF8.GetBytes($json);$state['stateSha256']=([BitConverter]::ToString($stateHash.ComputeHash($bytes))).Replace('-','').ToLowerInvariant()}finally{$stateHash.Dispose()}
++  $hashInput=Join-Path $dir ('.execution-state-hash-'+[guid]::NewGuid().ToString('N')+'.json');try{$state|ConvertTo-Json -Depth 12|Set-Content -LiteralPath $hashInput -Encoding utf8;$stateSha=(& node scripts/rc1-execution-recovery.cjs "--hash-state-file=$hashInput").Trim();if($LASTEXITCODE -ne 0 -or $stateSha -notmatch '^[a-f0-9]{64}$'){throw 'Canonical execution state hashing failed.'};$state['stateSha256']=$stateSha}finally{Remove-Item -LiteralPath $hashInput -Force -ErrorAction SilentlyContinue}
+   $p=Join-Path $dir 'execution-state.json';$tmp=$p+'.tmp-'+[guid]::NewGuid().ToString('N');$state|ConvertTo-Json -Depth 12|Set-Content -LiteralPath $tmp -Encoding utf8;Move-Item -LiteralPath $tmp -Destination $p -Force
+   $history=Join-Path $dir 'execution-history.jsonl';($state|ConvertTo-Json -Depth 12 -Compress)|Add-Content -LiteralPath $history -Encoding utf8
+   Write-Host "[$overall] $stage" -ForegroundColor $(if($overall -eq 'PASS'){'Green'}elseif($overall -eq 'INCOMPLETE'){'Yellow'}else{'Red'});Write-Host "State: $p";return $p
+@@ -52,6 +52,23 @@
+ function Verify-Handoff([string]$dir){node scripts/rc1-execution-handoff.cjs --verify "--dir=$dir" "--manifest=$(Join-Path $dir 'handoff-manifest.json')"|Out-Host;if($LASTEXITCODE -ne 0){throw 'Handoff integrity/source verification failed.'}}
+ function Find-Pointer([string]$dir,[string]$name){$p=Join-Path $dir $name;if(-not(Test-Path $p)){throw "Pointer پیدا نشد: $p"};return (Get-Content $p -Raw|ConvertFrom-Json)}
+ function Rel([string]$base,[string]$target){$b=[IO.Path]::GetFullPath($base);if(-not $b.EndsWith('\')){$b+='\'};$t=[IO.Path]::GetFullPath($target);$bu=New-Object -TypeName System.Uri -ArgumentList $b;$tu=New-Object -TypeName System.Uri -ArgumentList $t;return [Uri]::UnescapeDataString($bu.MakeRelativeUri($tu).ToString()).Replace('/','\')}
++function Test-PhaseReadiness([string]$result,[ValidateSet('primary','peer')][string]$role,[string]$out){
++  & node scripts/rc1-phase-readiness.cjs "--result=$result" "--role=$role" "--out=$out"|Out-Host
++  return $LASTEXITCODE
++}
++function Get-RecoveryPlan([string]$exec){
++  $planPath=Join-Path $exec 'recovery-plan.json'
++  & node scripts/rc1-execution-recovery.cjs "--dir=$exec" "--out=$planPath"|Out-Host
++  $code=$LASTEXITCODE;if(-not(Test-Path -LiteralPath $planPath)){throw 'Recovery plan ساخته نشد.'}
++  $plan=Get-Content -LiteralPath $planPath -Raw|ConvertFrom-Json
++  return [pscustomobject]@{code=$code;path=$planPath;plan=$plan}
++}
++function Archive-RecoveryInvalidations([string]$exec,[object]$plan){
++  $items=@($plan.invalidatePaths);if($items.Count -eq 0){return}
++  $execFull=[IO.Path]::GetFullPath($exec).TrimEnd('\')+'\';$stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss-fff');$archiveRoot=Join-Path $exec ('recovery-invalidated\'+$stamp);New-Item -ItemType Directory -Path $archiveRoot -Force|Out-Null
++  foreach($item in $items){if(-not $item){continue};$full=[IO.Path]::GetFullPath([string]$item);if(-not $full.StartsWith($execFull,[StringComparison]::OrdinalIgnoreCase)){throw 'Recovery invalidation path خارج Execution root است.'};$leaf=Split-Path -Leaf $full;if($leaf -notin @('primary-certification','peer-certification')){throw "Recovery فقط phase output شناخته‌شده را archive می‌کند: $leaf"};if(Test-Path -LiteralPath $full){Move-Item -LiteralPath $full -Destination (Join-Path $archiveRoot $leaf) -Force}}
++  Write-State $exec 'RECOVERY_INVALIDATED_PARTIAL' 'INCOMPLETE' 'Rerun only the invalidated certification phase.' @{archiveRoot=$archiveRoot} @{planSha256=$plan.planSha256;invalidated=@($items)}|Out-Null
++}
+ 
+ $rootAbs=Resolve-ExecutionRoot $ExecutionRoot;New-Item -ItemType Directory -Path $rootAbs -Force|Out-Null
+ if($ExecutionId){Assert-ExecutionId $ExecutionId|Out-Null}
+@@ -70,17 +87,43 @@
+   if(-not $state){Write-Host 'هیچ Execution State پیدا نشد.' -ForegroundColor Yellow;exit 2};Get-Content $state -Raw|Write-Host;exit 0
+ }
+ 
++$resumeAction=''
++if($Mode -in @('Recover','Resume')){
++  if(-not $ExecutionId){throw '-ExecutionId برای Recover/Resume لازم است.'};Assert-ExecutionId $ExecutionId|Out-Null;$exec=Join-Path $rootAbs $ExecutionId;if(-not(Test-Path -LiteralPath $exec -PathType Container)){throw "Execution پیدا نشد: $exec"}
++  $recovery=Get-RecoveryPlan $exec;$plan=$recovery.plan
++  if($Mode -eq 'Recover'){Get-Content -LiteralPath $recovery.path -Raw|Write-Host;exit $(if($recovery.code -eq 0){0}else{1})}
++  if([string]$plan.action -like 'BLOCK_*'){Write-State $exec 'RECOVERY_BLOCKED' 'FAIL' 'Repair execution-state/history integrity before any resume.' @{recoveryPlan=$recovery.path} @{action=$plan.action;reason=$plan.reason;planSha256=$plan.planSha256}|Out-Null;exit 1}
++  Write-State $exec 'RECOVERY_PLANNED' 'INCOMPLETE' 'Apply the bounded recovery plan.' @{recoveryPlan=$recovery.path} @{action=$plan.action;reason=$plan.reason;planSha256=$plan.planSha256}|Out-Null
++  switch([string]$plan.action){
++    'PROMOTION_COMPLETE' { Write-State $exec 'PROMOTE_ALLOWED' 'PASS' 'Final promotion evidence was already complete and was recovered without rerunning certification.' @{decision=$plan.context.decisionPath;verdict=$plan.context.verdictPath;finalDelivery=$plan.context.delivery;finalDeliverySha256=$plan.context.deliverySha256} @{recovered=$true;planSha256=$plan.planSha256}|Out-Null;exit 0 }
++    'PRIMARY_COMPLETE_AWAIT_PEER' { Write-State $exec 'PRIMARY_READY' 'PASS' 'Primary handoff is already complete; continue on the other Windows family.' @{primaryHandoff=$plan.context.primaryHandoff;primaryHandoffDir=$plan.context.primaryHandoffDir} @{recovered=$true;planSha256=$plan.planSha256}|Out-Null;exit 0 }
++    'PEER_COMPLETE_RETURN_TO_PRIMARY' { Write-State $exec 'PEER_READY' 'PASS' 'Peer return is already complete; return it to the Primary machine.' @{peerReturn=$plan.context.peerReturn;peerReturnDir=$plan.context.peerReturnDir} @{recovered=$true;planSha256=$plan.planSha256}|Out-Null;exit 0 }
++    'RESUME_PRIMARY_HANDOFF' { $resumeAction='RESUME_PRIMARY_HANDOFF';$Mode='Primary' }
++    'RERUN_PRIMARY_CERTIFICATION' { Archive-RecoveryInvalidations $exec $plan;$resumeAction='RERUN_PRIMARY_CERTIFICATION';$Mode='Primary' }
++    'RESUME_PEER_RETURN' { if(-not $HandoffZip){$HandoffZip=[string]$plan.context.primaryHandoff};if(-not $HandoffZip){throw 'Recovery plan برای Peer مسیر Primary handoff ندارد.'};$resumeAction='RESUME_PEER_RETURN';$Mode='Peer' }
++    'RERUN_PEER_CERTIFICATION' { if(-not $HandoffZip){$HandoffZip=[string]$plan.context.primaryHandoff};if(-not $HandoffZip){throw 'Recovery plan برای Peer مسیر Primary handoff ندارد.'};Archive-RecoveryInvalidations $exec $plan;$resumeAction='RERUN_PEER_CERTIFICATION';$Mode='Peer' }
++    'RESUME_FINALIZE' { if(-not $HandoffZip){$HandoffZip=[string]$plan.context.primaryHandoff};if(-not $PeerReturnZip){$PeerReturnZip=[string]$plan.context.peerReturn};if(-not $ManualEvidenceFile){$ManualEvidenceFile=[string]$plan.context.manualEvidence};if(-not $HandoffZip -or -not $PeerReturnZip -or -not $ManualEvidenceFile){throw 'Recovery plan برای Finalize ورودی‌های کامل ثبت‌شده ندارد.'};$resumeAction='RESUME_FINALIZE';$Mode='Finalize' }
++    default { throw "Recovery action پشتیبانی نمی‌شود: $($plan.action)" }
++  }
++}
++
+ if($Mode -eq 'Primary'){
+   if(-not $ExecutionId){$ExecutionId=New-ExecutionId};Assert-ExecutionId $ExecutionId|Out-Null;$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null
+-  $doctorReport=Join-Path $exec 'doctor-primary.json';$doctorCode=Run-Doctor $doctorReport;if($doctorCode -ne 0){Write-State $exec 'PRIMARY_BLOCKED_DOCTOR' $(if($doctorCode -eq 2){'INCOMPLETE'}else{'FAIL'}) 'Fix Doctor findings before Primary.' @{doctorReport=$doctorReport} @{exitCode=$doctorCode}|Out-Null;exit $(if($doctorCode -eq 2){2}else{1})}
+-  Write-State $exec 'PRIMARY_RUNNING' 'INCOMPLETE' 'Wait for primary Windows certification.' @{doctorReport=$doctorReport} $null|Out-Null
+-  $outRel=Rel $project (Join-Path $exec 'primary-certification')
+-  $args=@('-NoProfile','-ExecutionPolicy','Bypass','-File','scripts/windows-rc1-certify.ps1','-RootA',$RootA,'-RootB',$RootB,'-OutputDir',$outRel)
+-  if($ScaleRoot){$args+=@('-ScaleRoot',$ScaleRoot)};if($SkipScale){$args+='-SkipScale'};if($RequireSigning){$args+='-RequireSigning'};if($NoGenerateLockfile){$args+='-NoGenerateLockfile'}
+-  & powershell.exe @args;$code=$LASTEXITCODE;if($code -eq 1){Write-State $exec 'PRIMARY_FAILED' 'FAIL' 'Fix the failed gate and rerun Primary.' @{} @{exitCode=$code}|Out-Null;exit 1};if($code -eq 2){Write-State $exec 'PRIMARY_INCOMPLETE' 'INCOMPLETE' 'Complete the missing prerequisite/evidence and rerun Primary.' @{} @{exitCode=$code}|Out-Null;exit 2};if($code -ne 0){Write-State $exec 'PRIMARY_FAILED' 'FAIL' 'Unexpected certification exit code.' @{} @{exitCode=$code}|Out-Null;exit 1}
++  $doctorReport=Join-Path $exec 'doctor-primary.json'
++  if($resumeAction -eq 'RESUME_PRIMARY_HANDOFF'){Write-State $exec 'PRIMARY_CERTIFICATION_REUSED' 'PASS' 'Reuse the already complete Primary PASS boundary; rebuild only handoff packaging.' @{} @{recovery=$true}|Out-Null}
++  else{
++    $doctorCode=Run-Doctor $doctorReport;if($doctorCode -ne 0){Write-State $exec 'PRIMARY_BLOCKED_DOCTOR' $(if($doctorCode -eq 2){'INCOMPLETE'}else{'FAIL'}) 'Fix Doctor findings before Primary.' @{doctorReport=$doctorReport} @{exitCode=$doctorCode}|Out-Null;exit $(if($doctorCode -eq 2){2}else{1})}
++    Write-State $exec 'PRIMARY_RUNNING' 'INCOMPLETE' 'Wait for primary Windows certification.' @{doctorReport=$doctorReport} $null|Out-Null
++    $outRel=Rel $project (Join-Path $exec 'primary-certification')
++    $args=@('-NoProfile','-ExecutionPolicy','Bypass','-File','scripts/windows-rc1-certify.ps1','-RootA',$RootA,'-RootB',$RootB,'-OutputDir',$outRel)
++    if($ScaleRoot){$args+=@('-ScaleRoot',$ScaleRoot)};if($SkipScale){$args+='-SkipScale'};if($RequireSigning){$args+='-RequireSigning'};if($NoGenerateLockfile){$args+='-NoGenerateLockfile'}
++    & powershell.exe @args;$code=$LASTEXITCODE;if($code -eq 1){Write-State $exec 'PRIMARY_FAILED' 'FAIL' 'Fix the failed gate and rerun Primary.' @{} @{exitCode=$code}|Out-Null;exit 1};if($code -notin @(0,2)){Write-State $exec 'PRIMARY_FAILED' 'FAIL' 'Unexpected certification exit code.' @{} @{exitCode=$code}|Out-Null;exit 1}
++  }
+   $result=Get-ChildItem (Join-Path $exec 'primary-certification') -Recurse -Filter 'rc1-certification-result.json' -File|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 1;if(-not $result){throw 'Primary rc1-certification-result.json پیدا نشد.'}
++  $phaseReadiness=Join-Path $exec 'primary-phase-readiness.json';$phaseCode=Test-PhaseReadiness $result.FullName 'primary' $phaseReadiness;if($phaseCode -ne 0){Write-State $exec 'PRIMARY_INCOMPLETE' 'INCOMPLETE' 'Primary phase is not safely handoff-ready; only expected dual/manual incompleteness is allowed.' @{phaseReadiness=$phaseReadiness} @{orchestratorExitCode=$code;phaseExitCode=$phaseCode}|Out-Null;exit 2};Write-State $exec 'PRIMARY_PHASE_READY' 'PASS' 'Primary certification report/evidence are PASS; expected Final-only incompleteness does not block Handoff.' @{phaseReadiness=$phaseReadiness} @{orchestratorExitCode=$code}|Out-Null
+   $rj=Get-Content $result.FullName -Raw|ConvertFrom-Json;$report=[string]$rj.certificationReport;if(-not(Test-Path $report)){throw 'Primary certification report missing.'};$cj=Get-Content $report -Raw|ConvertFrom-Json;if([string]$cj.overall -ne 'PASS'){throw "Primary certification report باید PASS باشد؛ فعلی: $($cj.overall)"}
+   $releaseManifest=Join-Path $project 'release\release-manifest.json';if(-not(Test-Path $releaseManifest)){throw 'Primary release-manifest.json پیدا نشد.'}
++  $rmArgs=@('scripts/verify-release-manifest-rc1.cjs',"--manifest=$releaseManifest");if($RequireSigning){$rmArgs+='--require-signing'};& node @rmArgs|Out-Host;if($LASTEXITCODE -ne 0){Write-State $exec 'PRIMARY_RELEASE_MANIFEST_INVALID' 'FAIL' 'Release manifest/artifacts changed or failed verification after certification; do not build Handoff.' @{releaseManifest=$releaseManifest;phaseReadiness=$phaseReadiness} $null|Out-Null;exit 1}
+   $handoff=Join-Path $exec 'primary-handoff';if(Test-Path $handoff){Remove-Item $handoff -Recurse -Force};New-Item -ItemType Directory -Path $handoff -Force|Out-Null
+   $evidenceDir=Join-Path $handoff 'primary-evidence';Copy-Item -Path (Join-Path (Split-Path -Parent $report) '*') -Destination (New-Item -ItemType Directory -Path $evidenceDir -Force).FullName -Recurse -Force
+   $releaseDir=Join-Path $handoff 'release';New-Item -ItemType Directory -Path $releaseDir -Force|Out-Null;Get-ChildItem (Join-Path $project 'release') -File|Where-Object{$_.Extension -eq '.exe' -or $_.Name -in @('release-manifest.json','SHA256SUMS.txt')}|Copy-Item -Destination $releaseDir -Force
+@@ -101,11 +144,15 @@
+ if($Mode -eq 'Peer'){
+   if(-not $HandoffZip){throw '-HandoffZip primary handoff لازم است.'};$bootstrap=Join-Path $rootAbs ('peer-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$primaryPointer=Find-Pointer $bootstrap 'primary-pointer.json';if(-not $ExecutionId){$ExecutionId=[string]$primaryPointer.executionId};Assert-ExecutionId $ExecutionId|Out-Null;if([string]$primaryPointer.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'};$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$import=Join-Path $exec 'primary-import';if(Test-Path $import){Remove-Item $import -Recurse -Force};Move-Item $bootstrap $import
+   $primaryPointer=Find-Pointer $import 'primary-pointer.json';if([string]$primaryPointer.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'};$primaryReport=Join-Path $import ([string]$primaryPointer.certificationReport);$primaryJson=Get-Content $primaryReport -Raw|ConvertFrom-Json;$currentFamily=Get-WindowsFamily;if($currentFamily -eq [string]$primaryJson.windowsFamily){throw "Peer باید Windows family متفاوت باشد. Primary=$($primaryJson.windowsFamily), Current=$currentFamily"}
+-  $doctorReport=Join-Path $exec 'doctor-peer.json';$doctorCode=Run-Doctor $doctorReport;if($doctorCode -ne 0){Write-State $exec 'PEER_BLOCKED_DOCTOR' $(if($doctorCode -eq 2){'INCOMPLETE'}else{'FAIL'}) 'Fix Doctor findings before Peer.' @{doctorReport=$doctorReport;primaryReport=$primaryReport} @{exitCode=$doctorCode}|Out-Null;exit $(if($doctorCode -eq 2){2}else{1})}
+-  Write-State $exec 'PEER_RUNNING' 'INCOMPLETE' 'Wait for peer Windows certification.' @{primaryHandoff=$HandoffZip;primaryReport=$primaryReport;doctorReport=$doctorReport} $null|Out-Null
+-  $outRel=Rel $project (Join-Path $exec 'peer-certification');$args=@('-NoProfile','-ExecutionPolicy','Bypass','-File','scripts/windows-rc1-certify.ps1','-RootA',$RootA,'-RootB',$RootB,'-OutputDir',$outRel,'-PeerWindowsReport',$primaryReport);if($ScaleRoot){$args+=@('-ScaleRoot',$ScaleRoot)};if($SkipScale){$args+='-SkipScale'};if($RequireSigning){$args+='-RequireSigning'};$args+='-NoGenerateLockfile'
+-  & powershell.exe @args;$code=$LASTEXITCODE;if($code -eq 1){Write-State $exec 'PEER_FAILED' 'FAIL' 'Fix peer certification failure and rerun Peer.' @{primaryReport=$primaryReport} @{exitCode=$code}|Out-Null;exit 1};if($code -eq 2){Write-State $exec 'PEER_INCOMPLETE' 'INCOMPLETE' 'Complete missing peer prerequisite/evidence and rerun Peer.' @{primaryReport=$primaryReport} @{exitCode=$code}|Out-Null;exit 2};if($code -ne 0){Write-State $exec 'PEER_FAILED' 'FAIL' 'Unexpected peer certification exit code.' @{primaryReport=$primaryReport} @{exitCode=$code}|Out-Null;exit 1}
+-  $result=Get-ChildItem (Join-Path $exec 'peer-certification') -Recurse -Filter 'rc1-certification-result.json' -File|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 1;if(-not $result){throw 'Peer result missing.'};$rj=Get-Content $result.FullName -Raw|ConvertFrom-Json;$peerReport=[string]$rj.certificationReport;$peerJson=Get-Content $peerReport -Raw|ConvertFrom-Json;if([string]$peerJson.overall -ne 'PASS'){throw "Peer certification report باید PASS باشد؛ فعلی: $($peerJson.overall)"}
++  $doctorReport=Join-Path $exec 'doctor-peer.json'
++  if($resumeAction -eq 'RESUME_PEER_RETURN'){Write-State $exec 'PEER_CERTIFICATION_REUSED' 'PASS' 'Reuse the already complete Peer PASS boundary; rebuild only peer return packaging.' @{primaryHandoff=$HandoffZip;primaryReport=$primaryReport} @{recovery=$true}|Out-Null}
++  else{
++    $doctorCode=Run-Doctor $doctorReport;if($doctorCode -ne 0){Write-State $exec 'PEER_BLOCKED_DOCTOR' $(if($doctorCode -eq 2){'INCOMPLETE'}else{'FAIL'}) 'Fix Doctor findings before Peer.' @{doctorReport=$doctorReport;primaryReport=$primaryReport} @{exitCode=$doctorCode}|Out-Null;exit $(if($doctorCode -eq 2){2}else{1})}
++    Write-State $exec 'PEER_RUNNING' 'INCOMPLETE' 'Wait for peer Windows certification.' @{primaryHandoff=$HandoffZip;primaryReport=$primaryReport;doctorReport=$doctorReport} $null|Out-Null
++    $outRel=Rel $project (Join-Path $exec 'peer-certification');$args=@('-NoProfile','-ExecutionPolicy','Bypass','-File','scripts/windows-rc1-certify.ps1','-RootA',$RootA,'-RootB',$RootB,'-OutputDir',$outRel,'-PeerWindowsReport',$primaryReport);if($ScaleRoot){$args+=@('-ScaleRoot',$ScaleRoot)};if($SkipScale){$args+='-SkipScale'};if($RequireSigning){$args+='-RequireSigning'};$args+='-NoGenerateLockfile'
++    & powershell.exe @args;$code=$LASTEXITCODE;if($code -eq 1){Write-State $exec 'PEER_FAILED' 'FAIL' 'Fix peer certification failure and rerun Peer.' @{primaryReport=$primaryReport} @{exitCode=$code}|Out-Null;exit 1};if($code -notin @(0,2)){Write-State $exec 'PEER_FAILED' 'FAIL' 'Unexpected peer certification exit code.' @{primaryReport=$primaryReport} @{exitCode=$code}|Out-Null;exit 1}
++  }
++  $result=Get-ChildItem (Join-Path $exec 'peer-certification') -Recurse -Filter 'rc1-certification-result.json' -File|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 1;if(-not $result){throw 'Peer result missing.'};$phaseReadiness=Join-Path $exec 'peer-phase-readiness.json';$phaseCode=Test-PhaseReadiness $result.FullName 'peer' $phaseReadiness;if($phaseCode -ne 0){Write-State $exec 'PEER_INCOMPLETE' 'INCOMPLETE' 'Peer phase is not safely return-ready; only expected manual-evidence incompleteness is allowed.' @{primaryReport=$primaryReport;phaseReadiness=$phaseReadiness} @{orchestratorExitCode=$code;phaseExitCode=$phaseCode}|Out-Null;exit 2};Write-State $exec 'PEER_PHASE_READY' 'PASS' 'Peer certification report/evidence are PASS; expected Final-only manual incompleteness does not block Peer Return.' @{primaryReport=$primaryReport;phaseReadiness=$phaseReadiness} @{orchestratorExitCode=$code}|Out-Null;$rj=Get-Content $result.FullName -Raw|ConvertFrom-Json;$peerReport=[string]$rj.certificationReport;$peerJson=Get-Content $peerReport -Raw|ConvertFrom-Json;if([string]$peerJson.overall -ne 'PASS'){throw "Peer certification report باید PASS باشد؛ فعلی: $($peerJson.overall)"}
+   $returnDir=Join-Path $exec 'peer-return';if(Test-Path $returnDir){Remove-Item $returnDir -Recurse -Force};New-Item -ItemType Directory -Path $returnDir -Force|Out-Null;$peerEvidence=Join-Path $returnDir 'peer-evidence';Copy-Item -Path (Join-Path (Split-Path -Parent $peerReport) '*') -Destination (New-Item -ItemType Directory -Path $peerEvidence -Force).FullName -Recurse -Force;Copy-Item (Join-Path $project 'package-lock.json') (Join-Path $returnDir 'package-lock.json') -Force
+   $pointer=[ordered]@{schemaVersion='workspace-agent-rc1-peer-pointer-v1';executionId=$ExecutionId;windowsFamily=$peerJson.windowsFamily;primaryWindowsFamily=$primaryJson.windowsFamily;createdAt=(Get-Date).ToUniversalTime().ToString('o');certificationReport='peer-evidence/certification-report.json';evidenceBundle='peer-evidence/evidence-bundle.json';certificationEvidenceId=$peerJson.evidenceId;packageLock='package-lock.json'};$pointerPath=Join-Path $returnDir 'peer-pointer.json';$pointer|ConvertTo-Json -Depth 8|Set-Content $pointerPath -Encoding utf8
+   & node scripts/rc1-execution-handoff.cjs --create "--dir=$returnDir" "--out=$(Join-Path $returnDir 'handoff-manifest.json')" --role=peer "--execution-id=$ExecutionId" "--pointer=$pointerPath"|Out-Host;if($LASTEXITCODE -ne 0){throw 'Peer-return manifest creation failed.'};$zip=Join-Path $exec "RC1-$ExecutionId-PEER-RETURN.zip";$zipHash=Zip-Directory $returnDir $zip
+@@ -116,6 +163,7 @@
+   if(-not $HandoffZip){throw '-HandoffZip primary handoff لازم است.'};if(-not $PeerReturnZip){throw '-PeerReturnZip لازم است.'};if(-not $ManualEvidenceFile -or -not(Test-Path $ManualEvidenceFile)){throw '-ManualEvidenceFile کامل لازم است.'}
+   if(-not $ExecutionId){$bootstrap=Join-Path $rootAbs ('finalize-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$bootPointer=Find-Pointer $bootstrap 'primary-pointer.json';$ExecutionId=[string]$bootPointer.executionId;Assert-ExecutionId $ExecutionId|Out-Null;$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$primaryImport=Join-Path $exec 'final-primary-import';if(Test-Path $primaryImport){Remove-Item $primaryImport -Recurse -Force};Move-Item $bootstrap $primaryImport}else{$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$primaryImport=Join-Path $exec 'final-primary-import';Expand-Clean $HandoffZip $primaryImport;Ensure-ImportedLock $primaryImport;Verify-Handoff $primaryImport}
+   Assert-ExecutionId $ExecutionId|Out-Null
++  Write-State $exec 'FINALIZE_RUNNING' 'INCOMPLETE' 'Verify immutable Primary/Peer/manual evidence and compute final Stable decision.' @{primaryHandoff=$HandoffZip;peerReturn=$PeerReturnZip;manualEvidence=$ManualEvidenceFile} @{recovery=$($resumeAction -eq 'RESUME_FINALIZE')}|Out-Null
+   $peerImport=Join-Path $exec 'final-peer-import';Expand-Clean $PeerReturnZip $peerImport;Verify-Handoff $peerImport
+   $pp=Find-Pointer $primaryImport 'primary-pointer.json';$qp=Find-Pointer $peerImport 'peer-pointer.json';if([string]$pp.executionId -ne [string]$qp.executionId){throw 'Primary/Peer executionId mismatch.'};if([string]$pp.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'}
+   $primaryReport=Join-Path $primaryImport ([string]$pp.certificationReport);$peerReport=Join-Path $peerImport ([string]$qp.certificationReport);$releaseManifest=Join-Path $primaryImport ([string]$pp.releaseManifest)
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-expected-incomplete-gate.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-expected-incomplete-gate.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-expected-incomplete-gate.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-expected-incomplete-gate.test.cjs	2026-08-16 10:05:17.503226608 +0000
+@@ -0,0 +1,11 @@
++const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
++const ps=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');
++assert(ps.includes("$code -notin @(0,2)"),'Primary/Peer must allow orchestrator exit 2 to reach bounded phase-readiness evaluation');
++assert(ps.includes("Test-PhaseReadiness $result.FullName 'primary'"),'Primary expected-incomplete must be evaluated by phase readiness');
++assert(ps.includes("Test-PhaseReadiness $result.FullName 'peer'"),'Peer expected-incomplete must be evaluated by phase readiness');
++assert(ps.includes('PRIMARY_PHASE_READY'),'Primary must distinguish phase readiness from final envelope completeness');
++assert(ps.includes('PEER_PHASE_READY'),'Peer must distinguish phase readiness from final envelope completeness');
++assert(ps.includes('verify-release-manifest-rc1.cjs'),'Primary Handoff must reverify release manifest/artifacts after certification');
++assert(!ps.includes("if($code -eq 2){Write-State $exec 'PRIMARY_INCOMPLETE'"),'Primary must not blindly reject expected Final-only incompleteness');
++assert(!ps.includes("if($code -eq 2){Write-State $exec 'PEER_INCOMPLETE'"),'Peer must not blindly reject expected Final-only incompleteness');
++console.log('rc1-execution-expected-incomplete-gate PASS');
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-kit-contract.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-kit-contract.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-kit-contract.test.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-kit-contract.test.cjs	2026-08-16 10:00:54.848103529 +0000
+@@ -1,5 +1,5 @@
+ const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+-const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit16');
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit17');
+ for(const s of ['certify:execution:rc1','handoff:rc1','manual:prefill:rc1','stable:decision:rc1','test:rc1-execution'])assert(pkg.scripts[s],s);
+ const ps=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');for(const mode of ["'Primary'","'Peer'","'PrepareEvidence'","'Finalize'","'Status'"])assert(ps.includes(mode),mode);for(const token of ['PRIMARY_READY','PEER_READY','PROMOTE_ALLOWED','rc1-execution-handoff.cjs','prefill-manual-evidence-rc1.cjs','rc1-stable-readiness.cjs','--require-artifact-binding'])assert(ps.includes(token),token);
+ const fp=fs.readFileSync(path.join(root,'scripts/source-tree-fingerprint.cjs'),'utf8');assert(fp.includes("'rc1-execution'"));assert(fp.includes("'final-certification'"));assert(fp.includes('PRIMARY-HANDOFF'));assert(fp.includes('MANUAL_EVIDENCE'));
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-contract.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-contract.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-contract.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-contract.test.cjs	2026-08-16 10:05:57.575502323 +0000
+@@ -0,0 +1,10 @@
++const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit17');
++assert(pkg.scripts['recover:execution:rc1']);assert(pkg.scripts['resume:execution:rc1']);
++const js=fs.readFileSync(path.join(root,'scripts/rc1-execution-recovery.cjs'),'utf8');
++for(const t of ['workspace-agent-rc1-execution-recovery-plan-v1','BLOCK_STATE_CHAIN_INVALID','RESUME_PRIMARY_HANDOFF','RERUN_PRIMARY_CERTIFICATION','RESUME_PEER_RETURN','RERUN_PEER_CERTIFICATION','RESUME_FINALIZE','PROMOTION_COMPLETE'])assert(js.includes(t),t);
++const phase=fs.readFileSync(path.join(root,'scripts/rc1-phase-readiness.cjs'),'utf8');assert(phase.includes('CURRENT_RELEASE_IDENTITY_UNAVAILABLE'));
++const ps=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');
++for(const t of ["'Recover'","'Resume'",'RECOVERY_PLANNED','RECOVERY_INVALIDATED_PARTIAL','PRIMARY_CERTIFICATION_REUSED','PEER_CERTIFICATION_REUSED','recovery-invalidated','FINALIZE_RUNNING','--hash-state-file','Canonical execution state hashing failed.'])assert(ps.includes(t),t);
++assert(ps.includes("$leaf -notin @('primary-certification','peer-certification')"),'partial invalidation must be bounded to known phase outputs');
++console.log('rc1-execution-recovery-contract PASS');
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-resume.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-resume.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-resume.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-execution-recovery-resume.test.cjs	2026-08-16 10:07:40.079012499 +0000
+@@ -0,0 +1,58 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {hashState,inspectExecution}=require('../scripts/rc1-execution-recovery.cjs');
++const {createBundle}=require('../scripts/certification-evidence-bundle.cjs');
++const {computeFingerprint}=require('../scripts/source-tree-fingerprint.cjs');
++const root=path.resolve(__dirname,'..');
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
++assert.equal(hashState({b:1,a:2}),hashState({a:2,b:1}),'state hash must be canonical across serializer key order');
++function mk(){return fs.mkdtempSync(path.join(os.tmpdir(),'wa-recovery-'));}
++function writeState(exec,stage,paths={}){
++  const base={schemaVersion:'workspace-agent-rc1-execution-state-v2',executionId:'EXEC-1',version:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,updatedAt:new Date().toISOString(),windowsFamily:'Windows11',stage,overall:'INCOMPLETE',previousStateSha256:null,nextStep:'test',paths,detail:null};
++  base.stateSha256=hashState(base);
++  fs.writeFileSync(path.join(exec,'execution-state.json'),JSON.stringify(base,null,2));
++  fs.writeFileSync(path.join(exec,'execution-history.jsonl'),JSON.stringify(base)+'\n');
++  return base;
++}
++function passCert(exec,role,identity='RID'){
++  const phase=path.join(exec,`${role}-certification`,'session');fs.mkdirSync(phase,{recursive:true});fs.writeFileSync(path.join(phase,'gate.log'),'PASS\n');
++  const bundle=createBundle(phase,path.join(phase,'evidence-bundle.json'));const fp=computeFingerprint(root);
++  const report=path.join(phase,'certification-report.json');fs.writeFileSync(report,JSON.stringify({schemaVersion:'workspace-agent-windows-certification-v5',workspaceAgentVersion:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,featureFreeze:true,overall:'PASS',evidenceId:`E-${role}`,sourceFingerprint:{sha256:fp.sha256},releaseIdentitySha256:identity,evidenceBundle:{file:'evidence-bundle.json',sha256:bundle.sha256,files:bundle.bundle.files,aggregateSha256:bundle.bundle.aggregateSha256}}));
++  const incomplete=role==='primary'?['DUAL_WINDOWS_EVIDENCE_REQUIRED','MANUAL_EVIDENCE_REQUIRED']:['MANUAL_EVIDENCE_REQUIRED'];
++  const envelope=path.join(phase,'rc1-certification-envelope.json');fs.writeFileSync(envelope,JSON.stringify({version:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,overall:'INCOMPLETE',releaseIdentity:{sha256:identity},checks:{hardFailures:[],incomplete}}));
++  const result=path.join(phase,'rc1-certification-result.json');fs.writeFileSync(result,JSON.stringify({version:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,overall:'INCOMPLETE',releaseIdentitySha256:identity,certificationReport:report,certificationEvidenceBundle:path.join(phase,'evidence-bundle.json'),certificationEvidenceId:`E-${role}`,envelope}));
++  return {report,result,envelope};
++}
++{
++  const exec=mk();writeState(exec,'PRIMARY_RUNNING');fs.mkdirSync(path.join(exec,'primary-certification'),{recursive:true});fs.writeFileSync(path.join(exec,'primary-certification','partial.txt'),'partial');
++  const plan=inspectExecution({executionDir:exec,projectRoot:root,expectedReleaseIdentity:'RID',requireCurrentIdentity:false});
++  assert.equal(plan.action,'RERUN_PRIMARY_CERTIFICATION');assert.equal(plan.invalidatePaths.length,1);assert(plan.invalidatePaths[0].endsWith('primary-certification'));
++  fs.rmSync(exec,{recursive:true,force:true});
++}
++{
++  const exec=mk();writeState(exec,'PRIMARY_RUNNING');passCert(exec,'primary');
++  const plan=inspectExecution({executionDir:exec,projectRoot:root,expectedReleaseIdentity:'RID',requireCurrentIdentity:false});
++  assert.equal(plan.action,'RESUME_PRIMARY_HANDOFF');assert(plan.context.primaryResult.endsWith('rc1-certification-result.json'));
++  fs.rmSync(exec,{recursive:true,force:true});
++}
++{
++  const exec=mk();writeState(exec,'PEER_RUNNING',{primaryHandoff:'C:\\handoff\\primary.zip'});passCert(exec,'peer');
++  const plan=inspectExecution({executionDir:exec,projectRoot:root,expectedReleaseIdentity:'RID',requireCurrentIdentity:false});
++  assert.equal(plan.action,'RESUME_PEER_RETURN');assert.equal(plan.context.primaryHandoff,'C:\\handoff\\primary.zip');
++  fs.rmSync(exec,{recursive:true,force:true});
++}
++{
++  const exec=mk();writeState(exec,'FINALIZE_RUNNING',{primaryHandoff:'C:\\p.zip',peerReturn:'C:\\q.zip',manualEvidence:'C:\\e.json'});
++  const plan=inspectExecution({executionDir:exec,projectRoot:root,expectedReleaseIdentity:'RID',requireCurrentIdentity:false});
++  assert.equal(plan.action,'RESUME_FINALIZE');assert.equal(plan.context.manualEvidence,'C:\\e.json');
++  fs.rmSync(exec,{recursive:true,force:true});
++}
++{
++  const exec=mk();const s=writeState(exec,'PRIMARY_RUNNING');s.stage='TAMPERED';fs.writeFileSync(path.join(exec,'execution-state.json'),JSON.stringify(s,null,2));
++  const plan=inspectExecution({executionDir:exec,projectRoot:root,expectedReleaseIdentity:'RID',requireCurrentIdentity:false});
++  assert.equal(plan.action,'BLOCK_STATE_CHAIN_INVALID');assert.equal(plan.stateChain.ok,false);
++  fs.rmSync(exec,{recursive:true,force:true});
++}
++console.log('rc1-execution-recovery-resume PASS');
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-manual-evidence-prefill.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-manual-evidence-prefill.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-manual-evidence-prefill.test.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-manual-evidence-prefill.test.cjs	2026-08-16 10:00:54.848185951 +0000
+@@ -2,7 +2,7 @@
+ const root=path.resolve(__dirname,'..');const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-manual-prefill-'));
+ try{
+   const hash='a'.repeat(64);const manifest=path.join(tmp,'release-manifest.json');const out=path.join(tmp,'manual.json');
+-  fs.writeFileSync(manifest,JSON.stringify({schemaVersion:'workspace-agent-release-v8',version:'1.0.0-rc1',toolingRevision:'cert-kit16',artifacts:[{kind:'nsis',file:'Workspace-Agent-Setup-1.0.0-rc1-x64.exe',sha256:hash,bytes:123}]}));
++  fs.writeFileSync(manifest,JSON.stringify({schemaVersion:'workspace-agent-release-v8',version:'1.0.0-rc1',toolingRevision:'cert-kit17',artifacts:[{kind:'nsis',file:'Workspace-Agent-Setup-1.0.0-rc1-x64.exe',sha256:hash,bytes:123}]}));
+   const r=cp.spawnSync(process.execPath,['scripts/prefill-manual-evidence-rc1.cjs',`--release-manifest=${manifest}`,`--out=${out}`,'--operator=Test Operator','--machine=WIN-TEST'],{cwd:root,encoding:'utf8'});assert.equal(r.status,0,r.stderr||r.stdout);
+   const d=JSON.parse(fs.readFileSync(out,'utf8'));assert.equal(d.schemaVersion,'workspace-agent-manual-evidence-rc1-v2');assert.equal(d.operator,'Test Operator');assert.equal(d.machine,'WIN-TEST');assert.equal(d.evidence.realUpgradeFrom0_9_8.installerSha256,hash);assert.equal(d.evidence.realUpgradeFrom0_9_8.status,'PENDING_MANUAL');assert.equal(d.evidence.realUpgradeFrom0_9_8.statePreserved,false);assert(d.prefill.note.includes('No manual evidence'));
+   console.log('rc1-manual-evidence-prefill PASS');
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-phase-readiness.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-phase-readiness.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-phase-readiness.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-phase-readiness.test.cjs	2026-08-16 10:07:40.079150344 +0000
+@@ -0,0 +1,22 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {createBundle}=require('../scripts/certification-evidence-bundle.cjs');
++const {computeFingerprint}=require('../scripts/source-tree-fingerprint.cjs');
++const {evaluatePhase}=require('../scripts/rc1-phase-readiness.cjs');
++const root=path.resolve(__dirname,'..');const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));const fp=computeFingerprint(root);
++function fixture(role,incomplete){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-phase-'));fs.writeFileSync(path.join(dir,'gate.log'),'PASS\n');const b=createBundle(dir,path.join(dir,'evidence-bundle.json'));const report=path.join(dir,'certification-report.json');fs.writeFileSync(report,JSON.stringify({schemaVersion:'workspace-agent-windows-certification-v5',workspaceAgentVersion:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,featureFreeze:true,overall:'PASS',evidenceId:'E1',sourceFingerprint:{sha256:fp.sha256},releaseIdentitySha256:'RID',evidenceBundle:{file:'evidence-bundle.json',sha256:b.sha256,files:b.bundle.files,aggregateSha256:b.bundle.aggregateSha256}}));const env=path.join(dir,'rc1-certification-envelope.json');fs.writeFileSync(env,JSON.stringify({version:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,overall:incomplete.length?'INCOMPLETE':'PASS',releaseIdentity:{sha256:'RID'},checks:{hardFailures:[],incomplete}}));const result=path.join(dir,'rc1-certification-result.json');fs.writeFileSync(result,JSON.stringify({version:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,overall:incomplete.length?'INCOMPLETE':'PASS',releaseIdentitySha256:'RID',certificationReport:report,certificationEvidenceBundle:path.join(dir,'evidence-bundle.json'),certificationEvidenceId:'E1',envelope:env}));return{dir,result,bundle:b};}
++{
++ const f=fixture('primary',['DUAL_WINDOWS_EVIDENCE_REQUIRED','MANUAL_EVIDENCE_REQUIRED']);const r=evaluatePhase({resultPath:f.result,role:'primary',projectRoot:root,expectedReleaseIdentity:'RID'});assert.equal(r.ok,true);assert.equal(r.status,'READY_FOR_HANDOFF');fs.rmSync(f.dir,{recursive:true,force:true});
++}
++{
++ const f=fixture('peer',['MANUAL_EVIDENCE_REQUIRED']);const r=evaluatePhase({resultPath:f.result,role:'peer',projectRoot:root,expectedReleaseIdentity:'RID'});assert.equal(r.ok,true);fs.rmSync(f.dir,{recursive:true,force:true});
++}
++{
++ const f=fixture('primary',['PACKAGE_LOCK_MISSING']);const r=evaluatePhase({resultPath:f.result,role:'primary',projectRoot:root,expectedReleaseIdentity:'RID'});assert.equal(r.ok,false);assert(r.errors.includes('UNEXPECTED_INCOMPLETE:PACKAGE_LOCK_MISSING'));fs.rmSync(f.dir,{recursive:true,force:true});
++}
++{
++ const f=fixture('peer',['MANUAL_EVIDENCE_REQUIRED']);fs.appendFileSync(path.join(f.dir,'gate.log'),'TAMPER\n');const r=evaluatePhase({resultPath:f.result,role:'peer',projectRoot:root,expectedReleaseIdentity:'RID'});assert.equal(r.ok,false);assert(r.errors.some(x=>x.includes('EVIDENCE_ENTRY_BYTES_MISMATCH')||x.includes('EVIDENCE_ENTRY_SHA256_MISMATCH')));fs.rmSync(f.dir,{recursive:true,force:true});
++}
++console.log('rc1-phase-readiness PASS');
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-release-matrix-contract.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-release-matrix-contract.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-16 10:00:54.848226131 +0000
+@@ -5,10 +5,10 @@
+ const {detectWindowsFamily,validatePeerPair,MANUAL_KEYS}=require('../scripts/rc1-certification-envelope.cjs');
+ assert.equal(detectWindowsFamily({windowsFamily:'Windows10'}),'Windows10');
+ assert.equal(detectWindowsFamily({os:{caption:'Microsoft Windows 11 Pro',build:'26100'}}),'Windows11');
+-const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit16',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
+-const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit16',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
+-let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit16'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit16'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
+-pair=validatePeerPair(current,{...peer,releaseIdentitySha256:'other'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit16'});assert(!pair.ok&&pair.reasons.includes('PEER_RELEASE_IDENTITY_MISMATCH'));
++const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit17',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
++const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit17',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
++let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit17'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit17'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
++pair=validatePeerPair(current,{...peer,releaseIdentitySha256:'other'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit17'});assert(!pair.ok&&pair.reasons.includes('PEER_RELEASE_IDENTITY_MISMATCH'));
+ assert(MANUAL_KEYS.includes('realUpgradeFrom0_9_8'),'real packaged upgrade evidence must be required');
+ const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');
+ for(const token of ['PeerWindowsReport','--require-dual-windows','100000,1000000','yyyyMMdd-HHmmss-fff','windows-runs'])assert(orchestrator.includes(token),`missing RC1 matrix invariant: ${token}`);
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-source-contract.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-source-contract.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-source-contract.test.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-source-contract.test.cjs	2026-08-16 10:00:54.848300702 +0000
+@@ -8,7 +8,7 @@
+ assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+ assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+ assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+-assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit16');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
++assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit17');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
+ const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+ assert(/PASS/.test(out));
+ console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-stable-readiness.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-stable-readiness.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-stable-readiness.test.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-stable-readiness.test.cjs	2026-08-16 10:00:54.848353621 +0000
+@@ -1,6 +1,6 @@
+ const assert=require('assert');const crypto=require('crypto');const {evaluateVerdict}=require('../scripts/rc1-stable-readiness.cjs');
+-const envelope={overall:'PASS',version:'1.0.0-rc1',toolingRevision:'cert-kit16',source:{fingerprint:'fp'},evidenceId:'ev'};
+-const verdict={schemaVersion:'workspace-agent-rc1-final-verdict-v2',version:'1.0.0-rc1',toolingRevision:'cert-kit16',createdAt:'2026-08-15T00:00:00.000Z',overall:'PASS',envelope:{path:'/tmp/e.json',sha256:'x',evidenceId:'ev'},inputs:{},windowsFamilies:{current:'Windows11',peer:'Windows10'},signingRequired:false};verdict.finalizationId=crypto.createHash('sha256').update(JSON.stringify(verdict)).digest('hex');
++const envelope={overall:'PASS',version:'1.0.0-rc1',toolingRevision:'cert-kit17',source:{fingerprint:'fp'},evidenceId:'ev'};
++const verdict={schemaVersion:'workspace-agent-rc1-final-verdict-v2',version:'1.0.0-rc1',toolingRevision:'cert-kit17',createdAt:'2026-08-15T00:00:00.000Z',overall:'PASS',envelope:{path:'/tmp/e.json',sha256:'x',evidenceId:'ev'},inputs:{},windowsFamilies:{current:'Windows11',peer:'Windows10'},signingRequired:false};verdict.finalizationId=crypto.createHash('sha256').update(JSON.stringify(verdict)).digest('hex');
+ let r=evaluateVerdict(verdict,{envelope,currentFingerprint:'fp'});assert(r.ok);assert.equal(r.decision,'PROMOTE_ALLOWED');
+ r=evaluateVerdict({...verdict,overall:'FAIL'},{envelope,currentFingerprint:'fp'});assert(!r.ok);assert.equal(r.decision,'BLOCKED');assert(r.reasons.includes('FINAL_VERDICT_NOT_PASS'));
+ r=evaluateVerdict(verdict,{envelope:{...envelope,source:{fingerprint:'other'}},currentFingerprint:'fp'});assert(!r.ok);assert(r.reasons.includes('FINAL_ENVELOPE_SOURCE_MISMATCH'));
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-windows-doctor-contract.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-windows-doctor-contract.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-windows-doctor-contract.test.cjs	2026-08-16 09:51:36.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/rc1-windows-doctor-contract.test.cjs	2026-08-16 10:00:54.848406770 +0000
+@@ -3,7 +3,7 @@
+ const path=require('path');
+ const root=path.resolve(__dirname,'..');
+ const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+-assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit16');
++assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit17');
+ assert(pkg.scripts['doctor:windows:rc1']);
+ const doctor=fs.readFileSync(path.join(root,'scripts/windows-rc1-doctor.ps1'),'utf8');
+ for(const token of [
+diff -ruN -x DIFF_v1.0.0-rc1-cert-kit16_to_cert-kit17.txt -x FILE_INVENTORY_v1.0.0-rc1-cert-kit17.txt /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/release-identity-chain-rc1.test.cjs /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/release-identity-chain-rc1.test.cjs
+--- /mnt/data/orig_cert16/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/release-identity-chain-rc1.test.cjs	2026-08-16 09:49:32.000000000 +0000
++++ /mnt/data/work_cert17/windows-workspace-agent-v1.0.0-rc1-cert-kit16-windows-execution-hardening-source/tests/release-identity-chain-rc1.test.cjs	2026-08-16 10:00:54.848457756 +0000
+@@ -5,7 +5,7 @@
+ const {computeReleaseIdentity}=require('../scripts/release-identity.cjs');
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-release-id-'));
+ try{
+-  const pkg={version:'1.0.0-rc1',workspaceAgentRelease:{toolingRevision:'cert-kit16',featureFreeze:true},engines:{node:'24.14.1',npm:'11.11.0'},packageManager:'npm@11.11.0'};
++  const pkg={version:'1.0.0-rc1',workspaceAgentRelease:{toolingRevision:'cert-kit17',featureFreeze:true},engines:{node:'24.14.1',npm:'11.11.0'},packageManager:'npm@11.11.0'};
+   fs.writeFileSync(path.join(tmp,'package.json'),JSON.stringify(pkg));fs.mkdirSync(path.join(tmp,'src'));fs.writeFileSync(path.join(tmp,'src','a.js'),'x\n');
+   fs.writeFileSync(path.join(tmp,'package-lock.json'),JSON.stringify({name:'x',version:'1.0.0-rc1',lockfileVersion:3,packages:{}}));
+   const a=computeReleaseIdentity(tmp),b=computeReleaseIdentity(tmp);assert.equal(a.releaseIdentitySha256,b.releaseIdentitySha256);assert.equal(a.sourceFingerprint.scope,'frozen-source-excluding-release-lockfile');

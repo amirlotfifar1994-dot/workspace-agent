@@ -1,0 +1,12 @@
+const assert=require('assert');const {validatePolicy,validateLockSources}=require('../scripts/dependency-source-policy.cjs');
+const policy={schemaVersion:'workspace-agent-dependency-source-policy-v1',mode:'allowlist',allowedRegistryOrigins:['https://registry.npmjs.org'],allowedResolvedProtocols:['https:'],forbidLinks:true,forbidGit:true,forbidFile:true,requireIntegrityForRegistryArtifacts:true};const pkg={workspaceAgentRelease:{dependencySourcePolicy:policy}};
+const pv=validatePolicy(pkg);assert(pv.ok,pv.errors.join(','));
+const row=(resolved,extra={})=>({resolved,integrity:'sha512-AAAA',...extra});
+let r=validateLockSources({packages:{'node_modules/a':row('https://registry.npmjs.org/a/-/a-1.0.0.tgz')}},pkg);assert(r.ok,r.errors.join(','));assert.deepEqual(r.resolvedOrigins,['https://registry.npmjs.org']);
+r=validateLockSources({packages:{'node_modules/a':row('https://evil.example/a.tgz')}},pkg);assert(!r.ok&&r.errors.some(x=>x.includes('DEPENDENCY_REGISTRY_ORIGIN_FORBIDDEN')));
+r=validateLockSources({packages:{'node_modules/a':row('http://registry.npmjs.org/a.tgz')}},pkg);assert(!r.ok&&r.errors.some(x=>x.includes('DEPENDENCY_PROTOCOL_FORBIDDEN')));
+r=validateLockSources({packages:{'node_modules/a':row('git+https://github.com/x/y.git')}},pkg);assert(!r.ok&&r.errors.some(x=>x.includes('DEPENDENCY_GIT_SOURCE_FORBIDDEN')));
+r=validateLockSources({packages:{'node_modules/a':row('file:../a')}},pkg);assert(!r.ok&&r.errors.some(x=>x.includes('DEPENDENCY_FILE_SOURCE_FORBIDDEN')));
+r=validateLockSources({packages:{'node_modules/a':{link:true}}},pkg);assert(!r.ok&&r.errors.some(x=>x.includes('DEPENDENCY_LINK_FORBIDDEN')));
+r=validateLockSources({packages:{'node_modules/a':{resolved:'https://registry.npmjs.org/a/-/a-1.0.0.tgz'}}},pkg);assert(!r.ok&&r.errors.some(x=>x.includes('DEPENDENCY_INTEGRITY_MISSING')));
+console.log('dependency-source-provenance-rc1 PASS',{policySha256:pv.sha256,registryAllowlist:true,gitFileLinkHttpBlocked:true});

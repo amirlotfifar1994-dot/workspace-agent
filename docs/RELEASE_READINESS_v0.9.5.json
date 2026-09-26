@@ -1,0 +1,20 @@
+{
+  "version": "0.9.5",
+  "coreSource": "READY",
+  "regression": "PASS",
+  "sourceHygiene": "PASS",
+  "syntax": "PASS",
+  "jsx": "PASS",
+  "batchRecursiveCopy": "PASS",
+  "batchMove": "PASS",
+  "conflictPolicies": "PASS_WITH_DIRECTORY_REPLACE_BLOCKED",
+  "duplicateAware": "PASS",
+  "checkpointResume": "PASS",
+  "cancelPartialRollback": "PASS",
+  "replaceCrashRecovery": "PASS",
+  "windowsUat": "PENDING_WINDOWS",
+  "packageLock": "PENDING",
+  "nsis": "PENDING",
+  "portable": "PENDING",
+  "authenticode": "PENDING"
+}

@@ -1,0 +1,30 @@
+const assert=require('assert');
+const fs=require('fs');
+const os=require('os');
+const path=require('path');
+const {VersionUpdateGuard,compareVersions,DATA_EPOCH}=require('../electron/services/version-update-guard.cjs');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-rc1-upgrade-'));
+const journal={append:()=>{}};
+try{
+  const old=new VersionUpdateGuard(dir,{currentVersion:'0.9.8',journal});
+  old.recordSelfCheck({at:new Date().toISOString(),overall:'pass',summary:{pass:1,warn:0,block:0},checks:[]});
+  assert.equal(old.status().stableVersion,'0.9.8');
+  old.prepareUpdate({targetVersion:'1.0.0-rc1',artifactSha256:'a'.repeat(64),backupFile:'pre-rc1.json.gz'});
+  const rc=new VersionUpdateGuard(dir,{currentVersion:'1.0.0-rc1',journal});
+  let s=rc.status();
+  assert.equal(s.pending.targetVersion,'1.0.0-rc1');
+  assert.equal(s.writeBlocked,false);
+  assert.equal(s.dataEpoch,DATA_EPOCH);
+  rc.recordSelfCheck({at:new Date().toISOString(),overall:'warn',summary:{pass:9,warn:1,block:0},checks:[{status:'warn',code:'UPDATE_PENDING_VALIDATION'}]});
+  s=rc.status();
+  assert.equal(s.stableVersion,'1.0.0-rc1');
+  assert.equal(s.pending,null);
+  assert.equal(s.writeBlocked,false);
+  const downgrade=new VersionUpdateGuard(dir,{currentVersion:'0.9.8',journal});
+  const d=downgrade.status();
+  assert.equal(d.writeBlocked,true);
+  assert.equal(d.blockCode,'APP_DOWNGRADE_DETECTED');
+  assert(compareVersions('1.0.0-rc1','0.9.8')>0);
+  assert(compareVersions('1.0.0-rc1','1.0.0')<0);
+  console.log('rc1-upgrade-gate.test.cjs PASS',{stable:s.stableVersion,downgrade:d.blockCode,dataEpoch:s.dataEpoch});
+} finally {fs.rmSync(dir,{recursive:true,force:true});}

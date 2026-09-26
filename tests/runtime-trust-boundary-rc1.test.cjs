@@ -1,0 +1,34 @@
+const assert=require('assert');
+const fs=require('fs');
+const os=require('os');
+const path=require('path');
+const {pathToFileURL}=require('url');
+const {rendererTrustPolicy,isTrustedRendererUrl,trustedSender,shouldAllowNavigation}=require('../electron/services/runtime-trust-policy.cjs');
+
+const base=fs.mkdtempSync(path.join(os.tmpdir(),'wa-renderer-trust-'));
+const prod=path.join(base,'dist','index.html');fs.mkdirSync(path.dirname(prod),{recursive:true});fs.writeFileSync(prod,'ok');
+const p=rendererTrustPolicy({productionEntry:prod,devServerUrl:'http://127.0.0.1:5173'});
+assert.equal(isTrustedRendererUrl(pathToFileURL(prod).href,p),true);
+assert.equal(isTrustedRendererUrl(pathToFileURL(path.join(base,'evil.html')).href,p),false,'arbitrary file:// must not be trusted');
+assert.equal(isTrustedRendererUrl('http://127.0.0.1:5173/',p),true);
+assert.equal(isTrustedRendererUrl('http://127.0.0.1:5174/',p),false,'another localhost port must not be trusted');
+assert.equal(isTrustedRendererUrl('http://localhost:5173/',p),false,'different hostname/origin must not inherit trust');
+assert.equal(isTrustedRendererUrl('https://example.com/',p),false);
+assert.equal(shouldAllowNavigation('https://example.com/',p),false);
+assert.equal(trustedSender({senderFrame:{url:pathToFileURL(prod).href}},p),true);
+assert.equal(trustedSender({senderFrame:{url:pathToFileURL(path.join(base,'other.html')).href}},p),false);
+
+const main=fs.readFileSync(path.join(__dirname,'..','electron','main.cjs'),'utf8');
+const ipc=fs.readFileSync(path.join(__dirname,'..','electron','ipc.cjs'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+assert(main.includes("const devRendererUrl=!app.isPackaged?"),'packaged app must not honor dev renderer env');
+assert(main.includes("wc.on('will-navigate'"));
+assert(main.includes("wc.on('will-redirect'"));
+assert(main.includes("wc.setWindowOpenHandler(()=>({action:'deny'}))"));
+assert(main.includes('setPermissionRequestHandler'));
+assert(main.includes('setPermissionCheckHandler'));
+assert(ipc.includes('OPEN_PATH_DIRECTORY_ONLY'),'open-path must be directory-only');
+assert(html.includes('Content-Security-Policy'));
+assert(html.includes("object-src 'none'"));
+assert(html.includes("frame-src 'none'"));
+console.log('runtime-trust-boundary-rc1 PASS');

@@ -1,0 +1,24 @@
+const assert=require('assert');
+const os=require('os');const fs=require('fs');const fsp=fs.promises;const path=require('path');
+const {scanTree}=require('../electron/services/file-indexer.cjs');
+const {analyzeWorkspace}=require('../electron/services/file-analyzer.cjs');
+const {buildMaintenancePlan,executeMaintenance,verifyMaintenance,restoreMaintenance}=require('../electron/services/maintenance.cjs');
+const {SnapshotStore,compareSnapshot}=require('../electron/services/snapshot-store.cjs');
+const {planRename,executeRenames,verifyRenames,undoRenames}=require('../electron/services/renamer.cjs');
+const {planGoal}=require('../electron/services/goal-planner.cjs');
+(async()=>{
+ const root=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-v03-'));const data=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-v03-data-'));
+ const old=Date.now()-20*86400000;
+ await fsp.writeFile(path.join(root,'draft copy.txt'),'abc');await fsp.utimes(path.join(root,'draft copy.txt'),old/1000,old/1000);
+ await fsp.writeFile(path.join(root,'cache.tmp'),'junk');await fsp.utimes(path.join(root,'cache.tmp'),old/1000,old/1000);
+ await fsp.writeFile(path.join(root,'zero.txt'),'');await fsp.utimes(path.join(root,'zero.txt'),old/1000,old/1000);
+ await fsp.mkdir(path.join(root,'empty'));
+ let scan=await scanTree(root);assert.equal(scan.files.length,3);assert.ok(Array.isArray(scan.errors));
+ let health=await analyzeWorkspace(root,scan,{largeThresholdBytes:1,staleDays:1});assert.ok(health.topFolders);assert.ok(health.suspiciousNames.total>=1);assert.ok(health.zeroByte.total>=1);assert.ok(health.healthScore.score>=0);
+ const plan=buildMaintenancePlan(root,health,{includeLowRiskJunk:true,includeEmptyFolders:true,minJunkAgeDays:7});assert.ok(plan.operations.some(o=>o.source.endsWith('cache.tmp')));assert.ok(plan.operations.some(o=>o.kind==='quarantine-dir'));
+ const q=await executeMaintenance(root,'m1',plan.operations);assert.equal((await verifyMaintenance(q.completed)).ok,true);const restored=await restoreMaintenance(q.completed);assert.equal(restored.every(x=>x.ok),true);
+ const snapshots=new SnapshotStore(data);scan=await scanTree(root);const s=await snapshots.save(root,scan);assert.ok(s.id);await fsp.writeFile(path.join(root,'new.txt'),'new');const d=compareSnapshot(await snapshots.get(s.id),await scanTree(root));assert.equal(d.counts.added,1);
+ scan=await scanTree(root);const rp=planRename(root,scan.files,{prefix:'P_'});assert.ok(rp.operations.length>=3);const renamed=await executeRenames(rp.operations);assert.equal((await verifyRenames(renamed)).ok,true);const ru=await undoRenames(renamed);assert.equal(ru.filter(x=>x.ok).length,renamed.length);
+ const goal=planGoal('این پوشه را بررسی کن و فایل های تکراری را پیدا کن و junk های قدیمی را قرنطینه کن ولی حذف دائمی نکن');assert.ok(goal.steps.some(s=>s.type==='duplicates'));assert.ok(goal.steps.some(s=>s.type==='maintenance-cleanup'));assert.equal(goal.constraints.permanentDeleteBlocked,true);
+ console.log('windows-agent-v03.test: OK');
+})().catch(e=>{console.error(e);process.exit(1)});

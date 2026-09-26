@@ -1,0 +1,727 @@
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/README_FA.md /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/README_FA.md
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/README_FA.md	2026-08-13 10:27:39.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/README_FA.md	2026-08-13 10:47:49.103543024 +0000
+@@ -1,4 +1,4 @@
+-# Workspace Agent v0.9.0 — Local AI Foundation
++# Workspace Agent v0.9.1 — Local AI Foundation
+ 
+ تمرکز فعال پروژه **Windows Agent امن برای مدیریت Workspace/هارد** است. CorelDRAW همچنان Deferred است.
+ 
+@@ -7,7 +7,7 @@
+ 
+ Writeهای فایل از Transaction / Recovery / Undo و Volume Identity Guard عبور می‌کنند. Permanent Delete و arbitrary shell غیرفعال‌اند.
+ 
+-## جدید در v0.9.0
++## جدید در v0.9.1
+ - **Local AI Provider** فقط روی loopback (`127.0.0.1/localhost/::1`).
+ - OpenAI-compatible transport مناسب `llama.cpp / llama-server`.
+ - Planner مدل فقط **Skillهای allowlisted** را در JSON Schema پیشنهاد می‌دهد؛ Tool execution مستقیم ندارد.
+@@ -46,9 +46,21 @@
+ npm run certify:windows
+ ```
+ 
+-## مرزهای v0.9.0
++## مرزهای v0.9.1
+ - مدل یا Runtime داخل سورس bundle نشده است.
+ - Cloud provider/API key در این نسخه پشتیبانی نمی‌شود.
+ - AI نمی‌تواند Windows UI Action مستقیم اجرا کند.
+ - AI نمی‌تواند Shell/PowerShell/Executable بسازد یا اجرا کند.
+ - Local AI واقعی با Qwen/llama.cpp روی Windows هنوز UAT جدا می‌خواهد.
++
++
++## v0.9.1 — Real Local AI Runtime
++
++این نسخه Managed `llama-server` اختیاری، Hardware Advisor، Capability Probe، Warmup و UIA-first/Vision-fallback را اضافه می‌کند. Runtime و GGUF از داخل پروژه دانلود یا bundle نمی‌شوند؛ کاربر باید فایل‌های محلی را صریح انتخاب کند. هر AI Plan همچنان از Skill Allowlist، Mission DAG و Safety Core عبور می‌کند.
++
++UAT واقعی Windows:
++```powershell
++$env:WA_LLAMA_SERVER='C:\tools\llama.cpp\llama-server.exe'
++$env:WA_GGUF_MODEL='D:\models\model.gguf'
++npm run test:windows-local-ai-runtime-uat
++```
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/CHANGELOG_v0.9.1_FA.md /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/CHANGELOG_v0.9.1_FA.md
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/CHANGELOG_v0.9.1_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/CHANGELOG_v0.9.1_FA.md	2026-08-13 10:47:47.382254377 +0000
+@@ -0,0 +1,27 @@
++# Changelog v0.9.1
++
++## Added
++- Hardware Profile Service برای RAM/CPU/GPU read-only
++- Model Advisor محافظه‌کارانه و non-guaranteed
++- Managed llama.cpp Runtime Manager
++- انتخاب صریح `llama-server(.exe)` و GGUF
++- start/stop/restart/autostart managed runtime
++- bounded in-memory runtime logs با path redaction
++- `/props` capability detection
++- JSON schema capability probe
++- synthetic Vision capability probe
++- warmup
++- OpenAI-compatible compatibility retry
++- AI UI Assist با UIA-first و user-selected Vision fallback
++- IPC/Preload/UI کامل برای Runtime و Hardware
++- Windows Real Local AI UAT opt-in
++
++## Security
++- loopback host hard-lock
++- `--no-webui`
++- arbitrary args/env ممنوع
++- `LLAMA_ARG_*` و `LLAMA_API_KEY` حذف می‌شوند
++- executable/model باید regular non-symlink باشند
++- model باید `.gguf` باشد
++- هیچ model/runtime download خودکار وجود ندارد
++- Vision fallback بدون background capture
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md	2026-08-13 10:47:47.370254377 +0000
+@@ -0,0 +1,53 @@
++# Local AI Runtime v0.9.1
++
++## هدف
++v0.9.1 لایه‌ی Local AI نسخه 0.9.0 را از یک Provider صرف به Runtime مدیریت‌شده‌ی اختیاری ارتقا می‌دهد. Agent می‌تواند یک `llama-server` و یک مدل GGUF که کاربر صریحاً از دیسک انتخاب کرده است اجرا/متوقف کند، اما هیچ Runtime یا مدل را خودکار دانلود نمی‌کند.
++
++## مرز امنیتی
++- Runtime فقط از فایل معمولی و غیر-link با نام دقیق `llama-server.exe` در Windows اجرا می‌شود.
++- مدل فقط فایل معمولی و غیر-link با پسوند `.gguf` است.
++- Host همیشه `127.0.0.1` است.
++- Web UI با `--no-webui` غیرفعال است.
++- هیچ arbitrary argument یا arbitrary environment از UI/AI عبور نمی‌کند.
++- `LLAMA_ARG_*` و `LLAMA_API_KEY` از محیط Child Process حذف می‌شوند.
++- AI همچنان Tool Executor نیست؛ خروجی Planner باید از Skill Allowlist، Mission DAG و Safety Core عبور کند.
++
++## Capability Probe
++Provider این موارد را بدون اعتماد به نام مدل Probe می‌کند:
++1. `/v1/models`
++2. `/props` در صورت پشتیبانی Runtime
++3. constrained JSON schema
++4. Vision فقط اگر Runtime آن را advertise کند و Vision در تنظیمات فعال باشد
++
++Vision capability probe از یک PNG مصنوعی 1x1 استفاده می‌کند و هیچ تصویر کاربر را برای Probe نمی‌خواند.
++
++## Hardware Advisor
++Hardware profile از Node برای RAM/CPU پایه استفاده می‌کند. در Windows جزئیات CPU/GPU با PowerShell + CIM به شکل read-only خوانده می‌شود. مقدار `Win32_VideoController.AdapterRAM` فقط low-confidence است و برای تضمین fit مدل استفاده نمی‌شود.
++
++Presetهای محافظه‌کارانه:
++- RAM کمتر از 8GB: Qwen3.5-0.8B class
++- 8GB: Qwen3.5-2B class
++- 12GB+: Qwen3.5-4B class
++- 24GB+: Qwen3.5-9B class
++- 48GB+: Qwen3.6-27B class
++- 64GB+ با GPU گسسته: Qwen3.6-35B-A3B class
++
++این‌ها فقط Recommendation هستند، نه تضمین fit یا performance. GGUF/quantization واقعی باید روی همان دستگاه benchmark شود.
++
++## UIA-first / Vision-fallback
++`AI UI Assist` ابتدا Windows UI Automation Map را اجرا می‌کند. اگر UIA ساختار کافی ارائه کند، Vision فراخوانی نمی‌شود. فقط اگر UIA ناکافی باشد، کاربر باید یک screenshot/image را دستی انتخاب کند و Vision روی همان فایل اجرا می‌شود. Background screenshot وجود ندارد.
++
++## Runtime lifecycle
++Managed Runtime دارای stateهای `stopped / starting / running / stopping / failed` است. Startup فقط وقتی موفق است که Provider health واقعاً Ready شود. Stop ابتدا SIGTERM و سپس در timeout مسیر kill محافظتی دارد. Logها در RAM محدود و مسیرهای model/runtime redacted هستند.
++
++## Upstream rationale
++- llama.cpp server: OpenAI-compatible HTTP, multimodal, JSON-schema response format و CPU/GPU runtime.
++- Qwen: preset کوچک از خانواده Qwen3.5 و preset بزرگ‌تر از Qwen3.6 انتخاب شده؛ نام مدل در Core hard-code اجرایی نیست و فقط Recommendation است.
++
++## مواردی که هنوز Certification واقعی می‌خواهند
++- اجرای `llama-server.exe` واقعی روی Windows 10/11
++- GGUF واقعی Text
++- GGUF واقعی Vision
++- GPU backend واقعی و thermal/performance طولانی
++- Packaged NSIS/Portable runtime path
++- Code signing/release artifacts
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/RELEASE_READINESS_v0.9.1.json /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/RELEASE_READINESS_v0.9.1.json
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/RELEASE_READINESS_v0.9.1.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/RELEASE_READINESS_v0.9.1.json	2026-08-13 10:50:02.274254377 +0000
+@@ -0,0 +1,21 @@
++{
++  "version": "0.9.1",
++  "track": "real-local-ai-runtime",
++  "coreSource": "READY",
++  "legacyRegression": "PASS",
++  "testSuitesInNpmTest": 31,
++  "localAIRuntimeUnit": "PASS",
++  "capabilityProbeUnit": "PASS",
++  "dependencyPins": "PASS",
++  "sourceHygiene": "PASS",
++  "syntax": "PASS",
++  "jsx": "PASS",
++  "windowsRealLlamaCppUAT": "PENDING_WINDOWS",
++  "windowsRealQwenTextUAT": "PENDING_WINDOWS",
++  "windowsRealQwenVisionUAT": "PENDING_WINDOWS",
++  "packageLock": "PENDING_LOCKFILE_REQUIRED",
++  "sourceBuild": "PENDING_DEPENDENCIES_VITE_NOT_INSTALLED",
++  "nsis": "PENDING",
++  "portable": "PENDING",
++  "authenticode": "PENDING"
++}
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/UPSTREAM_PROVENANCE.md /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/UPSTREAM_PROVENANCE.md
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/UPSTREAM_PROVENANCE.md	2026-08-13 10:27:41.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/UPSTREAM_PROVENANCE.md	2026-08-13 10:47:47.410254377 +0000
+@@ -12,3 +12,10 @@
+ - Qwen-Agent — planning/tool/memory architecture reference only; Python framework is not bundled because v0.9 keeps execution inside the existing Electron Skill/Cycle safety core.
+ 
+ If any upstream source code or model weights are vendored in a future release, add the exact pinned commit/version and required license/notice files to that release before distribution.
++
++## v0.9.1 Local Runtime references (2026-08-13)
++- llama.cpp server official repository/docs: https://github.com/ggml-org/llama.cpp/tree/master/tools/server
++- Qwen3.6 official repository (includes Qwen3.5 release matrix and llama.cpp text+vision support): https://github.com/QwenLM/Qwen3.6
++- Microsoft Win32_VideoController reference: https://learn.microsoft.com/windows/win32/cimwin32prov/win32-videocontroller
++
++No upstream runtime binary, model weights, or model file is bundled in this source release.
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/VALIDATION_v0.9.1_FA.md /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/VALIDATION_v0.9.1_FA.md
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/docs/VALIDATION_v0.9.1_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/VALIDATION_v0.9.1_FA.md	2026-08-13 10:50:02.286254377 +0000
+@@ -0,0 +1,35 @@
++# Validation v0.9.1
++
++## Source-level
++- Node syntax: PASS
++- JSX parse/type syntax: PASS
++- Runtime manager unit test: PASS
++- Hardware advisor unit test: PASS
++- OpenAI compatibility fallback test: PASS
++- `/props` capability test: PASS
++- JSON schema probe: PASS
++- synthetic Vision probe: PASS
++- Windows Real Local AI UAT: SKIP در محیط non-Windows
++
++## Runtime security assertions
++- Host 127.0.0.1: PASS
++- no-webui: PASS
++- no arbitrary MCP/agent args: PASS
++- LLAMA_ARG_* scrub: PASS
++- LLAMA_API_KEY scrub: PASS
++- explicit regular-file runtime/model validation: PASS
++
++## Pending external certification
++- real llama-server.exe on Windows 10
++- real llama-server.exe on Windows 11
++- real Qwen GGUF text
++- real multimodal GGUF vision
++- packaged NSIS/Portable smoke with managed runtime
++
++## Final gate (2026-08-13)
++- `npm run check`: PASS
++- npm test chain: 31 suites/files PASS
++- Windows Real Local AI UAT: SKIP (Windows only)
++- strict release inputs: expected FAIL-CLOSED with `LOCKFILE_REQUIRED`
++- Vite source build in this container: not executed because dependencies are not installed (`vite: not found`)
++- async Child Process spawn-error fail-fast: PASS
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/ipc.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/ipc.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/ipc.cjs	2026-08-13 10:26:10.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/ipc.cjs	2026-08-13 10:43:02.660012242 +0000
+@@ -22,6 +22,18 @@
+   ipcMain.handle('wa:ai-settings', e => trusted(e) ? (localAIService?localAIService.settings():{ok:false,code:'AI_RUNTIME_UNAVAILABLE'}) : deny());
+   ipcMain.handle('wa:ai-settings-update', (e,patch={}) => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,settings:localAIService.updateSettings(patch)}}catch(error){return{ok:false,code:error.code||'AI_SETTINGS_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-health', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};return localAIService.health();});
++  ipcMain.handle('wa:ai-hardware-profile', async (e,visionPreferred=false) => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,profile:await localAIService.hardwareProfile({visionPreferred:Boolean(visionPreferred)})}}catch(error){return{ok:false,code:error.code||'AI_HARDWARE_PROFILE_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-apply-hardware-advice', (e,advice={}) => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,settings:localAIService.applyHardwareAdvice(advice)}}catch(error){return{ok:false,code:error.code||'AI_HARDWARE_ADVICE_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-runtime-status', e => trusted(e) ? (localAIService?localAIService.runtimeStatus():{ok:false,code:'AI_RUNTIME_UNAVAILABLE'}) : deny());
++  ipcMain.handle('wa:ai-runtime-selection', e => trusted(e) ? (localAIService?localAIService.runtimeSelection():{ok:false,code:'AI_RUNTIME_UNAVAILABLE'}) : deny());
++  ipcMain.handle('wa:ai-runtime-pick-executable', async e => {if(!trusted(e))return deny();const filters=process.platform==='win32'?[{name:'llama-server',extensions:['exe']}]:[{name:'llama-server',extensions:['*']}];const r=await dialog.showOpenDialog({title:'انتخاب llama-server',properties:['openFile'],filters});return r.canceled||!r.filePaths[0]?{ok:false,cancelled:true}:{ok:true,filePath:r.filePaths[0]};});
++  ipcMain.handle('wa:ai-runtime-pick-model', async e => {if(!trusted(e))return deny();const r=await dialog.showOpenDialog({title:'انتخاب مدل GGUF',properties:['openFile'],filters:[{name:'GGUF model',extensions:['gguf']}]});return r.canceled||!r.filePaths[0]?{ok:false,cancelled:true}:{ok:true,filePath:r.filePaths[0]};});
++  ipcMain.handle('wa:ai-runtime-start', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,runtime:await localAIService.startManagedRuntime()}}catch(error){return{ok:false,code:error.code||'AI_RUNTIME_START_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-runtime-stop', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,runtime:await localAIService.stopManagedRuntime()}}catch(error){return{ok:false,code:error.code||'AI_RUNTIME_STOP_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-runtime-restart', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,runtime:await localAIService.restartManagedRuntime()}}catch(error){return{ok:false,code:error.code||'AI_RUNTIME_RESTART_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-capability-probe', async (e,includeVision=false) => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.capabilityProbe({includeVision:Boolean(includeVision)})}catch(error){return{ok:false,code:error.code||'AI_CAPABILITY_PROBE_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-warmup', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.warmup()}catch(error){return{ok:false,code:error.code||'AI_WARMUP_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-ui-assist', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const c=engine.create('windows-ui-map',{maxNodes:500,maxWindows:80},{source:'ai-ui-assist',budget:{maxIterations:4,maxWallTimeMs:30000}});const done=await engine.run(c.id);const map=done?.result||null;const count=Number(map?.elements?.length||0);if(map?.supported&&count>=8)return{ok:true,schemaVersion:'workspace-ai-ui-assist-v1',source:'uia',reason:'UIA_SUFFICIENT',uia:map,vision:null,policy:{uiaFirst:true,automaticScreenshot:false}};const r=await dialog.showOpenDialog({title:'UIA کافی نبود؛ تصویر Screenshot را برای Vision انتخاب کنید',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true,source:'uia-insufficient',uia:map,policy:{uiaFirst:true,automaticScreenshot:false}};const vision=await localAIService.analyzeImageFile(r.filePaths[0]);return{ok:true,schemaVersion:'workspace-ai-ui-assist-v1',source:'vision-fallback',reason:map?.supported?'UIA_LOW_SIGNAL':'UIA_UNSUPPORTED',uia:map,vision,policy:{uiaFirst:true,automaticScreenshot:false}};}catch(error){return{ok:false,code:error.code||'AI_UI_ASSIST_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-plan', async (e,command='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.plan(command,{root});}catch(error){return{ok:false,code:error.code||'AI_PLAN_FAILED',message:error.message,retryAfterMs:error.retryAfterMs||null}}});
+   ipcMain.handle('wa:ai-start-mission', async (e,planToken='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const rec=localAIService.consumePlan(planToken,{root});const c=engine.create('mission',{root,command:'[LOCAL_AI_PLAN]',goalPlan:rec.goalPlan,planSource:'local-ai-token',aiCommandHash:rec.commandHash},{source:'local-ai-token',budget:{maxIterations:80,maxWallTimeMs:30*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'AI_MISSION_START_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-vision-file', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};const r=await dialog.showOpenDialog({title:'انتخاب تصویر برای Local Vision',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true};try{return await localAIService.analyzeImageFile(r.filePaths[0]);}catch(error){return{ok:false,code:error.code||'AI_VISION_FAILED',message:error.message}}});
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/main.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/main.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/main.cjs	2026-08-13 10:26:10.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/main.cjs	2026-08-13 10:42:28.141336667 +0000
+@@ -28,7 +28,7 @@
+ const { persistentIndexScanCycle, persistentIndexMaintenanceCycle, indexedFileSearchCycle, indexedDuplicatesCycle } = require('./services/persistent-index-cycles.cjs');
+ const { registerIpc } = require('./ipc.cjs');
+ 
+-let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;
++let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;
+ 
+ function certificationSmokeOutput(){const eq=process.argv.find(x=>String(x).startsWith('--cert-smoke-output='));if(eq)return String(eq).slice('--cert-smoke-output='.length);const i=process.argv.indexOf('--cert-smoke-output');return i>=0?String(process.argv[i+1]||''):'';}
+ function certificationUserData(){const eq=process.argv.find(x=>String(x).startsWith('--cert-user-data='));if(eq)return String(eq).slice('--cert-user-data='.length);const i=process.argv.indexOf('--cert-user-data');return i>=0?String(process.argv[i+1]||''):'';}
+@@ -40,15 +40,15 @@
+   const dev=process.env.VITE_DEV_SERVER_URL; if(dev) mainWindow.loadURL(dev); else mainWindow.loadFile(path.join(__dirname,'..','dist','index.html'));
+ }
+ app.whenReady().then(async()=>{
+-  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); const localAIService=new LocalAIService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
++  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+   engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+   }});automationService.start();
+-  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});app.quit();return;}createWindow();
++  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});void localAIService.hardwareProfile({visionPreferred:localAIService.settings().allowVision}).catch(()=>{});void localAIService.autoStartManagedRuntime().catch(()=>{});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});app.quit();return;}createWindow();
+   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0) createWindow();});
+ });
+-app.on('before-quit',()=>{automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();persistentFileIndex?.close();});
++app.on('before-quit',()=>{localAIService?.terminateRuntimeNow?.();automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();persistentFileIndex?.close();});
+ app.on('will-quit',()=>{try{lifecycleState?.markCleanExit('will-quit');}catch{}});
+ app.on('window-all-closed',()=>{if(process.platform!=='darwin') app.quit();});
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/preload.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/preload.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/preload.cjs	2026-08-13 10:23:13.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/preload.cjs	2026-08-13 10:43:04.628869997 +0000
+@@ -1,7 +1,7 @@
+ const { contextBridge, ipcRenderer } = require('electron');
+ contextBridge.exposeInMainWorld('workspaceAgent', {
+   selectFolder: () => ipcRenderer.invoke('wa:select-folder'), cycles: () => ipcRenderer.invoke('wa:cycles'), capabilities: () => ipcRenderer.invoke('wa:capabilities'), skills: () => ipcRenderer.invoke('wa:skills'), indexStatus: root => ipcRenderer.invoke('wa:index-status',root), indexRoots: () => ipcRenderer.invoke('wa:index-roots'), indexHealth: deep => ipcRenderer.invoke('wa:index-health',deep), indexSearch: input => ipcRenderer.invoke('wa:index-search',input), indexErrors: (root,limit=200) => ipcRenderer.invoke('wa:index-errors',root,limit), snapshots: root => ipcRenderer.invoke('wa:snapshots',root), planGoal: command => ipcRenderer.invoke('wa:plan-goal',command),
+-  aiStatus:()=>ipcRenderer.invoke('wa:ai-status'), aiSettings:()=>ipcRenderer.invoke('wa:ai-settings'), aiSettingsUpdate:patch=>ipcRenderer.invoke('wa:ai-settings-update',patch), aiHealth:()=>ipcRenderer.invoke('wa:ai-health'), aiPlan:(command,root)=>ipcRenderer.invoke('wa:ai-plan',command,root), aiStartMission:(token,root)=>ipcRenderer.invoke('wa:ai-start-mission',token,root), aiVisionFile:()=>ipcRenderer.invoke('wa:ai-vision-file'),
++  aiStatus:()=>ipcRenderer.invoke('wa:ai-status'), aiSettings:()=>ipcRenderer.invoke('wa:ai-settings'), aiSettingsUpdate:patch=>ipcRenderer.invoke('wa:ai-settings-update',patch), aiHealth:()=>ipcRenderer.invoke('wa:ai-health'), aiHardwareProfile:vision=>ipcRenderer.invoke('wa:ai-hardware-profile',vision), aiApplyHardwareAdvice:advice=>ipcRenderer.invoke('wa:ai-apply-hardware-advice',advice), aiRuntimeStatus:()=>ipcRenderer.invoke('wa:ai-runtime-status'), aiRuntimeSelection:()=>ipcRenderer.invoke('wa:ai-runtime-selection'), aiRuntimePickExecutable:()=>ipcRenderer.invoke('wa:ai-runtime-pick-executable'), aiRuntimePickModel:()=>ipcRenderer.invoke('wa:ai-runtime-pick-model'), aiRuntimeStart:()=>ipcRenderer.invoke('wa:ai-runtime-start'), aiRuntimeStop:()=>ipcRenderer.invoke('wa:ai-runtime-stop'), aiRuntimeRestart:()=>ipcRenderer.invoke('wa:ai-runtime-restart'), aiCapabilityProbe:vision=>ipcRenderer.invoke('wa:ai-capability-probe',vision), aiWarmup:()=>ipcRenderer.invoke('wa:ai-warmup'), aiUiAssist:()=>ipcRenderer.invoke('wa:ai-ui-assist'), aiPlan:(command,root)=>ipcRenderer.invoke('wa:ai-plan',command,root), aiStartMission:(token,root)=>ipcRenderer.invoke('wa:ai-start-mission',token,root), aiVisionFile:()=>ipcRenderer.invoke('wa:ai-vision-file'),
+   startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
+   reviewList:root=>ipcRenderer.invoke('wa:review-list',root),reviewUpdate:(id,patch)=>ipcRenderer.invoke('wa:review-update',id,patch),reviewClear:root=>ipcRenderer.invoke('wa:review-clear',root),
+   zonesList:()=>ipcRenderer.invoke('wa:zones-list'),zonesAdd:input=>ipcRenderer.invoke('wa:zones-add',input),zonesRemove:id=>ipcRenderer.invoke('wa:zones-remove',id),storageTrend:root=>ipcRenderer.invoke('wa:storage-trend',root),
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/hardware-profile-service.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/hardware-profile-service.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/hardware-profile-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/hardware-profile-service.cjs	2026-08-13 10:48:58.875995876 +0000
+@@ -0,0 +1,27 @@
++const os=require('os');
++const fs=require('fs');
++const path=require('path');
++const {execFile}=require('child_process');
++
++function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
++function vendorFromName(name=''){const s=String(name).toLowerCase();if(s.includes('nvidia'))return'nvidia';if(s.includes('amd')||s.includes('radeon'))return'amd';if(s.includes('intel'))return'intel';if(s.includes('microsoft'))return'microsoft';return'unknown';}
++function powershellPath(){if(process.platform!=='win32')return null;const root=process.env.SystemRoot||process.env.WINDIR||'C:\\Windows';const candidates=[path.join(root,'System32','WindowsPowerShell','v1.0','powershell.exe'),path.join(root,'System32','WindowsPowerShell','v1.0','powershell')];for(const p of candidates){try{if(fs.statSync(p).isFile())return p}catch{}}return null;}
++function execFileJson(exe,args,{timeoutMs=7000,maxBuffer=512*1024}={}){return new Promise((resolve,reject)=>{execFile(exe,args,{windowsHide:true,timeout:timeoutMs,maxBuffer,encoding:'utf8'},(error,stdout,stderr)=>{if(error)return reject(Object.assign(error,{stderr:String(stderr||'').slice(0,1000)}));try{resolve(JSON.parse(String(stdout||'').trim()||'null'));}catch(parseError){reject(Object.assign(parseError,{code:'HW_JSON_INVALID'}));}});});}
++function baseProfile(){const cpus=os.cpus()||[];return{schemaVersion:'workspace-hardware-profile-v1',at:new Date().toISOString(),platform:process.platform,arch:process.arch,memory:{totalBytes:os.totalmem(),freeBytes:os.freemem()},cpu:{logicalCores:cpus.length,model:String(cpus[0]?.model||'unknown').trim(),speedMHz:Number(cpus[0]?.speed||0)},gpus:[],windowsDetail:null,warnings:[]};}
++async function windowsDetail(){const exe=powershellPath();if(!exe)return null;const script=`$ErrorActionPreference='Stop';$cs=Get-CimInstance Win32_ComputerSystem|Select-Object Manufacturer,Model,TotalPhysicalMemory,NumberOfLogicalProcessors,NumberOfProcessors;$cpu=Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed;$gpu=Get-CimInstance Win32_VideoController|Select-Object Name,AdapterRAM,DriverVersion,PNPDeviceID;[pscustomobject]@{computer=$cs;cpu=@($cpu);gpu=@($gpu)}|ConvertTo-Json -Depth 5 -Compress`;
++ try{return await execFileJson(exe,['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-Command',script]);}catch{return null;}}
++function advisedThreads(logical,{reserve=1,max=8}={}){const cores=Math.max(1,Number(logical)||1);return Math.max(1,Math.min(max,cores,cores-reserve>0?cores-reserve:cores));}
++function recommendModel(profile,{visionPreferred=false}={}){const ramGB=(profile.memory?.totalBytes||0)/(1024**3);const logical=Math.max(1,profile.cpu?.logicalCores||1);const hasDiscrete=profile.gpus.some(g=>['nvidia','amd'].includes(g.vendor));let tier='tiny',model='Qwen3.5-0.8B',contextSize=4096,threads=advisedThreads(logical,{reserve:1,max:8}),note='برای سیستم کم‌حافظه؛ مناسب Planner سبک.';
++ if(ramGB>=8){tier='small';model='Qwen3.5-2B';contextSize=8192;threads=advisedThreads(logical,{reserve:2,max:10});note='تعادل مناسب برای Agent محلی سبک.';}
++ if(ramGB>=12){tier='balanced';model='Qwen3.5-4B';contextSize=8192;threads=advisedThreads(logical,{reserve:2,max:12});note='پیشنهاد پیش‌فرض برای بیشتر سیستم‌های 16GB.';}
++ if(ramGB>=24){tier='strong';model='Qwen3.5-9B';contextSize=12288;threads=advisedThreads(logical,{reserve:2,max:16});note='کیفیت Planner بهتر با RAM بیشتر.';}
++ if(ramGB>=48){tier='advanced';model='Qwen3.6-27B';contextSize=16384;threads=advisedThreads(logical,{reserve:2,max:20});note='برای سیستم‌های پرحافظه/شتاب‌دهنده قوی؛ مصرف حافظه قابل توجه است.';}
++ if(ramGB>=64&&hasDiscrete){tier='advanced-moe';model='Qwen3.6-35B-A3B';contextSize=16384;note='MoE باز Qwen3.6 برای سخت‌افزار قوی؛ قبل از استفاده GGUF واقعی benchmark شود.';}
++ if(visionPreferred&&ramGB<12)note+=' Vision روی این سطح سخت‌افزار ممکن است کند باشد.';
++ return{schemaVersion:'workspace-model-advice-v1',tier,modelFamily:model,quantization:'Q4_K_M-or-equivalent',contextSize,threads,gpuLayers:'auto',visionPreferred:Boolean(visionPreferred),basis:{ramGB:Math.round(ramGB*10)/10,logicalCores:logical,gpuVendors:[...new Set(profile.gpus.map(g=>g.vendor))]},note,guaranteedFit:false};}
++class HardwareProfileService{
++ constructor({journal=null}={}){this.journal=journal;this.last=null;}
++ async probe({visionPreferred=false}={}){const p=baseProfile();if(process.platform==='win32'){const detail=await windowsDetail();p.windowsDetail=detail;if(detail?.computer?.TotalPhysicalMemory){const n=Number(detail.computer.TotalPhysicalMemory);if(Number.isFinite(n)&&n>0)p.memory.totalBytes=n;}const gpus=Array.isArray(detail?.gpu)?detail.gpu:detail?.gpu?[detail.gpu]:[];p.gpus=gpus.slice(0,12).map(g=>({name:String(g.Name||'Unknown GPU').slice(0,240),vendor:vendorFromName(g.Name),adapterRamBytes:Number(g.AdapterRAM||0)||null,adapterRamConfidence:'low',driverVersion:String(g.DriverVersion||'').slice(0,120)}));if(p.gpus.some(g=>g.adapterRamBytes))p.warnings.push('Win32_VideoController.AdapterRAM ممکن است روی برخی WDDM/GPUها دقیق نباشد؛ Model Advisor آن را معیار قطعی VRAM نمی‌داند.');}else p.warnings.push('جزئیات WMI فقط روی Windows قابل خواندن است.');p.advice=recommendModel(p,{visionPreferred});this.last=p;this.journal?.append('AI_HARDWARE_PROFILED',{payload:{platform:p.platform,arch:p.arch,ramBytes:p.memory.totalBytes,logicalCores:p.cpu.logicalCores,gpuVendors:p.gpus.map(g=>g.vendor),advice:p.advice.modelFamily}});return p;}
++ status(){return this.last||baseProfile();}
++}
++module.exports={HardwareProfileService,recommendModel,advisedThreads,baseProfile,vendorFromName,powershellPath};
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-ai-config-store.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-config-store.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-ai-config-store.cjs	2026-08-13 10:29:08.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-config-store.cjs	2026-08-13 10:41:10.358254377 +0000
+@@ -2,7 +2,7 @@
+ const path=require('path');
+ const crypto=require('crypto');
+ 
+-const SCHEMA='workspace-local-ai-config-v1';
++const SCHEMA='workspace-local-ai-config-v2';
+ const DEFAULTS=Object.freeze({
+   schemaVersion:SCHEMA,
+   enabled:false,
+@@ -20,19 +20,32 @@
+   allowVision:false,
+   maxVisionBytes:8*1024*1024,
+   storeRawPrompts:false,
+-  networkPolicy:'loopback-only'
++  networkPolicy:'loopback-only',
++  managedRuntime:false,
++  runtimeExecutablePath:'',
++  runtimeModelPath:'',
++  runtimePort:8080,
++  runtimeAlias:'workspace-local-model',
++  runtimeContextSize:8192,
++  runtimeThreads:0,
++  runtimeGpuLayers:'auto',
++  runtimeStartupTimeoutMs:120000,
++  runtimeStartOnLaunch:false
+ });
+ 
+ function clone(v){return JSON.parse(JSON.stringify(v));}
+ function atomicWrite(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=`${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,file);}
+ function isLoopbackHost(hostname=''){const h=String(hostname||'').toLowerCase().replace(/^\[|\]$/g,'');return h==='localhost'||h==='127.0.0.1'||h==='::1'||h==='0:0:0:0:0:0:0:1';}
+-function validateBaseUrl(value){let u;try{u=new URL(String(value||''));}catch{throw Object.assign(new Error('آدرس Local AI معتبر نیست.'),{code:'AI_BASE_URL_INVALID'});}if(!['http:','https:'].includes(u.protocol))throw Object.assign(new Error('فقط HTTP/HTTPS برای Local AI پشتیبانی می‌شود.'),{code:'AI_PROTOCOL_BLOCKED'});if(u.username||u.password)throw Object.assign(new Error('Credential داخل URL مجاز نیست.'),{code:'AI_URL_CREDENTIAL_BLOCKED'});if(!isLoopbackHost(u.hostname))throw Object.assign(new Error('v0.9 فقط endpoint محلی loopback را می‌پذیرد.'),{code:'AI_NON_LOOPBACK_BLOCKED'});u.hash='';u.search='';u.pathname=u.pathname.replace(/\/+$/,'')||'/v1';if(!u.pathname.endsWith('/v1'))throw Object.assign(new Error('Base URL باید به مسیر OpenAI-compatible /v1 ختم شود.'),{code:'AI_BASE_PATH_BLOCKED'});return u.toString().replace(/\/$/,'');}
+-function normalize(input={}){const v={...DEFAULTS,...input,schemaVersion:SCHEMA};v.enabled=Boolean(v.enabled);v.allowVision=Boolean(v.allowVision);v.storeRawPrompts=false;v.baseUrl=validateBaseUrl(v.baseUrl);v.provider='local-openai-compatible';v.model=String(v.model||'').trim().slice(0,200);v.timeoutMs=Math.max(5000,Math.min(180000,Number(v.timeoutMs)||DEFAULTS.timeoutMs));v.maxOutputTokens=Math.max(128,Math.min(4096,Number(v.maxOutputTokens)||DEFAULTS.maxOutputTokens));{const t=Number(v.temperature);v.temperature=Number.isFinite(t)?Math.max(0,Math.min(1,t)):DEFAULTS.temperature;}v.maxPlanNodes=Math.max(1,Math.min(24,Number(v.maxPlanNodes)||DEFAULTS.maxPlanNodes));v.maxPromptChars=Math.max(4000,Math.min(64000,Number(v.maxPromptChars)||DEFAULTS.maxPromptChars));v.callsPerMinute=Math.max(1,Math.min(60,Number(v.callsPerMinute)||DEFAULTS.callsPerMinute));v.breakerFailures=Math.max(2,Math.min(10,Number(v.breakerFailures)||DEFAULTS.breakerFailures));v.breakerCooldownMs=Math.max(10000,Math.min(10*60*1000,Number(v.breakerCooldownMs)||DEFAULTS.breakerCooldownMs));v.maxVisionBytes=Math.max(256*1024,Math.min(16*1024*1024,Number(v.maxVisionBytes)||DEFAULTS.maxVisionBytes));v.networkPolicy='loopback-only';return v;}
++function validateBaseUrl(value){let u;try{u=new URL(String(value||''));}catch{throw Object.assign(new Error('آدرس Local AI معتبر نیست.'),{code:'AI_BASE_URL_INVALID'});}if(!['http:','https:'].includes(u.protocol))throw Object.assign(new Error('فقط HTTP/HTTPS برای Local AI پشتیبانی می‌شود.'),{code:'AI_PROTOCOL_BLOCKED'});if(u.username||u.password)throw Object.assign(new Error('Credential داخل URL مجاز نیست.'),{code:'AI_URL_CREDENTIAL_BLOCKED'});if(!isLoopbackHost(u.hostname))throw Object.assign(new Error('Local AI فقط endpoint محلی loopback را می‌پذیرد.'),{code:'AI_NON_LOOPBACK_BLOCKED'});u.hash='';u.search='';u.pathname=u.pathname.replace(/\/+$/,'')||'/v1';if(!u.pathname.endsWith('/v1'))throw Object.assign(new Error('Base URL باید به مسیر OpenAI-compatible /v1 ختم شود.'),{code:'AI_BASE_PATH_BLOCKED'});return u.toString().replace(/\/$/,'');}
++function cleanPath(v,max=4096){return String(v||'').trim().slice(0,max);}
++function normalizeGpuLayers(v){const s=String(v??'auto').trim().toLowerCase();if(['auto','all','0'].includes(s))return s;if(/^\d{1,3}$/.test(s))return String(Math.min(999,Number(s)));return'auto';}
++function normalize(input={}){const v={...DEFAULTS,...input,schemaVersion:SCHEMA};v.enabled=Boolean(v.enabled);v.allowVision=Boolean(v.allowVision);v.storeRawPrompts=false;v.baseUrl=validateBaseUrl(v.baseUrl);v.provider='local-openai-compatible';v.model=String(v.model||'').trim().slice(0,200);v.timeoutMs=Math.max(5000,Math.min(180000,Number(v.timeoutMs)||DEFAULTS.timeoutMs));v.maxOutputTokens=Math.max(128,Math.min(4096,Number(v.maxOutputTokens)||DEFAULTS.maxOutputTokens));{const t=Number(v.temperature);v.temperature=Number.isFinite(t)?Math.max(0,Math.min(1,t)):DEFAULTS.temperature;}v.maxPlanNodes=Math.max(1,Math.min(24,Number(v.maxPlanNodes)||DEFAULTS.maxPlanNodes));v.maxPromptChars=Math.max(4000,Math.min(64000,Number(v.maxPromptChars)||DEFAULTS.maxPromptChars));v.callsPerMinute=Math.max(1,Math.min(60,Number(v.callsPerMinute)||DEFAULTS.callsPerMinute));v.breakerFailures=Math.max(2,Math.min(10,Number(v.breakerFailures)||DEFAULTS.breakerFailures));v.breakerCooldownMs=Math.max(10000,Math.min(10*60*1000,Number(v.breakerCooldownMs)||DEFAULTS.breakerCooldownMs));v.maxVisionBytes=Math.max(256*1024,Math.min(16*1024*1024,Number(v.maxVisionBytes)||DEFAULTS.maxVisionBytes));v.networkPolicy='loopback-only';
++ v.managedRuntime=Boolean(v.managedRuntime);v.runtimeExecutablePath=cleanPath(v.runtimeExecutablePath);v.runtimeModelPath=cleanPath(v.runtimeModelPath);v.runtimePort=Math.max(1024,Math.min(65535,Number(v.runtimePort)||8080));v.runtimeAlias=/^[A-Za-z0-9._-]{1,80}$/.test(String(v.runtimeAlias||''))?String(v.runtimeAlias):DEFAULTS.runtimeAlias;v.runtimeContextSize=Math.max(2048,Math.min(65536,Number(v.runtimeContextSize)||DEFAULTS.runtimeContextSize));v.runtimeThreads=Math.max(0,Math.min(64,Number(v.runtimeThreads)||0));v.runtimeGpuLayers=normalizeGpuLayers(v.runtimeGpuLayers);v.runtimeStartupTimeoutMs=Math.max(10000,Math.min(180000,Number(v.runtimeStartupTimeoutMs)||DEFAULTS.runtimeStartupTimeoutMs));v.runtimeStartOnLaunch=Boolean(v.runtimeStartOnLaunch);return v;}
+ class LocalAIConfigStore{
+   constructor(userData){this.file=path.join(userData,'local-ai-settings.json');this.value=this.load();}
+   load(){try{const raw=JSON.parse(fs.readFileSync(this.file,'utf8'));return normalize(raw);}catch{return normalize(DEFAULTS);}}
+   get(){return clone(this.value);}
+-  update(patch={}){const forbidden=['apiKey','token','secret','password'];for(const key of forbidden)if(Object.prototype.hasOwnProperty.call(patch,key))throw Object.assign(new Error('ذخیره Credential در Local AI v0.9 پشتیبانی نمی‌شود.'),{code:'AI_SECRET_STORAGE_BLOCKED'});this.value=normalize({...this.value,...patch});atomicWrite(this.file,this.value);return this.get();}
++  update(patch={}){const forbidden=['apiKey','token','secret','password','runtimeArgs','extraArgs','environment','env'];for(const key of forbidden)if(Object.prototype.hasOwnProperty.call(patch,key))throw Object.assign(new Error('ذخیره Credential/Raw Runtime Args در Local AI پشتیبانی نمی‌شود.'),{code:'AI_SECRET_STORAGE_BLOCKED'});this.value=normalize({...this.value,...patch});atomicWrite(this.file,this.value);return this.get();}
+   reset(){this.value=normalize(DEFAULTS);atomicWrite(this.file,this.value);return this.get();}
+ }
+-module.exports={SCHEMA,DEFAULTS,LocalAIConfigStore,validateBaseUrl,isLoopbackHost,normalize};
++module.exports={SCHEMA,DEFAULTS,LocalAIConfigStore,validateBaseUrl,isLoopbackHost,normalize,normalizeGpuLayers};
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-ai-runtime-manager.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-runtime-manager.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-ai-runtime-manager.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-runtime-manager.cjs	2026-08-13 10:48:58.875644846 +0000
+@@ -0,0 +1,24 @@
++const fs=require('fs');
++const path=require('path');
++const {spawn}=require('child_process');
++
++function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
++function existsRegular(file){try{const l=fs.lstatSync(file);return l.isFile()&&!l.isSymbolicLink();}catch{return false;}}
++function validatePort(value){const n=Number(value);if(!Number.isInteger(n)||n<1024||n>65535)throw Object.assign(new Error('پورت Managed Local AI باید بین 1024 و 65535 باشد.'),{code:'AI_RUNTIME_PORT_INVALID'});return n;}
++function validateAlias(value){const s=String(value||'workspace-local-model').trim();if(!/^[A-Za-z0-9._-]{1,80}$/.test(s))throw Object.assign(new Error('Alias مدل فقط باید شامل حروف، عدد، نقطه، خط تیره یا underscore باشد.'),{code:'AI_RUNTIME_ALIAS_INVALID'});return s;}
++function validateRuntimeFiles(cfg,{platform=process.platform}={}){const exe=path.resolve(String(cfg.runtimeExecutablePath||''));const model=path.resolve(String(cfg.runtimeModelPath||''));if(!cfg.runtimeExecutablePath||!existsRegular(exe))throw Object.assign(new Error('مسیر llama-server معتبر نیست.'),{code:'AI_RUNTIME_EXECUTABLE_INVALID'});const exeName=path.basename(exe).toLowerCase();const expected=platform==='win32'?'llama-server.exe':'llama-server';if(exeName!==expected)throw Object.assign(new Error(`فایل Runtime باید ${expected} باشد.`),{code:'AI_RUNTIME_EXECUTABLE_NAME_BLOCKED'});if(!cfg.runtimeModelPath||!existsRegular(model)||path.extname(model).toLowerCase()!=='.gguf')throw Object.assign(new Error('مدل Managed Runtime باید یک فایل GGUF معمولی و غیر-link باشد.'),{code:'AI_RUNTIME_MODEL_INVALID'});return{exe:fs.realpathSync(exe),model:fs.realpathSync(model),modelBytes:fs.statSync(model).size};}
++function cleanLlamaEnv(env=process.env){const out={};for(const [k,v] of Object.entries(env)){if(/^LLAMA_ARG_/i.test(k))continue;if(k==='LLAMA_API_KEY')continue;out[k]=v;}return out;}
++function buildArgs(cfg,files){const port=validatePort(cfg.runtimePort);const alias=validateAlias(cfg.runtimeAlias);const ctx=Math.max(2048,Math.min(65536,Number(cfg.runtimeContextSize)||8192));const args=['--model',files.model,'--alias',alias,'--host','127.0.0.1','--port',String(port),'--ctx-size',String(ctx),'--gpu-layers',String(cfg.runtimeGpuLayers||'auto'),'--no-webui','--reasoning','off'];const threads=Number(cfg.runtimeThreads||0);if(Number.isInteger(threads)&&threads>0)args.push('--threads',String(Math.min(64,threads)));return args;}
++function redactLog(text,{exe='',model=''}={}){let s=String(text||'');for(const p of [exe,model].filter(Boolean))s=s.split(p).join(`[${path.basename(p)}]`);return s.replace(/[\r\n]+$/,'').slice(0,2000);}
++class LocalAIRuntimeManager{
++ constructor({getConfig,updateConfig,provider,journal=null,spawnImpl=spawn,platform=process.platform}={}){this.getConfig=getConfig;this.updateConfig=updateConfig;this.provider=provider;this.journal=journal;this.spawnImpl=spawnImpl;this.platform=platform;this.child=null;this.state='stopped';this.startedAt=null;this.lastExit=null;this.logs=[];this.lastError=null;}
++ pushLog(kind,text,files={}){const clean=redactLog(text,files);if(!clean)return;this.logs.push({at:new Date().toISOString(),kind,text:clean});if(this.logs.length>120)this.logs.splice(0,this.logs.length-120);}
++ status(){const cfg=this.getConfig();return{schemaVersion:'workspace-local-ai-runtime-v1',managed:Boolean(cfg.managedRuntime),state:this.state,pid:this.child?.pid||null,startedAt:this.startedAt,lastExit:this.lastExit,lastError:this.lastError,baseUrl:`http://127.0.0.1:${cfg.runtimePort}/v1`,alias:cfg.runtimeAlias||'workspace-local-model',modelFile:cfg.runtimeModelPath?path.basename(cfg.runtimeModelPath):null,executableFile:cfg.runtimeExecutablePath?path.basename(cfg.runtimeExecutablePath):null,logs:this.logs.slice(-30)};}
++ async start({reason='manual'}={}){const cfg=this.getConfig();if(!cfg.managedRuntime)throw Object.assign(new Error('Managed Runtime در تنظیمات فعال نیست.'),{code:'AI_MANAGED_RUNTIME_DISABLED'});if(this.child&&['starting','running'].includes(this.state))return this.status();const files=validateRuntimeFiles(cfg,{platform:this.platform});const port=validatePort(cfg.runtimePort);const alias=validateAlias(cfg.runtimeAlias);const args=buildArgs(cfg,files);this.updateConfig({baseUrl:`http://127.0.0.1:${port}/v1`,model:alias});this.state='starting';this.lastError=null;this.lastExit=null;this.logs=[];let child;try{child=this.spawnImpl(files.exe,args,{cwd:path.dirname(files.exe),windowsHide:true,detached:false,stdio:['ignore','pipe','pipe'],env:cleanLlamaEnv(process.env)});}catch(error){this.state='failed';this.lastError={code:'AI_RUNTIME_SPAWN_FAILED',message:error.message};throw Object.assign(error,{code:'AI_RUNTIME_SPAWN_FAILED'});}this.child=child;this.startedAt=new Date().toISOString();this.journal?.append('AI_RUNTIME_STARTING',{payload:{reason,port,alias,modelFile:path.basename(files.model),modelBytes:files.modelBytes}});child.stdout?.on?.('data',d=>this.pushLog('stdout',d,files));child.stderr?.on?.('data',d=>this.pushLog('stderr',d,files));child.once?.('error',error=>{this.lastError={code:'AI_RUNTIME_PROCESS_ERROR',message:String(error.message||error).slice(0,500)};this.state='failed';this.child=null;});child.once?.('exit',(code,signal)=>{this.lastExit={at:new Date().toISOString(),code,signal};if(this.state!=='stopping')this.state=code===0?'stopped':'failed';this.child=null;this.journal?.append('AI_RUNTIME_EXIT',{payload:{code,signal,state:this.state}});});
++ const deadline=Date.now()+Math.max(10000,Math.min(180000,Number(cfg.runtimeStartupTimeoutMs)||120000));let lastHealth=null;while(Date.now()<deadline){if(!this.child){if(this.lastError?.code==='AI_RUNTIME_PROCESS_ERROR')throw Object.assign(new Error(this.lastError.message||'llama-server process error.'),{code:'AI_RUNTIME_PROCESS_ERROR'});const err=Object.assign(new Error('llama-server قبل از Ready شدن بسته شد.'),{code:'AI_RUNTIME_EARLY_EXIT'});this.lastError={code:err.code,message:err.message};throw err;}lastHealth=await this.provider.health();if(lastHealth?.ok){this.state='running';this.journal?.append('AI_RUNTIME_READY',{payload:{pid:child.pid,latencyMs:lastHealth.latencyMs,models:lastHealth.models?.slice(0,5)||[]}});return this.status();}await sleep(350);}await this.stop({reason:'startup-timeout'});const error=Object.assign(new Error('llama-server در زمان مجاز Ready نشد.'),{code:'AI_RUNTIME_START_TIMEOUT',health:lastHealth});this.lastError={code:error.code,message:error.message};throw error;}
++ async stop({reason='manual'}={}){const child=this.child;if(!child){this.state='stopped';return this.status();}this.state='stopping';this.journal?.append('AI_RUNTIME_STOPPING',{payload:{reason,pid:child.pid}});try{child.kill?.('SIGTERM');}catch{}const deadline=Date.now()+5000;while(this.child&&Date.now()<deadline)await sleep(100);if(this.child){try{this.child.kill?.('SIGKILL');}catch{}await sleep(100);}this.child=null;this.state='stopped';return this.status();}
++ async restart(){await this.stop({reason:'restart'});return this.start({reason:'restart'});}
++ terminateNow(reason='app-quit'){const child=this.child;if(!child)return;this.journal?.append('AI_RUNTIME_TERMINATE_NOW',{payload:{reason,pid:child.pid}});try{child.kill?.('SIGTERM');}catch{}this.child=null;this.state='stopped';}
++ async autoStart(){const cfg=this.getConfig();if(!cfg.enabled||!cfg.managedRuntime||!cfg.runtimeStartOnLaunch)return this.status();try{return await this.start({reason:'app-startup'});}catch(error){this.journal?.append('AI_RUNTIME_AUTOSTART_FAILED',{payload:{code:error.code||'AI_RUNTIME_AUTOSTART_FAILED',message:String(error.message||'').slice(0,500)}});return this.status();}}
++}
++module.exports={LocalAIRuntimeManager,validateRuntimeFiles,buildArgs,cleanLlamaEnv,validatePort,validateAlias};
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-ai-service.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-service.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-ai-service.cjs	2026-08-13 10:29:08.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-service.cjs	2026-08-13 10:42:16.586254377 +0000
+@@ -3,17 +3,31 @@
+ const path=require('path');
+ const {LocalAIConfigStore}=require('./local-ai-config-store.cjs');
+ const {LocalOpenAIProvider}=require('./local-openai-provider.cjs');
++const {LocalAIRuntimeManager,validateRuntimeFiles}=require('./local-ai-runtime-manager.cjs');
++const {HardwareProfileService}=require('./hardware-profile-service.cjs');
+ const {AICallGuard}=require('./ai-call-guard.cjs');
+ const {SkillMemoryStore}=require('./skill-memory-store.cjs');
+ const {AIPlanner}=require('./ai-planner.cjs');
+ const {hashText,redactText}=require('./ai-redaction.cjs');
+ function token(){return`ai-plan-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;}
++const TINY_PNG='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=';
+ class LocalAIService{
+- constructor(userData,{journal=null}={}){this.userData=userData;this.journal=journal;this.configStore=new LocalAIConfigStore(userData);this.memory=new SkillMemoryStore(userData,{journal});this.guard=new AICallGuard({journal,getConfig:()=>this.configStore.get()});this.provider=new LocalOpenAIProvider({getConfig:()=>this.configStore.get()});this.planner=new AIPlanner({provider:this.provider,guard:this.guard,memory:this.memory,journal,getConfig:()=>this.configStore.get()});this.tokens=new Map();}
++ constructor(userData,{journal=null}={}){this.userData=userData;this.journal=journal;this.configStore=new LocalAIConfigStore(userData);this.memory=new SkillMemoryStore(userData,{journal});this.guard=new AICallGuard({journal,getConfig:()=>this.configStore.get()});this.provider=new LocalOpenAIProvider({getConfig:()=>this.configStore.get()});this.planner=new AIPlanner({provider:this.provider,guard:this.guard,memory:this.memory,journal,getConfig:()=>this.configStore.get()});this.hardware=new HardwareProfileService({journal});this.runtime=new LocalAIRuntimeManager({getConfig:()=>this.configStore.get(),updateConfig:p=>this.configStore.update(p),provider:this.provider,journal});this.tokens=new Map();}
+  settings(){return this.configStore.get();}
+- updateSettings(patch){const v=this.configStore.update(patch);this.guard.resetCircuit();this.journal?.append('AI_SETTINGS_UPDATED',{payload:{enabled:v.enabled,provider:v.provider,baseUrl:v.baseUrl,model:v.model||null,allowVision:v.allowVision,networkPolicy:v.networkPolicy}});return v;}
+- status(){const c=this.settings();return{schemaVersion:'workspace-local-ai-status-v1',enabled:c.enabled,provider:c.provider,baseUrl:c.baseUrl,model:c.model||null,allowVision:c.allowVision,networkPolicy:c.networkPolicy,privacy:{rawPromptsStored:false,secretsStored:false,externalNetworkAllowed:false},guard:this.guard.snapshot(),memory:this.memory.summary(),recommendation:{runtime:'llama.cpp llama-server',families:['Qwen3.6','Qwen3.5'],note:'مدل در این پروژه دانلود یا bundle نمی‌شود؛ کاربر Runtime/Model محلی را جدا نصب می‌کند.'}};}
++ updateSettings(patch){const v=this.configStore.update(patch);this.guard.resetCircuit();this.journal?.append('AI_SETTINGS_UPDATED',{payload:{enabled:v.enabled,provider:v.provider,baseUrl:v.baseUrl,model:v.model||null,allowVision:v.allowVision,networkPolicy:v.networkPolicy,managedRuntime:v.managedRuntime,runtimePort:v.runtimePort,runtimeAlias:v.runtimeAlias,runtimeStartOnLaunch:v.runtimeStartOnLaunch}});return v;}
++ status(){const c=this.settings();return{schemaVersion:'workspace-local-ai-status-v2',enabled:c.enabled,provider:c.provider,baseUrl:c.baseUrl,model:c.model||null,allowVision:c.allowVision,networkPolicy:c.networkPolicy,privacy:{rawPromptsStored:false,secretsStored:false,externalNetworkAllowed:false,backgroundScreenCapture:false},guard:this.guard.snapshot(),memory:this.memory.summary(),runtime:this.runtime.status(),hardware:this.hardware.last?{platform:this.hardware.last.platform,arch:this.hardware.last.arch,memory:this.hardware.last.memory,cpu:this.hardware.last.cpu,gpus:this.hardware.last.gpus,advice:this.hardware.last.advice}:null,recommendation:{runtime:'llama.cpp llama-server',families:['Qwen3.5-0.8B/2B/4B/9B','Qwen3.6-27B/35B-A3B'],note:'Runtime و GGUF در پروژه bundle/download نمی‌شوند. Managed Runtime فقط فایل‌های محلی صریح انتخاب‌شده را اجرا می‌کند.'}};}
+  async health(){if(!this.settings().enabled)return{ok:false,code:'AI_DISABLED'};const out=await this.provider.health();this.journal?.append('AI_PROVIDER_HEALTH',{payload:{ok:out.ok,code:out.code,latencyMs:out.latencyMs,models:out.models?.slice(0,10)||[]}});return out;}
++ async hardwareProfile({visionPreferred=false}={}){return this.hardware.probe({visionPreferred});}
++ applyHardwareAdvice(advice){if(!advice||advice.schemaVersion!=='workspace-model-advice-v1')throw Object.assign(new Error('Hardware advice نامعتبر است.'),{code:'AI_HARDWARE_ADVICE_INVALID'});return this.updateSettings({runtimeContextSize:advice.contextSize,runtimeThreads:advice.threads,runtimeGpuLayers:advice.gpuLayers});}
++ runtimeStatus(){return this.runtime.status();}
++ async startManagedRuntime(){return this.runtime.start({reason:'manual'});}
++ async stopManagedRuntime(){return this.runtime.stop({reason:'manual'});}
++ async restartManagedRuntime(){return this.runtime.restart();}
++ autoStartManagedRuntime(){return this.runtime.autoStart();}
++ terminateRuntimeNow(){return this.runtime.terminateNow('app-quit');}
++ runtimeSelection(){const c=this.settings();let files=null,error=null;try{files=validateRuntimeFiles(c);}catch(e){error={code:e.code||'AI_RUNTIME_SELECTION_INVALID',message:e.message};}const total=this.hardware.last?.memory?.totalBytes||require('os').totalmem();return{schemaVersion:'workspace-local-ai-selection-v1',ok:Boolean(files),error,modelFile:c.runtimeModelPath?path.basename(c.runtimeModelPath):null,executableFile:c.runtimeExecutablePath?path.basename(c.runtimeExecutablePath):null,modelBytes:files?.modelBytes||null,ramRatio:files?.modelBytes&&total?Math.round((files.modelBytes/total)*1000)/1000:null,warning:files?.modelBytes&&total&&files.modelBytes>total*0.7?'فایل مدل نسبت به RAM سیستم بزرگ است؛ Runtime ممکن است کند یا ناموفق شود.':null};}
++ async capabilityProbe({includeVision=false}={}){if(!this.settings().enabled)return{ok:false,code:'AI_DISABLED'};const health=await this.provider.health();if(!health.ok)return{schemaVersion:'workspace-ai-capabilities-v1',ok:false,health};const props=await this.provider.props();const schema=await this.provider.schemaProbe();let vision={tested:false,supported:Boolean(props?.modalities?.vision),ok:null};if(includeVision&&this.settings().allowVision&&vision.supported){const tinySchema={type:'object',additionalProperties:false,required:['seen'],properties:{seen:{type:'boolean'}}};try{const out=await this.provider.visionJson({prompt:'This is a capability probe using a synthetic 1x1 local image. Return seen=true if the image input was accepted.',imageDataUrl:TINY_PNG,schema:tinySchema});vision={tested:true,supported:true,ok:Boolean(out.parsed?.seen),latencyMs:out.latencyMs,model:out.model};}catch(error){vision={tested:true,supported:true,ok:false,code:error.code||'AI_VISION_PROBE_FAILED',message:error.message};}}const result={schemaVersion:'workspace-ai-capabilities-v1',ok:Boolean(health.ok&&schema.ok),health,props,schemaJson:schema,vision};this.journal?.append('AI_CAPABILITY_PROBED',{payload:{ok:result.ok,schemaJson:schema.ok,visionSupported:vision.supported,visionTested:vision.tested,visionOk:vision.ok}});return result;}
++ async warmup(){if(!this.settings().enabled)return{ok:false,code:'AI_DISABLED'};const started=Date.now();const schema=await this.provider.schemaProbe();const out={schemaVersion:'workspace-ai-warmup-v1',ok:Boolean(schema.ok),latencyMs:Date.now()-started,schema};this.journal?.append('AI_MODEL_WARMUP',{payload:{ok:out.ok,latencyMs:out.latencyMs,model:schema.model||null}});return out;}
+  cleanupTokens(){const now=Date.now();for(const [k,v] of this.tokens)if(v.expiresAt<=now)this.tokens.delete(k);}
+  validateWorkspaceRoot(root){const raw=String(root||'').trim();if(!raw)throw Object.assign(new Error('برای Local AI Plan باید Workspace صریح انتخاب شود.'),{code:'AI_WORKSPACE_REQUIRED'});const resolved=path.resolve(raw);let stat;try{stat=fs.statSync(resolved);}catch{throw Object.assign(new Error('Workspace انتخاب‌شده در دسترس نیست.'),{code:'AI_WORKSPACE_UNAVAILABLE'});}if(!stat.isDirectory())throw Object.assign(new Error('Workspace باید پوشه باشد.'),{code:'AI_WORKSPACE_NOT_DIRECTORY'});return resolved;}
+  async plan(command,{root=''}={}){this.cleanupTokens();const resolvedRoot=this.validateWorkspaceRoot(root);const p=await this.planner.plan(command,{root:resolvedRoot});const t=token();const record={token:t,root:resolvedRoot,goalPlan:p.goalPlan,missionDag:p.missionDag,commandHash:hashText(command),createdAt:Date.now(),expiresAt:Date.now()+10*60*1000};this.tokens.set(t,record);return{...p,token:t,expiresAt:new Date(record.expiresAt).toISOString()};}
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-openai-provider.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-openai-provider.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/electron/services/local-openai-provider.cjs	2026-08-13 10:29:10.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-openai-provider.cjs	2026-08-13 10:41:10.366254377 +0000
+@@ -1,11 +1,15 @@
+ const {validateBaseUrl}=require('./local-ai-config-store.cjs');
+ function parseContent(value){if(value&&typeof value==='object')return value;let s=String(value??'').trim();s=s.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();return JSON.parse(s);}
++function originFromBase(baseUrl){const u=new URL(validateBaseUrl(baseUrl));return u.origin;}
+ class LocalOpenAIProvider{
+  constructor({getConfig}={}){this.getConfig=getConfig;}
+  cfg(){const c=this.getConfig();return{...c,baseUrl:validateBaseUrl(c.baseUrl)};}
+- async request(pathname,{method='GET',body=null,timeoutMs=null,maxResponseBytes=4*1024*1024}={}){const c=this.cfg();const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs||c.timeoutMs);try{const res=await fetch(`${c.baseUrl}${pathname}`,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:ctrl.signal,redirect:'error'});const declared=Number(res.headers.get('content-length')||0);if(declared>maxResponseBytes){ctrl.abort();throw Object.assign(new Error('پاسخ Local AI از سقف مجاز بزرگ‌تر است.'),{code:'AI_RESPONSE_TOO_LARGE'});}let total=0;const chunks=[];if(res.body){for await(const chunk of res.body){total+=chunk.length;if(total>maxResponseBytes){ctrl.abort();throw Object.assign(new Error('پاسخ Local AI از سقف مجاز بزرگ‌تر است.'),{code:'AI_RESPONSE_TOO_LARGE'});}chunks.push(Buffer.from(chunk));}}const text=Buffer.concat(chunks,total).toString('utf8');let json=null;try{json=text?JSON.parse(text):null}catch{}if(!res.ok)throw Object.assign(new Error(json?.error?.message||`Local AI HTTP ${res.status}`),{code:'AI_HTTP_ERROR',status:res.status});return json;}catch(error){if(error?.name==='AbortError'&&!error?.code)throw Object.assign(new Error('Local AI timeout.'),{code:'AI_TIMEOUT'});if(error?.code)throw error;throw Object.assign(new Error(error.message||'Local AI unavailable.'),{code:'AI_CONNECTION_FAILED'});}finally{clearTimeout(timer);}}
+- async health(){const started=Date.now();try{const json=await this.request('/models',{timeoutMs:5000});const models=Array.isArray(json?.data)?json.data.map(x=>String(x.id||'')).filter(Boolean).slice(0,50):[];return{ok:true,code:'AI_PROVIDER_READY',latencyMs:Date.now()-started,models};}catch(error){return{ok:false,code:error.code||'AI_PROVIDER_UNAVAILABLE',message:error.message,latencyMs:Date.now()-started,models:[]};}}
+- async chatJson({messages,schema,kind='plan',maxTokens=null,temperature=null}){const c=this.cfg();if(!c.model)throw Object.assign(new Error('نام مدل Local AI تنظیم نشده است.'),{code:'AI_MODEL_REQUIRED'});const payload={model:c.model,messages,temperature:temperature??c.temperature,max_tokens:maxTokens||c.maxOutputTokens,stream:false,response_format:{type:'json_schema',schema},reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}};const started=Date.now();const json=await this.request('/chat/completions',{method:'POST',body:payload});const content=json?.choices?.[0]?.message?.content;if(content===undefined||content===null)throw Object.assign(new Error('Local AI پاسخ متنی معتبر نداد.'),{code:'AI_EMPTY_RESPONSE'});let parsed;try{parsed=parseContent(content);}catch{throw Object.assign(new Error('پاسخ Local AI JSON معتبر نبود.'),{code:'AI_JSON_INVALID'});}return{parsed,latencyMs:Date.now()-started,usage:json?.usage||null,model:json?.model||c.model,kind};}
++ async request(pathname,{method='GET',body=null,timeoutMs=null,maxResponseBytes=4*1024*1024,root=false}={}){const c=this.cfg();const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs||c.timeoutMs);try{const target=root?`${originFromBase(c.baseUrl)}${pathname}`:`${c.baseUrl}${pathname}`;const res=await fetch(target,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:ctrl.signal,redirect:'error'});const declared=Number(res.headers.get('content-length')||0);if(declared>maxResponseBytes){ctrl.abort();throw Object.assign(new Error('پاسخ Local AI از سقف مجاز بزرگ‌تر است.'),{code:'AI_RESPONSE_TOO_LARGE'});}let total=0;const chunks=[];if(res.body){for await(const chunk of res.body){total+=chunk.length;if(total>maxResponseBytes){ctrl.abort();throw Object.assign(new Error('پاسخ Local AI از سقف مجاز بزرگ‌تر است.'),{code:'AI_RESPONSE_TOO_LARGE'});}chunks.push(Buffer.from(chunk));}}const text=Buffer.concat(chunks,total).toString('utf8');let json=null;try{json=text?JSON.parse(text):null}catch{}if(!res.ok)throw Object.assign(new Error(json?.error?.message||`Local AI HTTP ${res.status}`),{code:'AI_HTTP_ERROR',status:res.status,details:json?.error||null});return json;}catch(error){if(error?.name==='AbortError'&&!error?.code)throw Object.assign(new Error('Local AI timeout.'),{code:'AI_TIMEOUT'});if(error?.code)throw error;throw Object.assign(new Error(error.message||'Local AI unavailable.'),{code:'AI_CONNECTION_FAILED'});}finally{clearTimeout(timer);}}
++ async health(){const started=Date.now();try{const json=await this.request('/models',{timeoutMs:5000});const data=Array.isArray(json?.data)?json.data.slice(0,50):[];const models=data.map(x=>String(x.id||'')).filter(Boolean);return{ok:true,code:'AI_PROVIDER_READY',latencyMs:Date.now()-started,models,modelDetails:data.map(x=>({id:String(x.id||''),meta:x.meta||null}))};}catch(error){return{ok:false,code:error.code||'AI_PROVIDER_UNAVAILABLE',message:error.message,latencyMs:Date.now()-started,models:[],modelDetails:[]};}}
++ async props(){try{const c=this.cfg();const model=encodeURIComponent(c.model||'');const json=await this.request(`/props${model?`?model=${model}`:''}`,{root:true,timeoutMs:5000,maxResponseBytes:2*1024*1024});return{ok:true,modalities:json?.modalities||null,chatTemplateCaps:json?.chat_template_caps||null,totalSlots:Number(json?.total_slots||0)||null,contextSize:Number(json?.default_generation_settings?.n_ctx||0)||null,isSleeping:Boolean(json?.is_sleeping),buildInfo:String(json?.build_info||'').slice(0,240)};}catch(error){return{ok:false,code:error.code||'AI_PROPS_UNAVAILABLE',message:error.message};}}
++ payload({messages,schema,maxTokens,temperature,compat='llama'}){const c=this.cfg();if(!c.model)throw Object.assign(new Error('نام مدل Local AI تنظیم نشده است.'),{code:'AI_MODEL_REQUIRED'});const body={model:c.model,messages,temperature:temperature??c.temperature,max_tokens:maxTokens||c.maxOutputTokens,stream:false,response_format:{type:'json_schema',schema}};if(compat==='llama'){body.reasoning_effort='none';body.chat_template_kwargs={enable_thinking:false};}return body;}
++ async chatJson({messages,schema,kind='plan',maxTokens=null,temperature=null}){const started=Date.now();let json;try{json=await this.request('/chat/completions',{method:'POST',body:this.payload({messages,schema,maxTokens,temperature,compat:'llama'})});}catch(error){if(error?.code==='AI_HTTP_ERROR'&&[400,404,422].includes(error.status)){json=await this.request('/chat/completions',{method:'POST',body:this.payload({messages,schema,maxTokens,temperature,compat:'minimal'})});}else throw error;}const c=this.cfg();const content=json?.choices?.[0]?.message?.content;if(content===undefined||content===null)throw Object.assign(new Error('Local AI پاسخ متنی معتبر نداد.'),{code:'AI_EMPTY_RESPONSE'});let parsed;try{parsed=parseContent(content);}catch{throw Object.assign(new Error('پاسخ Local AI JSON معتبر نبود.'),{code:'AI_JSON_INVALID'});}return{parsed,latencyMs:Date.now()-started,usage:json?.usage||null,model:json?.model||c.model,kind};}
+  async visionJson({prompt,imageDataUrl,schema}){return this.chatJson({kind:'vision',messages:[{role:'system',content:'You are a local visual analysis component. Describe only visible evidence. Never suggest clicking or executing actions. Return only schema-valid JSON.'},{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:imageDataUrl}}]}],schema,maxTokens:1200,temperature:0.1});}
++ async schemaProbe(){const schema={type:'object',additionalProperties:false,required:['ok'],properties:{ok:{type:'boolean'}}};try{const out=await this.chatJson({kind:'capability-probe',messages:[{role:'system',content:'Return only schema-valid JSON.'},{role:'user',content:'Set ok to true.'}],schema,maxTokens:32,temperature:0});return{ok:Boolean(out.parsed?.ok),latencyMs:out.latencyMs,model:out.model};}catch(error){return{ok:false,code:error.code||'AI_SCHEMA_PROBE_FAILED',message:error.message};}}
+ }
+-module.exports={LocalOpenAIProvider,parseContent};
++module.exports={LocalOpenAIProvider,parseContent,originFromBase};
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/package.json /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/package.json
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/package.json	2026-08-13 10:32:02.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/package.json	2026-08-13 10:47:04.242254377 +0000
+@@ -1,16 +1,16 @@
+ {
+   "name": "windows-workspace-agent",
+-  "version": "0.9.0",
++  "version": "0.9.1",
+   "private": true,
+-  "description": "Cycle-driven Windows workspace agent with crash-resilient indexing, Windows safety/certification foundations, and a loopback-only schema-constrained Local AI planner with privacy, budget and circuit guards.",
++  "description": "Cycle-driven Windows workspace agent with crash-resilient indexing, Windows safety foundations, and a managed loopback-only llama.cpp local AI runtime with hardware advisory and capability probing.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -44,7 +44,9 @@
+     "certify:windows": "powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1",
+     "test:ai": "node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs",
+     "test:local-ai-server": "powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1",
+-    "test:local-ai-uat": "node tests/local-ai-server-v090.uat.cjs"
++    "test:local-ai-uat": "node tests/local-ai-server-v090.uat.cjs",
++    "test:ai-runtime": "node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs",
++    "test:windows-local-ai-runtime-uat": "node tests/windows-local-ai-runtime-v091.uat.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/src/App.jsx /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/src/App.jsx
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/src/App.jsx	2026-08-13 10:31:29.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/src/App.jsx	2026-08-13 10:44:05.960196223 +0000
+@@ -5,7 +5,7 @@
+ const bytes=n=>{if(!n)return'۰ B';const u=['B','KB','MB','GB','TB'];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${new Intl.NumberFormat('fa-IR',{maximumFractionDigits:1}).format(v)} ${u[i]}`};
+ const tabs={home:'مرکز فرمان',system:'Windows System',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+- const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState('');
++ const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null);
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -14,7 +14,7 @@
+  const refreshJournal=async()=>{setJournalRows(await api.journalList({limit:250}));setJournalStatus(await api.journalVerify())};
+  const refreshWatches=async()=>{setWatches(await api.watchList());setWatchEvents(await api.watchEvents(250));setWatchStatus(await api.watchStatus());setResilience(await api.resilienceStatus())};
+  const refreshCert=async()=>setCertStatus(await api.certStatus());
+- const refreshAI=async()=>{const [status,settings]=await Promise.all([api.aiStatus(),api.aiSettings()]);setAiStatus(status);setAiSettings(settings)};
++ const refreshAI=async()=>{const [status,settings,runtime,selection]=await Promise.all([api.aiStatus(),api.aiSettings(),api.aiRuntimeStatus(),api.aiRuntimeSelection()]);setAiStatus(status);setAiSettings(settings);setAiRuntime(runtime);setAiSelection(selection)};
+  const refreshReviews=async r=>{const target=r||root;if(!target){setReviewItems([]);return}setReviewItems(await api.reviewList(target));};
+  const refreshIndex=async r=>{const target=r||root;if(!target){setIndexStatus(null);setIndexErrors([]);setIndexHealth(null);return}setIndexStatus(await api.indexStatus(target));setIndexErrors(await api.indexErrors(target,100));setIndexHealth(await api.indexHealth(false));};
+  useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();refreshAI();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
+@@ -29,18 +29,24 @@
+  async function makeAIPlan(){setAiError('');setAiPlanResult(null);if(!root||!aiCommand)return;setBusy(true);try{const r=await api.aiPlan(aiCommand,root);setAiPlanResult(r);if(!r?.ok)setAiError(r?.message||r?.code||'ساخت Local AI Plan ناموفق بود.')}finally{setBusy(false)}}
+  async function executeAIPlan(){if(!aiPlanResult?.token||!root)return;setAiError('');setBusy(true);try{const c=await api.aiStartMission(aiPlanResult.token,root);if(c?.id){setCycle(c);setAiPlanResult(null);await refresh();await refreshJournal()}else setAiError(c?.message||c?.code||'اجرای AI Mission شروع نشد.')}finally{setBusy(false)}}
+  async function runAIVision(){setAiError('');setBusy(true);try{const r=await api.aiVisionFile();if(r?.cancelled)return;setAiVision(r);if(!r?.ok)setAiError(r?.message||r?.code||'تحلیل Vision ناموفق بود.')}finally{setBusy(false)}}
++ async function probeAIHardware(){setAiError('');setBusy(true);try{const r=await api.aiHardwareProfile(Boolean(aiSettings?.allowVision));if(r?.ok){setAiHardware(r.profile);if(!aiSettings?.runtimeThreads&&r.profile?.advice){const x=await api.aiApplyHardwareAdvice(r.profile.advice);if(x?.ok)setAiSettings(x.settings)}}else setAiError(r?.message||r?.code||'تشخیص سخت‌افزار ناموفق بود.')}finally{setBusy(false)}}
++ async function pickAIRuntimeExe(){const r=await api.aiRuntimePickExecutable();if(r?.ok)setAiSettings(x=>({...x,runtimeExecutablePath:r.filePath}))}
++ async function pickAIModel(){const r=await api.aiRuntimePickModel();if(r?.ok)setAiSettings(x=>({...x,runtimeModelPath:r.filePath}))}
++ async function runtimeAction(kind){setAiError('');setBusy(true);try{const fn=kind==='start'?api.aiRuntimeStart:kind==='restart'?api.aiRuntimeRestart:api.aiRuntimeStop;const r=await fn();if(r?.ok){setAiRuntime(r.runtime);await refreshAI()}else setAiError(r?.message||r?.code||`Runtime ${kind} failed`)}finally{setBusy(false)}}
++ async function probeAICapabilities(includeVision=false){setAiError('');setBusy(true);try{const r=await api.aiCapabilityProbe(includeVision);setAiCapabilities(r);if(!r?.ok)setAiError(r?.message||r?.code||'Capability probe ناموفق بود.')}finally{setBusy(false)}}
++ async function warmupAI(){setAiError('');setBusy(true);try{const r=await api.aiWarmup();if(!r?.ok)setAiError(r?.message||r?.code||'Warmup ناموفق بود.');else setAiHealth({ok:true,code:'AI_WARMED',latencyMs:r.latencyMs,models:[r.schema?.model].filter(Boolean)})}finally{setBusy(false)}}
++ async function runAIUiAssist(){setAiError('');setAiUiAssist(null);setBusy(true);try{const r=await api.aiUiAssist();if(r?.cancelled){setAiUiAssist(r);return}setAiUiAssist(r);if(!r?.ok)setAiError(r?.message||r?.code||'UI Assist ناموفق بود.')}finally{setBusy(false)}}
+  async function dismissReview(item,status='dismissed'){await api.reviewUpdate(item.id,{status});await refreshReviews();setSelectedReview(x=>x.filter(id=>id!==item.id))}
+  async function auditZone(z){setActiveZone(z);setZoneReport(null);await run('managed-zone-audit',{root:z.root,zoneId:z.id})}
+  const pending=useMemo(()=>reviewItems.filter(x=>x.status==='pending'),[reviewItems]);
+  const rootTabs=['home','mission','ai','health','intelligence','review','zones','drive','index','search','cleanup','files','duplicates','snapshots','automation','watch','pdf'];
+- return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.0</span></header>
++ return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.1</span></header>
+  {rootTabs.includes(tab)&&<section className="picker"><div><b>Workspace</b><span>{root||'پوشه‌ای انتخاب نشده'}</span></div><button onClick={pick}>انتخاب پوشه</button></section>}
+  {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/><Task title="Local AI" sub="Qwen / llama.cpp · Plan-only" on={()=>setTab('ai')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
+  {tab==='system'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('windows-system')} disabled={busy}>اجرای Windows System Doctor</button><span>Read-only؛ Startup Advisor فقط اولویت Review می‌دهد و Registry/Process را تغییر نمی‌دهد.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{system&&<SystemReport data={system}/>}</>}
+  {tab==='uia'&&<><div className="toolbar"><button className="primary large" onClick={()=>{setUiaError('');run('windows-ui-map')}} disabled={busy}>خواندن UI پنجره فعال</button><span>Grounding خواندنی + Action کنترل‌شده با Preview/Confirm/Pin/Verify؛ بدون coordinate click، SendKeys عمومی یا Password write.</span></div>{uiaError&&<div className="panel action-error"><b>Action متوقف شد</b><p>{uiaError}</p></div>}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{uiaMap&&<UiaReport data={uiaMap} onAction={startUiaAction} busy={busy}/>}</>}
+  {tab==='mission'&&<><div className="panel"><h3>فرمان فارسی</h3><textarea className="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="مثلاً: این پوشه رو هوشمند بررسی کن، پیشنهادها رو برای Review آماده کن و چیزی رو خودکار تغییر نده"/><div className="actions"><button onClick={plan} disabled={!command}>فقط ساخت Plan</button><button className="primary" onClick={mission} disabled={!root||!command||busy}>اجرای Mission</button></div>{goal&&<div className="preview-box"><b>{goal.summary}</b><p>Confidence: {Math.round(goal.confidence*100)}%</p>{goal.notes?.map((n,i)=><small key={i}>{n}</small>)}{goal.steps.map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'نیازمند تأیید':'Read-only/Local'}</small></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+- {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>فقط endpoint محلی loopback؛ مدل هیچ Tool اجرایی دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>Status</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Provider</span><b>{aiStatus.provider}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback only · no raw prompts</b></div></>}</div><div className="panel"><h3>Provider Settings</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id served by llama.cpp"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health Test</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+- {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
++ {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>External loopback endpoint یا Managed llama-server؛ مدل هیچ Tool اجرایی مستقیم دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>AI</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Runtime</span><b>{aiRuntime?.managed?`${aiRuntime.state} · ${aiRuntime.pid||'-'}`:'External / manual'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback · no raw prompt · no background screenshot</b></div></>}</div><div className="panel"><h3>Hardware Advisor</h3><p>RAM/CPU و روی Windows اطلاعات WMI GPU خوانده می‌شود. VRAM WMI فقط سیگنال کم‌اعتماد است و Fit تضمین نمی‌شود.</p><div className="actions"><button onClick={probeAIHardware} disabled={busy}>Probe Hardware</button>{aiHardware?.advice&&<button onClick={async()=>{const r=await api.aiApplyHardwareAdvice(aiHardware.advice);if(r?.ok){setAiSettings(r.settings);await refreshAI()}}}>اعمال تنظیمات Runtime پیشنهادی</button>}</div>{aiHardware&&<><div className="meter"><span>RAM</span><b>{bytes(aiHardware.memory?.totalBytes)}</b></div><div className="meter"><span>CPU</span><b>{aiHardware.cpu?.logicalCores||'-'} threads</b></div><div className="meter"><span>GPU</span><b>{(aiHardware.gpus||[]).map(g=>g.name).join(' · ')||'نامشخص'}</b></div><div className="meter"><span>Suggested</span><b>{aiHardware.advice?.modelFamily} · ctx {fmt(aiHardware.advice?.contextSize)}</b></div><small>{aiHardware.advice?.note}</small></>}</div><div className="panel wide"><h3>Managed llama.cpp Runtime</h3><p>Agent فقط فایل <code>llama-server</code> و مدل <code>.gguf</code> انتخاب‌شده توسط کاربر را با آرگومان‌های allowlisted اجرا می‌کند. Host همیشه 127.0.0.1 و Web UI خاموش است.</p>{aiSettings&&<div className="formgrid"><label><span>Managed Runtime</span><input type="checkbox" checked={Boolean(aiSettings.managedRuntime)} onChange={e=>setAiSettings({...aiSettings,managedRuntime:e.target.checked})}/></label><label><span>Start with Agent</span><input type="checkbox" checked={Boolean(aiSettings.runtimeStartOnLaunch)} onChange={e=>setAiSettings({...aiSettings,runtimeStartOnLaunch:e.target.checked})}/></label><div className="inline"><input value={aiSettings.runtimeExecutablePath||''} readOnly placeholder="llama-server.exe"/><button onClick={pickAIRuntimeExe}>انتخاب Runtime</button></div><div className="inline"><input value={aiSettings.runtimeModelPath||''} readOnly placeholder="model.gguf"/><button onClick={pickAIModel}>انتخاب GGUF</button></div><label><span>Port</span><input type="number" value={aiSettings.runtimePort||8080} onChange={e=>setAiSettings({...aiSettings,runtimePort:Number(e.target.value)})}/></label><label><span>Context</span><input type="number" value={aiSettings.runtimeContextSize||8192} onChange={e=>setAiSettings({...aiSettings,runtimeContextSize:Number(e.target.value)})}/></label><label><span>CPU Threads (0=auto)</span><input type="number" value={aiSettings.runtimeThreads||0} onChange={e=>setAiSettings({...aiSettings,runtimeThreads:Number(e.target.value)})}/></label><label><span>GPU Layers</span><select value={String(aiSettings.runtimeGpuLayers||'auto')} onChange={e=>setAiSettings({...aiSettings,runtimeGpuLayers:e.target.value})}><option value="auto">auto</option><option value="all">all</option><option value="0">CPU only</option></select></label><div className="actions"><button onClick={saveAI}>ذخیره تنظیمات</button><button className="primary" disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('start')}>Start</button><button disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('restart')}>Restart</button><button disabled={busy} onClick={()=>runtimeAction('stop')}>Stop</button></div></div>}{aiSelection&&<p>{aiSelection.ok?`Model ${aiSelection.modelFile} · ${bytes(aiSelection.modelBytes)} · RAM ratio ${Math.round((aiSelection.ramRatio||0)*100)}%`:`Selection: ${aiSelection.error?.code||'ناقص'}`} {aiSelection.warning||''}</p>}{aiRuntime?.logs?.length>0&&<details><summary>آخرین Runtime Logهای حافظه‌ای</summary><pre className="preview-box">{aiRuntime.logs.slice(-12).map(x=>`${x.kind}: ${x.text}`).join('\n')}</pre></details>}</div><div className="panel"><h3>Provider + Capability</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id / managed alias"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health</button><button onClick={warmupAI}>Warmup</button><button onClick={()=>probeAICapabilities(false)}>Probe JSON</button><button disabled={!aiSettings.allowVision} onClick={()=>probeAICapabilities(true)}>Probe Vision</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}{aiCapabilities&&<div className="preview-box"><b>Capability Probe: {aiCapabilities.ok?'PASS':'CHECK'}</b><small>Schema JSON: {aiCapabilities.schemaJson?.ok?'OK':'NO'} · Vision advertised: {aiCapabilities.vision?.supported?'YES':'NO'} · Vision tested: {aiCapabilities.vision?.tested?(aiCapabilities.vision?.ok?'PASS':'FAIL'):'NO'}</small><small>Context: {fmt(aiCapabilities.props?.contextSize||0)} · Slots: {fmt(aiCapabilities.props?.totalSlots||0)} · Build: {aiCapabilities.props?.buildInfo||'-'}</small></div>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIUiAssist}>UIA-first / Vision fallback</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}{aiUiAssist?.ok&&<div className="panel wide"><h3>UI Assist</h3><p>Source: <b>{aiUiAssist.source}</b> · {aiUiAssist.reason}</p><small>Policy: UIA first · هیچ Screenshot خودکاری گرفته نمی‌شود.</small>{aiUiAssist.source==='uia'?<p>{fmt(aiUiAssist.uia?.elements?.length)} کنترل از UI Automation کافی بود؛ Vision فراخوانی نشد.</p>:<p>{aiUiAssist.vision?.summary}</p>}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}\n {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
+  {tab==='intelligence'&&<><div className="grid4"><Task title="Workspace Intelligence" sub="Project / Destination / Rename" on={()=>run('workspace-intelligence')}/><Task title="Similar Photos" sub="dHash perceptual · Read-only" on={()=>run('similar-images')}/><Task title="Similar Texts" sub="SimHash content · Read-only" on={()=>run('similar-texts')}/><Task title="Build Review Queue" sub="Confidence ≥ 72% · Local only" on={async()=>{await run('review-queue-build');setTab('review')}}/><Task title="PDF Intelligence" sub="Metadata / Base text · No OCR" on={()=>run('pdf-intelligence')}/></div><div className="panel"><h3>Policy</h3><p>Intelligence فقط پیشنهاد می‌سازد. اعمال پیشنهاد فقط از Review Queue و پس از انتخاب، Preview و تأیید کاربر امکان‌پذیر است.</p></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{intel&&<IntelligenceReport data={intel}/>} {similarImages&&<SimilarityReport title="عکس‌های مشابه" data={similarImages} kind="image"/>} {similarTexts&&<SimilarityReport title="متن‌های مشابه" data={similarTexts} kind="text"/>}</>}
+  {tab==='review'&&<><div className="toolbar"><button className="primary" onClick={()=>run('review-queue-build')} disabled={!root||busy}>بازسازی Review Queue</button><button onClick={()=>setSelectedReview(pending.filter(x=>x.confidence>=.9).map(x=>x.id))} disabled={!pending.length}>انتخاب High Confidence</button><button onClick={()=>setSelectedReview(pending.map(x=>x.id))} disabled={!pending.length}>انتخاب همه Pending</button><button className="primary" onClick={()=>run('recommendation-apply',{itemIds:selectedReview})} disabled={!selectedReview.length||busy}>Preview اجرای {fmt(selectedReview.length)} پیشنهاد</button><button onClick={async()=>{await api.reviewClear(root);await refreshReviews()}} disabled={!root}>پاک‌سازی Dismissed/Reverted از صف</button></div><div className="panel"><div className="panel-title"><div><h3>Recommendation Review Queue</h3><p>Move و Rename یک فایل در زمان Preview با هم ترکیب می‌شوند. Collision Guard و Staging فعال است.</p></div><div className="mini-stats"><b>{fmt(pending.length)}</b><span>Pending</span><b>{fmt(reviewItems.filter(x=>x.status==='applied').length)}</b><span>Applied</span></div></div>{reviewItems.map(x=><div className={`review-row ${x.status}`} key={x.id}><label><input type="checkbox" disabled={x.status!=='pending'} checked={selectedReview.includes(x.id)} onChange={e=>setSelectedReview(s=>e.target.checked?[...new Set([...s,x.id])]:s.filter(id=>id!==x.id))}/><span><b>{x.actionType==='move'?'Move':'Rename'} · {x.status}</b><button className="linkish" onClick={()=>api.showItem(x.source)}>{x.source}</button><small>→ {x.actionType==='move'?x.suggestedFolder:x.suggestedName}</small></span></label><Confidence value={x.confidence}/><p>{(x.evidence||[]).join(' · ')}</p><div className="actions">{x.status==='pending'&&<button onClick={()=>dismissReview(x)}>Dismiss</button>}{x.status==='dismissed'&&<button onClick={()=>dismissReview(x,'pending')}>برگرداندن به Pending</button>}</div></div>)}{!reviewItems.length&&<p>صف خالی است. ابتدا Workspace Intelligence را اجرا و سپس Review Queue را بسازید.</p>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+  {tab==='zones'&&<><div className="toolbar"><button className="primary" disabled={!root} onClick={async()=>{await api.zonesAdd({root,title:'Workspace سفارشی',type:'custom'});await refreshZones()}}>افزودن Workspace فعلی به Managed Zones</button><span>Downloads / Desktop / Documents به‌صورت Built-in شناخته می‌شوند.</span></div><div className="panel"><h3>Managed Zones</h3>{zones.map(z=><div className="zone-row" key={z.id}><div><b>{z.title}</b><small>{z.type} · {z.root}</small></div><div className="actions"><button onClick={()=>api.openPath(z.root)}>باز کردن</button><button className="primary" onClick={()=>auditZone(z)} disabled={busy}>Audit</button>{!z.builtIn&&<button className="danger" onClick={async()=>{await api.zonesRemove(z.id);await refreshZones()}}>حذف Zone</button>}</div></div>)}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{zoneReport&&<ZoneReport data={zoneReport} zone={activeZone}/>}</>}
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/tests/local-ai-capability-v091.test.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/local-ai-capability-v091.test.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/tests/local-ai-capability-v091.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/local-ai-capability-v091.test.cjs	2026-08-13 10:46:51.422254377 +0000
+@@ -0,0 +1,54 @@
++const assert=require('assert');
++const http=require('http');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {LocalAIService}=require('../electron/services/local-ai-service.cjs');
++
++function readJson(req){return new Promise((resolve,reject)=>{let s='';req.on('data',c=>s+=c);req.on('end',()=>{try{resolve(s?JSON.parse(s):{});}catch(e){reject(e);}});req.on('error',reject);});}
++
++(async()=>{
++  const calls={chat:0,llamaRejected:0,vision:0,props:0};
++  const server=http.createServer(async(req,res)=>{
++    res.setHeader('Content-Type','application/json');
++    if(req.method==='GET'&&req.url.startsWith('/v1/models')){res.end(JSON.stringify({data:[{id:'wa-cap-test',meta:{n_ctx_train:8192}}]}));return;}
++    if(req.method==='GET'&&req.url.startsWith('/props')){calls.props++;res.end(JSON.stringify({modalities:{vision:true,audio:false},chat_template_caps:{supports_tools:true},total_slots:1,default_generation_settings:{n_ctx:8192},build_info:'test-build'}));return;}
++    if(req.method==='POST'&&req.url==='/v1/chat/completions'){
++      calls.chat++;const body=await readJson(req);
++      if(Object.prototype.hasOwnProperty.call(body,'reasoning_effort')){calls.llamaRejected++;res.statusCode=400;res.end(JSON.stringify({error:{message:'compat field unsupported'}}));return;}
++      const content=body.messages?.some(m=>Array.isArray(m.content)&&m.content.some(x=>x.type==='image_url'))?JSON.stringify({seen:true}):JSON.stringify({ok:true});
++      if(content.includes('seen'))calls.vision++;
++      res.end(JSON.stringify({model:'wa-cap-test',choices:[{message:{content}}],usage:{prompt_tokens:1,completion_tokens:1}}));return;
++    }
++    res.statusCode=404;res.end(JSON.stringify({error:{message:'not found'}}));
++  });
++  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
++  const port=server.address().port;
++  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-v091-cap-'));
++  try{
++    const service=new LocalAIService(dir);
++    service.updateSettings({enabled:true,baseUrl:`http://127.0.0.1:${port}/v1`,model:'wa-cap-test',allowVision:true,timeoutMs:5000});
++    const health=await service.health();
++    assert.equal(health.ok,true);
++    assert(health.models.includes('wa-cap-test'));
++
++    const caps=await service.capabilityProbe({includeVision:true});
++    assert.equal(caps.ok,true);
++    assert.equal(caps.props.ok,true);
++    assert.equal(caps.props.modalities.vision,true);
++    assert.equal(caps.schemaJson.ok,true);
++    assert.equal(caps.vision.tested,true);
++    assert.equal(caps.vision.ok,true);
++    assert(calls.llamaRejected>=2,'expected llama-specific body to be rejected then retried minimally');
++    assert(calls.vision>=1);
++    assert(calls.props>=1);
++
++    const warm=await service.warmup();
++    assert.equal(warm.ok,true);
++    assert(calls.chat>=5);
++    console.log('local-ai-capability-v091.test.cjs: PASS');
++  }finally{
++    await new Promise(resolve=>server.close(resolve));
++    fs.rmSync(dir,{recursive:true,force:true});
++  }
++})().catch(err=>{console.error(err);process.exit(1);});
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/tests/real-local-ai-runtime-v091.test.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/real-local-ai-runtime-v091.test.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/tests/real-local-ai-runtime-v091.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/real-local-ai-runtime-v091.test.cjs	2026-08-13 10:49:09.059552637 +0000
+@@ -0,0 +1,100 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {EventEmitter}=require('events');
++const {PassThrough}=require('stream');
++const {LocalAIRuntimeManager,validateRuntimeFiles,buildArgs,cleanLlamaEnv}=require('../electron/services/local-ai-runtime-manager.cjs');
++const {recommendModel}=require('../electron/services/hardware-profile-service.cjs');
++
++function profile(ramGB,cores=16,gpus=[]){return{memory:{totalBytes:ramGB*1024**3},cpu:{logicalCores:cores},gpus};}
++function fakeChild(pid=4242){
++  const child=new EventEmitter();
++  child.pid=pid;
++  child.stdout=new PassThrough();
++  child.stderr=new PassThrough();
++  child.kill=(signal='SIGTERM')=>{setImmediate(()=>child.emit('exit',0,signal));return true;};
++  return child;
++}
++
++(async()=>{
++  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-v091-runtime-'));
++  try{
++    const exe=path.join(dir,'llama-server');
++    const model=path.join(dir,'qwen-local.gguf');
++    fs.writeFileSync(exe,'fake-runtime');
++    fs.writeFileSync(model,Buffer.alloc(1024));
++
++    const files=validateRuntimeFiles({runtimeExecutablePath:exe,runtimeModelPath:model},{platform:'linux'});
++    assert.equal(files.exe,fs.realpathSync(exe));
++    assert.equal(files.model,fs.realpathSync(model));
++    assert.equal(files.modelBytes,1024);
++    assert.throws(()=>validateRuntimeFiles({runtimeExecutablePath:path.join(dir,'server'),runtimeModelPath:model},{platform:'linux'}),e=>e.code==='AI_RUNTIME_EXECUTABLE_INVALID'||e.code==='AI_RUNTIME_EXECUTABLE_NAME_BLOCKED');
++
++    const env=cleanLlamaEnv({PATH:'/safe',LLAMA_ARG_HOST:'0.0.0.0',LLAMA_ARG_MCP:'1',LLAMA_API_KEY:'secret',WA_OK:'yes'});
++    assert.equal(env.PATH,'/safe');
++    assert.equal(env.WA_OK,'yes');
++    assert.equal(env.LLAMA_ARG_HOST,undefined);
++    assert.equal(env.LLAMA_ARG_MCP,undefined);
++    assert.equal(env.LLAMA_API_KEY,undefined);
++
++    const cfg={
++      enabled:true,managedRuntime:true,runtimeExecutablePath:exe,runtimeModelPath:model,
++      runtimePort:18081,runtimeAlias:'wa-test-model',runtimeContextSize:8192,
++      runtimeThreads:6,runtimeGpuLayers:'auto',runtimeStartupTimeoutMs:10000,runtimeStartOnLaunch:false,
++      baseUrl:'http://127.0.0.1:18081/v1',model:'wa-test-model'
++    };
++    const built=buildArgs(cfg,files);
++    const joined=built.join(' ');
++    assert(joined.includes('--host 127.0.0.1'));
++    assert(joined.includes('--no-webui'));
++    assert(joined.includes('--reasoning off'));
++    assert(joined.includes('--gpu-layers auto'));
++    assert(!joined.includes('--mcp'));
++    assert(!joined.includes('--agent'));
++
++    let spawned=null;
++    const provider={health:async()=>({ok:true,code:'AI_PROVIDER_READY',latencyMs:3,models:['wa-test-model']})};
++    const manager=new LocalAIRuntimeManager({
++      getConfig:()=>cfg,
++      updateConfig:patch=>Object.assign(cfg,patch),
++      provider,
++      platform:'linux',
++      spawnImpl:(file,args,opts)=>{spawned={file,args,opts};return fakeChild();}
++    });
++    const started=await manager.start();
++    assert.equal(started.state,'running');
++    assert.equal(started.pid,4242);
++    assert.equal(spawned.file,files.exe);
++    assert.equal(spawned.opts.detached,false);
++    assert.equal(spawned.opts.windowsHide,true);
++    assert.equal(spawned.opts.env.LLAMA_API_KEY,undefined);
++    assert.equal(spawned.opts.env.LLAMA_ARG_HOST,undefined);
++    assert(spawned.args.includes('127.0.0.1'));
++    assert(spawned.args.includes('--no-webui'));
++    await manager.stop();
++    assert.equal(manager.status().state,'stopped');
++
++    const badManager=new LocalAIRuntimeManager({
++      getConfig:()=>cfg,
++      updateConfig:patch=>Object.assign(cfg,patch),
++      provider:{health:async()=>{await new Promise(r=>setTimeout(r,20));return{ok:false,code:'AI_PROVIDER_UNAVAILABLE'};}},
++      platform:'linux',
++      spawnImpl:()=>{const child=fakeChild(4343);setImmediate(()=>child.emit('error',new Error('spawn EACCES')));return child;}
++    });
++    await assert.rejects(()=>badManager.start(),e=>e.code==='AI_RUNTIME_PROCESS_ERROR'&&/EACCES/.test(e.message));
++    assert.equal(badManager.status().state,'failed');
++
++    const a=recommendModel(profile(6,8));
++    const b=recommendModel(profile(16,16));
++    const c=recommendModel(profile(32,24));
++    const d=recommendModel(profile(64,32,[{vendor:'nvidia'}]));
++    assert.equal(a.modelFamily,'Qwen3.5-0.8B');
++    assert.equal(b.modelFamily,'Qwen3.5-4B');
++    assert.equal(c.modelFamily,'Qwen3.5-9B');
++    assert.equal(d.modelFamily,'Qwen3.6-35B-A3B');
++    for(const x of [a,b,c,d]){assert.equal(x.guaranteedFit,false);assert.equal(x.gpuLayers,'auto');}
++
++    console.log('real-local-ai-runtime-v091.test.cjs: PASS');
++  }finally{fs.rmSync(dir,{recursive:true,force:true});}
++})().catch(err=>{console.error(err);process.exit(1);});
+diff -ruN '--exclude=DIFF_v0.9.1.txt' '--exclude=FILE_INVENTORY_v0.9.1.txt' /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/tests/windows-local-ai-runtime-v091.uat.cjs /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/windows-local-ai-runtime-v091.uat.cjs
+--- /mnt/data/wwa_v091/windows-workspace-agent-v0.9.0-local-ai-foundation/tests/windows-local-ai-runtime-v091.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wwa_v091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/windows-local-ai-runtime-v091.uat.cjs	2026-08-13 10:46:51.430254377 +0000
+@@ -0,0 +1,35 @@
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {LocalAIService}=require('../electron/services/local-ai-service.cjs');
++
++(async()=>{
++  if(process.platform!=='win32')return console.log('windows-local-ai-runtime-v091.uat.cjs: SKIP (Windows only)');
++  const exe=String(process.env.WA_LLAMA_SERVER||'').trim();
++  const model=String(process.env.WA_GGUF_MODEL||'').trim();
++  if(!exe||!model)return console.log('windows-local-ai-runtime-v091.uat.cjs: SKIP (set WA_LLAMA_SERVER + WA_GGUF_MODEL)');
++  if(!fs.existsSync(exe)||!fs.existsSync(model))throw new Error('WA_LLAMA_SERVER / WA_GGUF_MODEL path does not exist');
++  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-v091-real-ai-'));
++  const service=new LocalAIService(dir);
++  try{
++    service.updateSettings({
++      enabled:true,managedRuntime:true,runtimeExecutablePath:path.resolve(exe),runtimeModelPath:path.resolve(model),
++      runtimePort:Number(process.env.WA_LLAMA_PORT||18089),runtimeAlias:'wa-real-local-model',runtimeContextSize:Number(process.env.WA_LLAMA_CTX||8192),
++      runtimeThreads:Number(process.env.WA_LLAMA_THREADS||0),runtimeGpuLayers:'auto',runtimeStartupTimeoutMs:180000,
++      allowVision:String(process.env.WA_LLAMA_VISION||'').toLowerCase()==='true'
++    });
++    const hardware=await service.hardwareProfile({visionPreferred:service.settings().allowVision});
++    if(!hardware?.memory?.totalBytes)throw new Error('hardware profile failed');
++    const started=await service.startManagedRuntime();
++    if(started.state!=='running')throw new Error(`runtime state=${started.state}`);
++    const caps=await service.capabilityProbe({includeVision:service.settings().allowVision});
++    if(!caps.ok)throw new Error(`capability probe failed: ${JSON.stringify(caps)}`);
++    const warm=await service.warmup();
++    if(!warm.ok)throw new Error(`warmup failed: ${JSON.stringify(warm)}`);
++    console.log(JSON.stringify({ok:true,runtime:service.runtimeStatus(),capabilities:caps,hardware:{memory:hardware.memory,cpu:hardware.cpu,gpus:hardware.gpus,advice:hardware.advice}},null,2));
++    console.log('windows-local-ai-runtime-v091.uat.cjs: PASS');
++  }finally{
++    await service.stopManagedRuntime().catch(()=>{});
++    fs.rmSync(dir,{recursive:true,force:true});
++  }
++})().catch(err=>{console.error(err);process.exit(1);});

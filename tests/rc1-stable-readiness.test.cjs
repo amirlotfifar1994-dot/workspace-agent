@@ -1,0 +1,8 @@
+const assert=require('assert');const crypto=require('crypto');const {evaluateVerdict}=require('../scripts/rc1-stable-readiness.cjs');
+const executionId='exec-20260816-win11';const envelope={overall:'PASS',version:'1.0.0-rc1',toolingRevision:'cert-kit21',source:{fingerprint:'fp'},releaseIdentity:{sha256:'rid'},evidenceId:'ev',execution:{bindingRequired:true,executionId}};
+const verdict={schemaVersion:'workspace-agent-rc1-final-verdict-v4',version:'1.0.0-rc1',toolingRevision:'cert-kit21',createdAt:'2026-08-15T00:00:00.000Z',executionId,overall:'PASS',envelope:{path:'/tmp/e.json',sha256:'x',evidenceId:'ev'},inputs:{},handoffs:{primary:{handoffId:'a'.repeat(64)},peer:{handoffId:'b'.repeat(64)}},windowsFamilies:{current:'Windows11',peer:'Windows10'},signingRequired:false};verdict.finalizationId=crypto.createHash('sha256').update(JSON.stringify(verdict)).digest('hex');
+let r=evaluateVerdict(verdict,{envelope,currentFingerprint:'fp',currentReleaseIdentity:'rid'});assert(r.ok);assert.equal(r.decision,'PROMOTE_ALLOWED');assert.equal(r.executionId,executionId);
+r=evaluateVerdict({...verdict,overall:'FAIL'},{envelope,currentFingerprint:'fp',currentReleaseIdentity:'rid'});assert(!r.ok);assert(r.reasons.includes('FINAL_VERDICT_NOT_PASS'));
+r=evaluateVerdict(verdict,{envelope:{...envelope,source:{fingerprint:'other'}},currentFingerprint:'fp',currentReleaseIdentity:'rid'});assert(!r.ok);assert(r.reasons.includes('FINAL_ENVELOPE_SOURCE_MISMATCH'));
+r=evaluateVerdict(verdict,{envelope:{...envelope,execution:{bindingRequired:true,executionId:'other'}},currentFingerprint:'fp',currentReleaseIdentity:'rid'});assert(!r.ok);assert(r.reasons.includes('FINAL_ENVELOPE_EXECUTION_ID_MISMATCH'));
+console.log('rc1-stable-readiness PASS');

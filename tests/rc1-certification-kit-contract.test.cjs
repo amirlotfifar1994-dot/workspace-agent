@@ -1,0 +1,14 @@
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const p=path.join(root,'scripts','windows-rc1-certify.ps1');
+const s=fs.readFileSync(p,'utf8');
+for(const required of ['verify-rc1-source.cjs','Get-Volume','NTFS','UniqueId','release:lock','verify-release-inputs.cjs','windows-certification-v097.ps1','rc1-certification-envelope.cjs','package-lock.json','verify-release-manifest-rc1.cjs','WA_CERT_ROOT_A','WA_CERT_ROOT_B','evidence-bundle.json'])assert(s.includes(required),`missing certification invariant: ${required}`);
+for(const forbidden of ['Format-Volume','Remove-Partition','Clear-Disk','Initialize-Disk','Stop-Computer','Restart-Computer','Remove-PhysicalDisk'])assert(!s.includes(forbidden),`destructive command forbidden in certification harness: ${forbidden}`);
+assert(/RootA و RootB باید روی دو Volume واقعی متفاوت باشند/.test(s));
+assert(/CSC_LINK|WIN_CSC_LINK/.test(s),'signing must come from environment, not embedded key material');
+assert(!/BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY/.test(s));
+const cert=fs.readFileSync(path.join(root,'scripts','windows-certification-v097.ps1'),'utf8');assert(cert.includes('certification-evidence-bundle.cjs'),'Windows certification must create a cryptographic evidence bundle');
+const native=fs.readFileSync(path.join(root,'tests','windows-native-edge-rc1.uat.cjs'),'utf8');for(const token of ['WA_CERT_RESULT','workspace-agent-windows-native-edge-uat-v2','realNtfsJunctionFence','ntfsAclInheritance','realWindowsShareModeLock'])assert(native.includes(token),`missing native UAT evidence invariant: ${token}`);
+console.log('rc1-certification-kit-contract.test.cjs PASS',{nonDestructive:true,distinctVolumes:true,envelope:true,evidenceBundle:true,nativeStructuredUat:true});

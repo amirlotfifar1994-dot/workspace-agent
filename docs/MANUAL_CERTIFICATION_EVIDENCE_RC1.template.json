@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "workspace-agent-manual-evidence-rc1-v4",
+  "version": "1.0.0-rc1",
+  "executionId": "",
+  "operator": "",
+  "machine": "",
+  "createdAt": "",
+  "binding": {
+    "sourceFingerprint": "",
+    "packageLockSha256": "",
+    "releaseIdentitySha256": "",
+    "releaseManifestSha256": "",
+    "installerSha256": "",
+    "primaryCertificationReportSha256": "",
+    "primaryCertificationEvidenceId": "",
+    "primaryWindowsFamily": ""
+  },
+  "evidence": {
+    "physicalUsbDisconnectReconnect": {
+      "status": "PENDING_MANUAL",
+      "observedAt": "",
+      "notes": "",
+      "attachment": "",
+      "attachmentSha256": "",
+      "attachmentBytes": 0
+    },
+    "actualDiskFullRecovery": {
+      "status": "PENDING_MANUAL",
+      "observedAt": "",
+      "notes": "",
+      "attachment": "",
+      "attachmentSha256": "",
+      "attachmentBytes": 0
+    },
+    "realAclReadOnlyRecovery": {
+      "status": "PENDING_MANUAL",
+      "observedAt": "",
+      "notes": "",
+      "attachment": "",
+      "attachmentSha256": "",
+      "attachmentBytes": 0
+    },
+    "uncleanShutdownPowerLoss": {
+      "status": "PENDING_MANUAL",
+      "observedAt": "",
+      "notes": "",
+      "attachment": "",
+      "attachmentSha256": "",
+      "attachmentBytes": 0
+    },
+    "realUpgradeFrom0_9_8": {
+      "status": "PENDING_MANUAL",
+      "observedAt": "",
+      "notes": "",
+      "attachment": "",
+      "attachmentSha256": "",
+      "attachmentBytes": 0,
+      "fromVersion": "0.9.8",
+      "toVersion": "1.0.0-rc1",
+      "installerSha256": "",
+      "preSelfCheckOverall": "",
+      "postSelfCheckOverall": "",
+      "statePreserved": false
+    }
+  }
+}

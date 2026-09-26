@@ -1,0 +1,985 @@
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/README_FA.md /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/README_FA.md
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/README_FA.md	2026-08-14 16:32:44.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/README_FA.md	2026-08-14 17:42:31.415923705 +0000
+@@ -49,3 +49,17 @@
+ این source candidate را نباید به‌عنوان Windows-certified binary معرفی کرد مگر اینکه package-lock واقعی، Windows UAT، scale UAT، packaged smoke و artifact verification همگی PASS شوند.
+ 
+ جزئیات در `docs/RC1_ACCEPTANCE_MODEL_FA.md` و `docs/RELEASE_READINESS_v1.0.0-rc1.json` است.
++
++## RC1 Windows Certification Kit — cert-kit1
++
++Core از v0.9.8 Feature Freeze است. برای تبدیل Source Candidate به شواهد Release واقعی روی Windows از Orchestrator واحد استفاده کنید:
++
++```powershell
++$env:WA_CERT_ROOT_A='C:\WA-Cert'
++$env:WA_CERT_ROOT_B='D:\WA-Cert'
++npm run certify:windows:rc1
++```
++
++این Orchestrator Runtime دقیق، دو Volume NTFS متفاوت، lockfile/integrity، Regression، Windows UAT، Scale، buildهای win-unpacked/NSIS/Portable، packaged smoke، SHA256/Authenticode و Certification Envelope را به هم متصل می‌کند. خروجی‌های generated از Source Fingerprint حذف‌اند ولی `package-lock.json` عمداً جزو fingerprint است.
++
++برای جزئیات: `docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md` و `docs/RC1_CERTIFICATION_ENVELOPE_FA.md`.
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md	2026-08-14 17:43:30.417728804 +0000
+@@ -0,0 +1,29 @@
++# Changelog — v1.0.0-rc1 / cert-kit1
++
++این revision فقط Release/Certification tooling را تغییر می‌دهد و Core/State SemVer همان `1.0.0-rc1` باقی مانده است.
++
++## افزوده شد
++
++- `scripts/windows-rc1-certify.ps1`: Orchestrator یک‌مرحله‌ای Windows Certification.
++- `scripts/rc1-certification-envelope.cjs`: زنجیره integrity بین source fingerprint، lockfile، certification report و artifactها.
++- `scripts/verify-manual-evidence-rc1.cjs`: Manual Evidence نسخه‌دار برای RC1.
++- `docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json`.
++- `docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md`.
++- `docs/RC1_CERTIFICATION_ENVELOPE_FA.md`.
++- تست‌های contract برای non-destructive harness، envelope و evidence.
++
++## اصلاح شد
++
++- Source Fingerprint دیگر `dist/` و تمام پوشه‌های `certification-*` را به‌عنوان ورودی سورس حساب نمی‌کند.
++- `package-lock.json` همچنان عمداً در fingerprint باقی می‌ماند.
++- Release/Certification manifestها `toolingRevision` و Feature Freeze را ثبت می‌کنند.
++- Windows release/certification برای RC1 از verifier مخصوص Manual Evidence RC1 استفاده می‌کند.
++- Required SKIP/INCOMPLETE در Orchestrator به PASS تبدیل نمی‌شود.
++
++## تغییر نکرد
++
++- Data Epoch = 1.
++- App ID.
++- Core File Engine / UIA / Local AI / Grounding behavior.
++- Skill Registry behavior.
++- Safety/confirmation/write gates.
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt	2026-08-14 17:43:30.419921243 +0000
+@@ -0,0 +1,317 @@
++.node-version
++.npmrc
++.nvmrc
++README_FA.md
++docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md
++docs/ARCHITECTURE_FA.md
++docs/CERTIFICATION_MODEL_v0.8.4_FA.md
++docs/CHANGELOG_v0.4_FA.md
++docs/CHANGELOG_v0.5_FA.md
++docs/CHANGELOG_v0.6_FA.md
++docs/CHANGELOG_v0.7.1_FA.md
++docs/CHANGELOG_v0.7.2_FA.md
++docs/CHANGELOG_v0.7_FA.md
++docs/CHANGELOG_v0.8.0_FA.md
++docs/CHANGELOG_v0.8.1_FA.md
++docs/CHANGELOG_v0.8.2_FA.md
++docs/CHANGELOG_v0.8.3_FA.md
++docs/CHANGELOG_v0.8.4_FA.md
++docs/CHANGELOG_v0.9.0_FA.md
++docs/CHANGELOG_v0.9.1_FA.md
++docs/CHANGELOG_v0.9.2_FA.md
++docs/CHANGELOG_v0.9.3_FA.md
++docs/CHANGELOG_v0.9.4_FA.md
++docs/CHANGELOG_v0.9.5_FA.md
++docs/CHANGELOG_v0.9.6_FA.md
++docs/CHANGELOG_v0.9.7_FA.md
++docs/CHANGELOG_v0.9.8_FA.md
++docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md
++docs/CHANGELOG_v1.0.0-rc1_FA.md
++docs/DIFF_v0.7.1.txt
++docs/DIFF_v0.7.2.txt
++docs/DIFF_v0.8.0.txt
++docs/DIFF_v0.8.1.txt
++docs/DIFF_v0.8.2.txt
++docs/DIFF_v0.8.3.txt
++docs/DIFF_v0.8.4.txt
++docs/DIFF_v0.9.0.txt
++docs/DIFF_v0.9.1.txt
++docs/DIFF_v0.9.2.txt
++docs/DIFF_v0.9.3.txt
++docs/DIFF_v0.9.4.txt
++docs/DIFF_v0.9.5.txt
++docs/DIFF_v0.9.6.txt
++docs/DIFF_v0.9.7.txt
++docs/DIFF_v0.9.8.txt
++docs/DIFF_v1.0.0-rc1-cert-kit1.txt
++docs/DIFF_v1.0.0-rc1.txt
++docs/FILE_EXPLORER_PRODUCTION_HARDENING_v0.9.6_FA.md
++docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md
++docs/FILE_INVENTORY_v0.8.2.txt
++docs/FILE_INVENTORY_v0.8.3.txt
++docs/FILE_INVENTORY_v0.8.4.txt
++docs/FILE_INVENTORY_v0.9.0.txt
++docs/FILE_INVENTORY_v0.9.1.txt
++docs/FILE_INVENTORY_v0.9.2.txt
++docs/FILE_INVENTORY_v0.9.3.txt
++docs/FILE_INVENTORY_v0.9.4.txt
++docs/FILE_INVENTORY_v0.9.5.txt
++docs/FILE_INVENTORY_v0.9.6.txt
++docs/FILE_INVENTORY_v0.9.7.txt
++docs/FILE_INVENTORY_v0.9.8.txt
++docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt
++docs/FILE_INVENTORY_v1.0.0-rc1.txt
++docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md
++docs/LOCAL_AI_MODEL_v0.9_FA.md
++docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md
++docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json
++docs/MANUAL_CERTIFICATION_EVIDENCE_v0.9.7.template.json
++docs/PERSISTENT_INDEX_MODEL_FA.md
++docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md
++docs/PRODUCTION_HARDENING_v0.8.1_FA.md
++docs/RC1_ACCEPTANCE_MODEL_FA.md
++docs/RC1_CERTIFICATION_ENVELOPE_FA.md
++docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
++docs/RC_READINESS_MODEL_v0.9.8_FA.md
++docs/RECOVERY_MODEL_FA.md
++docs/RELEASE_READINESS_v0.8.2.json
++docs/RELEASE_READINESS_v0.8.3.json
++docs/RELEASE_READINESS_v0.8.4.json
++docs/RELEASE_READINESS_v0.9.0.json
++docs/RELEASE_READINESS_v0.9.1.json
++docs/RELEASE_READINESS_v0.9.2.json
++docs/RELEASE_READINESS_v0.9.3.json
++docs/RELEASE_READINESS_v0.9.4.json
++docs/RELEASE_READINESS_v0.9.5.json
++docs/RELEASE_READINESS_v0.9.6.json
++docs/RELEASE_READINESS_v0.9.7.json
++docs/RELEASE_READINESS_v0.9.8.json
++docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json
++docs/RELEASE_READINESS_v1.0.0-rc1.json
++docs/ROADMAP_FA.md
++docs/SOURCE_REUSE_AUDIT_FA.md
++docs/SYSTEM_RESILIENCE_MODEL_v0.8.3_FA.md
++docs/UPSTREAM_INTEGRATION_FA.md
++docs/UPSTREAM_PROVENANCE.md
++docs/VALIDATION_v0.4_FA.md
++docs/VALIDATION_v0.5_FA.md
++docs/VALIDATION_v0.6_FA.md
++docs/VALIDATION_v0.7.1_FA.md
++docs/VALIDATION_v0.7.2_FA.md
++docs/VALIDATION_v0.7_FA.md
++docs/VALIDATION_v0.8.0_FA.md
++docs/VALIDATION_v0.8.1_FA.md
++docs/VALIDATION_v0.8.2_FA.md
++docs/VALIDATION_v0.8.3_FA.md
++docs/VALIDATION_v0.8.4_FA.md
++docs/VALIDATION_v0.9.0_FA.md
++docs/VALIDATION_v0.9.1_FA.md
++docs/VALIDATION_v0.9.2_FA.md
++docs/VALIDATION_v0.9.3_FA.md
++docs/VALIDATION_v0.9.4_FA.md
++docs/VALIDATION_v0.9.5_FA.md
++docs/VALIDATION_v0.9.6_FA.md
++docs/VALIDATION_v0.9.7_FA.md
++docs/VALIDATION_v0.9.8_FA.md
++docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md
++docs/VALIDATION_v1.0.0-rc1_FA.md
++docs/WINDOWS_CERTIFICATION_MODEL_v0.9.7_FA.md
++docs/WINDOWS_FILE_EXPLORER_PRODUCTION_UAT_v0.9.6_FA.md
++docs/WINDOWS_PATH_RELEASE_MODEL_v0.8.2_FA.md
++docs/WINDOWS_RELEASE_CHECKLIST_FA.md
++docs/WINDOWS_SYSTEM_UAT_v0.8.3_FA.md
++docs/WINDOWS_UIA_ACTION_MODEL_FA.md
++docs/deferred/corel-bridge.cjs.txt
++electron/ipc.cjs
++electron/main.cjs
++electron/preload.cjs
++electron/services/ai-call-guard.cjs
++electron/services/ai-planner.cjs
++electron/services/ai-redaction.cjs
++electron/services/automation-conditions.cjs
++electron/services/automation-service.cjs
++electron/services/automation-store.cjs
++electron/services/capability-registry.cjs
++electron/services/certification-core.cjs
++electron/services/configuration-service.cjs
++electron/services/cycle-engine.cjs
++electron/services/cycle-store.cjs
++electron/services/diagnostic-redaction.cjs
++electron/services/diagnostics-bundle-service.cjs
++electron/services/drive-audit.cjs
++electron/services/duplicate-finder.cjs
++electron/services/event-journal.cjs
++electron/services/explorer-batch-cycles.cjs
++electron/services/explorer-batch-service.cjs
++electron/services/explorer-batch-store.cjs
++electron/services/explorer-storage-guard.cjs
++electron/services/file-analyzer.cjs
++electron/services/file-cycles.cjs
++electron/services/file-explorer-cycles.cjs
++electron/services/file-explorer-service.cjs
++electron/services/file-indexer.cjs
++electron/services/file-insights.cjs
++electron/services/file-search.cjs
++electron/services/file-watcher-service.cjs
++electron/services/fingerprint-store.cjs
++electron/services/goal-planner.cjs
++electron/services/grounding-memory-store.cjs
++electron/services/hardware-profile-service.cjs
++electron/services/hash-worker-pool.cjs
++electron/services/hash-worker.cjs
++electron/services/image-similarity.cjs
++electron/services/indexed-duplicate-finder.cjs
++electron/services/lifecycle-state.cjs
++electron/services/local-ai-config-store.cjs
++electron/services/local-ai-runtime-manager.cjs
++electron/services/local-ai-service.cjs
++electron/services/local-openai-provider.cjs
++electron/services/maintenance.cjs
++electron/services/managed-zone-audit.cjs
++electron/services/managed-zone-store.cjs
++electron/services/mission-compiler.cjs
++electron/services/office-text-extractor.cjs
++electron/services/organizer.cjs
++electron/services/path-policy.cjs
++electron/services/pdf-text-extractor.cjs
++electron/services/persistent-file-index.cjs
++electron/services/persistent-index-cycles.cjs
++electron/services/quarantine.cjs
++electron/services/rc-self-check-service.cjs
++electron/services/recommendation-applier.cjs
++electron/services/recovery-service.cjs
++electron/services/renamer.cjs
++electron/services/resource-pressure-guard.cjs
++electron/services/review-queue-store.cjs
++electron/services/root-resilience-service.cjs
++electron/services/similarity-core.cjs
++electron/services/skill-memory-store.cjs
++electron/services/skill-registry.cjs
++electron/services/skill-retriever.cjs
++electron/services/snapshot-store.cjs
++electron/services/startup-advisor.cjs
++electron/services/state-backup-service.cjs
++electron/services/storage-trend-store.cjs
++electron/services/system-resilience-controller.cjs
++electron/services/text-similarity.cjs
++electron/services/transaction-store.cjs
++electron/services/ui-grounding-core.cjs
++electron/services/ui-grounding-layout.cjs
++electron/services/ui-grounding-service.cjs
++electron/services/ui-grounding-session-store.cjs
++electron/services/ui-outcome-verifier.cjs
++electron/services/version-update-guard.cjs
++electron/services/vision-crop-service.cjs
++electron/services/windows-action-policy.cjs
++electron/services/windows-action-session-store.cjs
++electron/services/windows-inspector.cjs
++electron/services/windows-path-utils.cjs
++electron/services/windows-uia-actions.cjs
++electron/services/windows-uia.cjs
++electron/services/windows-volume-probe.cjs
++electron/services/workspace-cycles.cjs
++electron/services/workspace-intelligence.cjs
++index.html
++package.json
++scripts/generate-lockfile.ps1
++scripts/local-ai-smoke.ps1
++scripts/lockfile-provenance.cjs
++scripts/prepare-update-v098.cjs
++scripts/rc1-certification-envelope.cjs
++scripts/rc1-source-manifest.cjs
++scripts/source-tree-fingerprint.cjs
++scripts/verify-manual-evidence-rc1.cjs
++scripts/verify-manual-evidence-v097.cjs
++scripts/verify-rc1-source.cjs
++scripts/verify-release-inputs.cjs
++scripts/verify-source-hygiene.cjs
++scripts/windows-certification-v097.ps1
++scripts/windows-certification.ps1
++scripts/windows-rc1-certify.ps1
++scripts/windows-release.ps1
++src/App.jsx
++src/components/CycleTimeline.jsx
++src/main.jsx
++src/styles/app.css
++tests/ai-mission-v090.test.cjs
++tests/automation-v04.test.cjs
++tests/certification-core-v097.test.cjs
++tests/cycle-engine.test.cjs
++tests/cycle-root-guard-v083.test.cjs
++tests/diagnostics-v098.test.cjs
++tests/explorer-batch-recovery-v095.test.cjs
++tests/explorer-batch-schema-v096.test.cjs
++tests/file-cycles.integration.test.cjs
++tests/file-explorer-batch-v095.test.cjs
++tests/file-explorer-production-v096.test.cjs
++tests/file-explorer-skill-pack-v094.test.cjs
++tests/file-guardian.test.cjs
++tests/fixtures/lifecycle-crash-child-v084.cjs
++tests/fixtures/persistent-index-crash-child-v081.cjs
++tests/lifecycle-resource-v084.test.cjs
++tests/local-ai-capability-v091.test.cjs
++tests/local-ai-foundation-v090.test.cjs
++tests/local-ai-grounding-vision-v092.test.cjs
++tests/local-ai-guard-v090.test.cjs
++tests/local-ai-server-v090.uat.cjs
++tests/manual-evidence-rc1.test.cjs
++tests/manual-evidence-v097.test.cjs
++tests/mission.integration.test.cjs
++tests/multi-index-isolation-v084.test.cjs
++tests/multi-root-isolation-v084.test.cjs
++tests/office-extractor-v05.test.cjs
++tests/packaged-app-smoke-v084.cjs
++tests/packaged-worker-smoke-v082.cjs
++tests/persistent-index-crash-v081.test.cjs
++tests/persistent-index-cycles-v080.test.cjs
++tests/persistent-index-scale-v080.cjs
++tests/persistent-index-v080.test.cjs
++tests/persistent-index-windows.uat.cjs
++tests/production-hardening-v07.test.cjs
++tests/production-hardening-v081.test.cjs
++tests/rc-self-check-v098.test.cjs
++tests/rc1-certification-envelope.test.cjs
++tests/rc1-certification-kit-contract.test.cjs
++tests/rc1-source-contract.test.cjs
++tests/rc1-upgrade-gate.test.cjs
++tests/real-local-ai-runtime-v091.test.cjs
++tests/resource-cycle-integration-v084.test.cjs
++tests/root-interruption-v083.test.cjs
++tests/scale-benchmark-v07.cjs
++tests/semantic-cycles-v05.test.cjs
++tests/semantic-intelligence-v05.test.cjs
++tests/source-tree-fingerprint-generated-vrc1.test.cjs
++tests/source-tree-fingerprint-v097.test.cjs
++tests/state-backup-v098.test.cjs
++tests/system-resilience-v083.test.cjs
++tests/ui-grounded-action-v092.test.cjs
++tests/ui-grounding-core-v092.test.cjs
++tests/ui-grounding-layout-v093.test.cjs
++tests/ui-grounding-recovery-v093.test.cjs
++tests/ui-grounding-scale-v092.cjs
++tests/ui-grounding-service-v092.test.cjs
++tests/update-preflight-v098.test.cjs
++tests/upstream-foundation-v071.test.cjs
++tests/version-update-guard-v098.test.cjs
++tests/vision-crop-v093.test.cjs
++tests/windows-agent-v03.test.cjs
++tests/windows-agent-v06.test.cjs
++tests/windows-certification-v097.uat.cjs
++tests/windows-file-explorer-v094.uat.cjs
++tests/windows-file-explorer-v095.uat.cjs
++tests/windows-file-explorer-v096.uat.cjs
++tests/windows-intelligent-grounding-v092.uat.cjs
++tests/windows-local-ai-runtime-v091.uat.cjs
++tests/windows-multiroot-v084.uat.cjs
++tests/windows-path-hardening-v082.test.cjs
++tests/windows-production-grounding-v093.uat.cjs
++tests/windows-production-v081.uat.cjs
++tests/windows-removable-drive-v083.uat.cjs
++tests/windows-scale-resilience-v083.uat.cjs
++tests/windows-scale-v097.uat.cjs
++tests/windows-system-resilience-v083.uat.cjs
++tests/windows-uia-action-v072.test.cjs
++tests/windows-uia-action.uat.cjs
++tests/windows-verification-v082.uat.cjs
++tests/windows-volume-probe-v083.test.cjs
++vite.config.js
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json	2026-08-14 17:39:29.231931305 +0000
+@@ -0,0 +1,13 @@
++{
++  "schemaVersion": "workspace-agent-manual-evidence-rc1-v1",
++  "version": "1.0.0-rc1",
++  "operator": "",
++  "machine": "",
++  "createdAt": "",
++  "evidence": {
++    "physicalUsbDisconnectReconnect": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
++    "actualDiskFullRecovery": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
++    "realAclReadOnlyRecovery": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
++    "uncleanShutdownPowerLoss": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""}
++  }
++}
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md	2026-08-14 17:42:16.310785084 +0000
+@@ -0,0 +1,20 @@
++# RC1 Certification Envelope
++
++`rc1-certification-envelope.json` زنجیره شواهد Release را به یک شناسه نهایی bind می‌کند.
++
++## داده‌های bind شده
++
++- Source Tree Fingerprint
++- SHA256 گزارش Windows Certification
++- Evidence ID گزارش Certification
++- SHA256 `package-lock.json`
++- SHA256 `release/release-manifest.json`
++- SHA256 واقعی artifactهای ساخته‌شده و تطبیق آن با Release Manifest
++- وضعیت Authenticode در صورت `--require-signing`
++- SHA256 Manual Evidence در صورت ارائه
++
++در انتها کل Envelope به شکل canonical مرتب می‌شود و `evidenceId` SHA256 برای آن تولید می‌شود. تغییر هر ورودی باعث تغییر Evidence ID یا FAIL شدن check می‌شود.
++
++## اصل اعتماد
++
++Envelope جای امضای دیجیتال را نمی‌گیرد. برای Release نهایی عمومی، Artifact باید در صورت سیاست پروژه با Authenticode معتبر امضا شود. Envelope فقط provenance و integrity بین اجزای Release را قابل ممیزی می‌کند.
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-14 17:42:16.310057592 +0000
+@@ -0,0 +1,83 @@
++# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit1
++
++این کیت **قابلیت جدیدی به Core اضافه نمی‌کند**. هدف آن این است که Source Candidate فریز‌شده را روی Windows واقعی، دو Volume NTFS واقعی و Runtime دقیق Release Lane به یک گزارش قابل ممیزی تبدیل کند.
++
++## فرمان اصلی
++
++روی Windows PowerShell و از ریشه پروژه:
++
++```powershell
++$env:WA_CERT_ROOT_A='C:\WA-Cert'
++$env:WA_CERT_ROOT_B='D:\WA-Cert'
++$env:WA_CERT_SCALE_ROOT='C:\WA-Cert'
++
++npm run certify:windows:rc1
++```
++
++اگر `package-lock.json` وجود نداشته باشد، Orchestrator ابتدا دسترسی npm registry را بررسی می‌کند و lockfile را با `release:lock` ایجاد و integrity آن را validate می‌کند. برای جلوگیری از هر تغییر lockfile می‌توان `-NoGenerateLockfile` داد؛ در آن صورت نبود lockfile نتیجه `INCOMPLETE` می‌دهد.
++
++## Certification کامل
++
++```powershell
++npm run certify:windows:rc1 -- `
++  -RootA 'C:\WA-Cert' `
++  -RootB 'D:\WA-Cert' `
++  -ScaleRoot 'C:\WA-Cert' `
++  -ScaleFiles 1000000 `
++  -RequireManualEvidence `
++  -ManualEvidenceFile '.\manual-evidence-rc1.json' `
++  -RequireSigning
++```
++
++برای امضا Certificate/Private Key داخل Repository قرار نمی‌گیرد. electron-builder فقط از متغیرهای استاندارد محیط مثل `CSC_LINK` یا `WIN_CSC_LINK` استفاده می‌کند.
++
++## Preflight فقط
++
++```powershell
++npm run certify:windows:rc1 -- -PreflightOnly
++```
++
++Preflight موارد زیر را Fail-closed بررسی می‌کند:
++
++- Windows واقعی؛
++- Node `24.14.1` و npm `11.11.0`؛
++- قرارداد Feature Freeze برای `1.0.0-rc1`؛
++- دو Root موجود روی NTFS؛
++- Volume UniqueId متفاوت؛
++- فضای آزاد کافی برای Scale انتخابی؛
++- lockfile واقعی و integrity؛
++- signing configuration در صورت اجباری بودن؛
++- manual evidence در صورت اجباری بودن.
++
++## رفتار غیرمخرب Harness
++
++Harness خودش این کارها را انجام **نمی‌دهد**:
++
++- Format/Initialize/Clear Disk؛
++- Unmount یا eject اجباری USB؛
++- پرکردن عمدی کل دیسک؛
++- تغییر ACL واقعی سیستم؛
++- Shutdown/Restart/Power loss خودکار.
++
++این موارد در Manual Evidence ثبت می‌شوند تا اپراتور روی محیط کنترل‌شده انجامشان دهد.
++
++## خروجی‌ها
++
++هر Run یک پوشه timestamped در `certification-rc1/` می‌سازد که شامل موارد زیر است:
++
++- `operator-transcript.log`
++- `preflight-report.json`
++- گزارش Windows Certification
++- `rc1-certification-envelope.json`
++- `rc1-certification-result.json`
++- log هر مرحله
++
++پوشه `certification-rc1/`، `dist/`، `release/` و `node_modules/` از Source Fingerprint حذف شده‌اند؛ بنابراین خروجی‌های تولیدشده fingerprint ورودی سورس را تغییر نمی‌دهند. `package-lock.json` عمداً جزو Source Fingerprint است.
++
++## وضعیت‌ها
++
++- `PASS`: همه Gateهای اجباری و Envelope پاس شده‌اند.
++- `INCOMPLETE`: prerequisite واقعی مثل lockfile/Windows UAT/artifact/manual evidence انجام نشده است.
++- `FAIL`: یک Gate واقعی fail شده یا fingerprint/artifact/evidence mismatch وجود دارد.
++
++Required `SKIP` هرگز به PASS تبدیل نمی‌شود.
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json	2026-08-14 17:42:31.419155746 +0000
+@@ -0,0 +1,24 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-rc1-cert-kit1-v1",
++  "version": "1.0.0-rc1",
++  "toolingRevision": "cert-kit1",
++  "featureFreeze": true,
++  "coreChanges": false,
++  "sourceValidation": "READY",
++  "rc1SourceContract": "READY",
++  "certificationOrchestrator": "READY_SOURCE_TESTED",
++  "certificationEnvelope": "READY_SOURCE_TESTED",
++  "manualEvidenceRc1": "READY_SOURCE_TESTED",
++  "generatedDirectoryFingerprintIsolation": "READY_SOURCE_TESTED",
++  "packageLock": "PENDING_ONLINE_RELEASE_LANE",
++  "windows10Certification": "PENDING_WINDOWS",
++  "windows11Certification": "PENDING_WINDOWS",
++  "twoDistinctNtfsVolumes": "PENDING_WINDOWS",
++  "scale100k": "PENDING_WINDOWS",
++  "scale1m": "PENDING_WINDOWS",
++  "winUnpacked": "PENDING_WINDOWS_BUILD",
++  "nsis": "PENDING_WINDOWS_BUILD",
++  "portable": "PENDING_WINDOWS_BUILD",
++  "authenticode": "PENDING_CERTIFICATE_POLICY",
++  "finalCertificationEnvelope": "PENDING_WINDOWS_RELEASE_RUN"
++}
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md	2026-08-14 17:43:58.717777083 +0000
+@@ -0,0 +1,38 @@
++# Validation — v1.0.0-rc1 / cert-kit1
++
++## محیط این Validation
++
++- محیط فعلی: non-Windows.
++- Node/npm این محیط، Release Lane رسمی نیست؛ برای Source tests استفاده شده است.
++- Release Lane رسمی همچنان Node `24.14.1` + npm `11.11.0` + Windows 10/11 است.
++
++## نتایج Source Gate
++
++- Dependency exact pins: PASS
++- RC1 source/freeze contract: PASS
++- Tooling revision `cert-kit1`: PASS
++- Source hygiene: PASS
++- JS/CJS syntax: PASS
++- JSX check: PASS
++- Regression/test chain: **57/57 PASS**
++- Manual Evidence RC1: PASS
++- Certification Envelope behavior: PASS
++- Generated-directory fingerprint isolation: PASS
++- Non-destructive Certification Harness contract: PASS
++
++## Source Fingerprint
++
++Fingerprint نهایی پس از بسته‌بندی در artifact manifest مستقل کنار ZIP ثبت می‌شود تا self-reference داخل سورس ایجاد نشود.
++
++## مرزهای واقعی Release
++
++- `check:release-inputs`: `LOCKFILE_REQUIRED` — مورد انتظار، چون lockfile واقعی در این محیط آنلاین تولید نشده است.
++- Windows strict two-volume UAT: exit code `3 / SKIP (Windows only)`.
++- Windows strict scale UAT: exit code `3 / SKIP (Windows only)`.
++- Vite build: exit `127`, علت `vite: not found` به دلیل نصب نبودن `node_modules` در این محیط.
++
++هیچ‌کدام از موارد بالا به‌عنوان PASS واقعی Windows/Binary ثبت نشده‌اند.
++
++## محدودیت تست PowerShell
++
++در محیط فعلی PowerShell/Windows موجود نیست؛ بنابراین اجرای واقعی `windows-rc1-certify.ps1` فقط در Windows Release Lane قابل تأیید است. در Source Gate، invariantهای غیرمخرب و وجود مراحل حیاتی آن به‌صورت static test بررسی شده‌اند.
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/package.json /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/package.json
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/package.json	2026-08-14 16:32:44.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/package.json	2026-08-14 17:42:15.653843689 +0000
+@@ -9,8 +9,8 @@
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs && node --check electron/services/file-explorer-service.cjs && node --check electron/services/file-explorer-cycles.cjs && node --check tests/file-explorer-skill-pack-v094.test.cjs && node --check electron/services/explorer-batch-store.cjs && node --check electron/services/explorer-batch-service.cjs && node --check electron/services/explorer-batch-cycles.cjs && node --check tests/file-explorer-batch-v095.test.cjs && node --check tests/explorer-batch-recovery-v095.test.cjs && node --check tests/windows-file-explorer-v095.uat.cjs && node --check electron/services/explorer-storage-guard.cjs && node --check tests/file-explorer-production-v096.test.cjs && node --check tests/explorer-batch-schema-v096.test.cjs && node --check tests/windows-file-explorer-v096.uat.cjs && node --check electron/services/certification-core.cjs && node --check scripts/source-tree-fingerprint.cjs && node --check tests/certification-core-v097.test.cjs && node --check tests/source-tree-fingerprint-v097.test.cjs && node --check tests/windows-certification-v097.uat.cjs && node --check tests/windows-scale-v097.uat.cjs && node --check scripts/verify-manual-evidence-v097.cjs && node --check tests/manual-evidence-v097.test.cjs && node --check scripts/lockfile-provenance.cjs && node --check electron/services/version-update-guard.cjs && node --check electron/services/diagnostic-redaction.cjs && node --check electron/services/rc-self-check-service.cjs && node --check electron/services/state-backup-service.cjs && node --check electron/services/diagnostics-bundle-service.cjs && node --check tests/version-update-guard-v098.test.cjs && node --check tests/rc-self-check-v098.test.cjs && node --check tests/state-backup-v098.test.cjs && node --check tests/diagnostics-v098.test.cjs && node --check scripts/prepare-update-v098.cjs && node --check tests/update-preflight-v098.test.cjs && node --check scripts/verify-rc1-source.cjs && node --check scripts/rc1-source-manifest.cjs && node --check tests/rc1-upgrade-gate.test.cjs && node --check tests/rc1-source-contract.test.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs && node tests/file-explorer-skill-pack-v094.test.cjs && node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs && node tests/file-explorer-production-v096.test.cjs && node tests/explorer-batch-schema-v096.test.cjs && node tests/certification-core-v097.test.cjs && node tests/source-tree-fingerprint-v097.test.cjs && node tests/manual-evidence-v097.test.cjs && node tests/version-update-guard-v098.test.cjs && node tests/rc-self-check-v098.test.cjs && node tests/state-backup-v098.test.cjs && node tests/diagnostics-v098.test.cjs && node tests/update-preflight-v098.test.cjs && node tests/rc1-upgrade-gate.test.cjs && node tests/rc1-source-contract.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs && node --check electron/services/file-explorer-service.cjs && node --check electron/services/file-explorer-cycles.cjs && node --check tests/file-explorer-skill-pack-v094.test.cjs && node --check electron/services/explorer-batch-store.cjs && node --check electron/services/explorer-batch-service.cjs && node --check electron/services/explorer-batch-cycles.cjs && node --check tests/file-explorer-batch-v095.test.cjs && node --check tests/explorer-batch-recovery-v095.test.cjs && node --check tests/windows-file-explorer-v095.uat.cjs && node --check electron/services/explorer-storage-guard.cjs && node --check tests/file-explorer-production-v096.test.cjs && node --check tests/explorer-batch-schema-v096.test.cjs && node --check tests/windows-file-explorer-v096.uat.cjs && node --check electron/services/certification-core.cjs && node --check scripts/source-tree-fingerprint.cjs && node --check tests/certification-core-v097.test.cjs && node --check tests/source-tree-fingerprint-v097.test.cjs && node --check tests/windows-certification-v097.uat.cjs && node --check tests/windows-scale-v097.uat.cjs && node --check scripts/verify-manual-evidence-v097.cjs && node --check tests/manual-evidence-v097.test.cjs && node --check scripts/lockfile-provenance.cjs && node --check electron/services/version-update-guard.cjs && node --check electron/services/diagnostic-redaction.cjs && node --check electron/services/rc-self-check-service.cjs && node --check electron/services/state-backup-service.cjs && node --check electron/services/diagnostics-bundle-service.cjs && node --check tests/version-update-guard-v098.test.cjs && node --check tests/rc-self-check-v098.test.cjs && node --check tests/state-backup-v098.test.cjs && node --check tests/diagnostics-v098.test.cjs && node --check scripts/prepare-update-v098.cjs && node --check tests/update-preflight-v098.test.cjs && node --check scripts/verify-rc1-source.cjs && node --check scripts/rc1-source-manifest.cjs && node --check tests/rc1-upgrade-gate.test.cjs && node --check tests/rc1-source-contract.test.cjs && node --check scripts/verify-manual-evidence-rc1.cjs && node --check scripts/rc1-certification-envelope.cjs && node --check tests/manual-evidence-rc1.test.cjs && node --check tests/rc1-certification-envelope.test.cjs && node --check tests/source-tree-fingerprint-generated-vrc1.test.cjs && node --check tests/rc1-certification-kit-contract.test.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs && node tests/file-explorer-skill-pack-v094.test.cjs && node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs && node tests/file-explorer-production-v096.test.cjs && node tests/explorer-batch-schema-v096.test.cjs && node tests/certification-core-v097.test.cjs && node tests/source-tree-fingerprint-v097.test.cjs && node tests/manual-evidence-v097.test.cjs && node tests/version-update-guard-v098.test.cjs && node tests/rc-self-check-v098.test.cjs && node tests/state-backup-v098.test.cjs && node tests/diagnostics-v098.test.cjs && node tests/update-preflight-v098.test.cjs && node tests/rc1-upgrade-gate.test.cjs && node tests/rc1-source-contract.test.cjs && node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/source-tree-fingerprint-generated-vrc1.test.cjs && node tests/rc1-certification-kit-contract.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:rc1-source && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -70,7 +70,11 @@
+     "check:rc1-source": "node scripts/verify-rc1-source.cjs",
+     "manifest:rc1-source": "node scripts/rc1-source-manifest.cjs",
+     "test:rc1": "node tests/rc1-upgrade-gate.test.cjs && node tests/rc1-source-contract.test.cjs",
+-    "release:win:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-release.ps1 -RunScaleUat"
++    "release:win:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-release.ps1 -RunScaleUat",
++    "verify:manual-evidence:rc1": "node scripts/verify-manual-evidence-rc1.cjs",
++    "certify:envelope:rc1": "node scripts/rc1-certification-envelope.cjs",
++    "certify:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-certify.ps1",
++    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+@@ -128,6 +132,7 @@
+     "baselineVersion": "0.9.8",
+     "dataEpoch": 1,
+     "releaseCandidate": "rc1",
+-    "coreFeatureAdditionsAllowed": false
++    "coreFeatureAdditionsAllowed": false,
++    "toolingRevision": "cert-kit1"
+   }
+ }
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-certification-envelope.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-certification-envelope.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-certification-envelope.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-certification-envelope.cjs	2026-08-14 17:39:29.230408240 +0000
+@@ -0,0 +1,55 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++const cp=require('child_process');
++const root=path.resolve(__dirname,'..');
++function arg(name){const p=`--${name}=`;const v=process.argv.find(x=>x.startsWith(p));return v?v.slice(p.length):''}
++function has(name){return process.argv.includes(`--${name}`)}
++function shaBuf(buf){return crypto.createHash('sha256').update(buf).digest('hex')}
++function shaFile(p){return shaBuf(fs.readFileSync(p))}
++function readJson(p){return JSON.parse(fs.readFileSync(p,'utf8'))}
++function canonical(value){
++  if(Array.isArray(value))return value.map(canonical);
++  if(value&&typeof value==='object'){const out={};for(const k of Object.keys(value).sort())out[k]=canonical(value[k]);return out}
++  return value;
++}
++function stable(value){return JSON.stringify(canonical(value))}
++function fileMeta(p){if(!p||!fs.existsSync(p))return null;const st=fs.statSync(p);return{path:path.relative(root,p).replace(/\\/g,'/'),bytes:st.size,sha256:shaFile(p)}}
++function fail(code,message,extra={}){console.error(JSON.stringify({ok:false,code,message,...extra},null,2));process.exit(1)}
++const pkg=readJson(path.join(root,'package.json'));
++if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('RC1_CONTRACT_REQUIRED','Envelope فقط برای RC1 feature-frozen ساخته می‌شود.');
++const reportPath=path.resolve(root,arg('report')||'');
++if(!arg('report')||!fs.existsSync(reportPath))fail('CERTIFICATION_REPORT_REQUIRED','--report=<certification-report.json> لازم است.');
++const report=readJson(reportPath);
++const lockPath=path.join(root,'package-lock.json');
++const releaseManifestPath=path.resolve(root,arg('release-manifest')||'release/release-manifest.json');
++const manualPath=arg('manual-evidence')?path.resolve(root,arg('manual-evidence')):'';
++let fp={};try{fp=JSON.parse(cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd:root,encoding:'utf8'}))}catch(e){fail('SOURCE_FINGERPRINT_FAILED',e.message)}
++const releaseManifest=fs.existsSync(releaseManifestPath)?readJson(releaseManifestPath):null;
++const artifactRows=[];
++if(releaseManifest?.artifacts&&Array.isArray(releaseManifest.artifacts)){
++  for(const a of releaseManifest.artifacts){const p=path.join(root,'release',String(a.file||''));artifactRows.push({file:String(a.file||''),manifestSha256:String(a.sha256||'').toLowerCase(),actual:fs.existsSync(p)?fileMeta(p):null,match:fs.existsSync(p)&&String(a.sha256||'').toLowerCase()===shaFile(p)})}
++}
++const requiredArtifacts=has('require-artifacts');
++const requireSigning=has('require-signing');
++const signingOk=!requireSigning||Boolean(releaseManifest?.signatures?.length)&&releaseManifest.signatures.every(x=>String(x.status)==='Valid');
++const artifactsOk=!requiredArtifacts||(artifactRows.length>0&&artifactRows.every(x=>x.actual&&x.match));
++let manual=null;if(manualPath&&fs.existsSync(manualPath))manual={...fileMeta(manualPath),data:readJson(manualPath)};
++const manualRequired=has('require-manual-evidence');
++const manualKeys=['physicalUsbDisconnectReconnect','actualDiskFullRecovery','realAclReadOnlyRecovery','uncleanShutdownPowerLoss'];
++const manualOk=!manualRequired||Boolean(manual&&manual.data?.schemaVersion==='workspace-agent-manual-evidence-rc1-v1'&&manual.data?.version==='1.0.0-rc1'&&manualKeys.every(k=>String(manual.data?.evidence?.[k]?.status||'').toUpperCase()==='PASS'));
++const lock=fileMeta(lockPath);
++const lockRequired=true;
++const reportPass=String(report.overall||'').toUpperCase()==='PASS';
++const sourceMatch=!report.sourceFingerprint?.sha256||String(report.sourceFingerprint.sha256)===String(fp.sha256);
++const releaseFpMatch=!releaseManifest?.sourceFingerprint||String(releaseManifest.sourceFingerprint)===String(fp.sha256);
++const checks={reportPass,lockPresent:Boolean(lock),sourceFingerprintMatch:sourceMatch,releaseManifestPresent:Boolean(releaseManifest),releaseManifestFingerprintMatch:releaseFpMatch,artifactsOk,signingOk,manualEvidenceOk:manualOk};
++let overall='PASS';
++if(!reportPass||!sourceMatch||!releaseFpMatch||!artifactsOk||!signingOk||!manualOk)overall='FAIL';
++else if(lockRequired&&!lock)overall='INCOMPLETE';
++else if(!releaseManifest)overall='INCOMPLETE';
++const envelope={schemaVersion:'workspace-agent-rc1-certification-envelope-v1',version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,createdAt:new Date().toISOString(),overall,checks,source:{fingerprint:String(fp.sha256||''),files:Number(fp.files||0)},inputs:{certificationReport:fileMeta(reportPath),packageLock:lock,releaseManifest:fileMeta(releaseManifestPath),manualEvidence:manual?{path:manual.path,bytes:manual.bytes,sha256:manual.sha256}:null},certification:{overall:report.overall||null,evidenceId:report.evidenceId||null,schemaVersion:report.schemaVersion||null},release:{artifacts:artifactRows,signatures:releaseManifest?.signatures||[]}};
++const noId=JSON.parse(JSON.stringify(envelope));envelope.evidenceId=shaBuf(Buffer.from(stable(noId)));
++const out=arg('out')?path.resolve(root,arg('out')):path.join(path.dirname(reportPath),'rc1-certification-envelope.json');fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(envelope,null,2));
++console.log(JSON.stringify({ok:overall==='PASS',overall,evidenceId:envelope.evidenceId,out:path.relative(root,out).replace(/\\/g,'/'),checks},null,2));
++if(overall==='FAIL')process.exit(1);if(overall==='INCOMPLETE')process.exit(2);
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-source-manifest.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-source-manifest.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-source-manifest.cjs	2026-08-14 16:32:44.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/rc1-source-manifest.cjs	2026-08-14 17:43:30.288700916 +0000
+@@ -7,6 +7,6 @@
+ function sha(file){return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');}
+ let fp={};try{fp=JSON.parse(cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd:root,encoding:'utf8'}));}catch(error){fp={error:error.message};}
+ const lock=path.join(root,'package-lock.json');
+-const report={schemaVersion:'workspace-agent-rc-source-manifest-v1',version:pkg.version,channel:pkg.workspaceAgentRelease?.channel||null,releaseCandidate:pkg.workspaceAgentRelease?.releaseCandidate||null,featureFreeze:Boolean(pkg.workspaceAgentRelease?.featureFreeze),baselineVersion:pkg.workspaceAgentRelease?.baselineVersion||null,dataEpoch:Number(pkg.workspaceAgentRelease?.dataEpoch||0),createdAt:new Date().toISOString(),sourceFingerprint:fp.sha256||null,sourceFiles:fp.files||null,packageLock:fs.existsSync(lock)?{status:'PRESENT',sha256:sha(lock)}:{status:'PENDING_REGISTRY_ENVIRONMENT'},windowsCertification:'PENDING_WINDOWS',binaryArtifacts:'PENDING_WINDOWS_BUILD',authenticode:'PENDING_CERTIFICATE'};
++const report={schemaVersion:'workspace-agent-rc-source-manifest-v1',version:pkg.version,channel:pkg.workspaceAgentRelease?.channel||null,releaseCandidate:pkg.workspaceAgentRelease?.releaseCandidate||null,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,featureFreeze:Boolean(pkg.workspaceAgentRelease?.featureFreeze),baselineVersion:pkg.workspaceAgentRelease?.baselineVersion||null,dataEpoch:Number(pkg.workspaceAgentRelease?.dataEpoch||0),createdAt:new Date().toISOString(),sourceFingerprint:fp.sha256||null,sourceFiles:fp.files||null,packageLock:fs.existsSync(lock)?{status:'PRESENT',sha256:sha(lock)}:{status:'PENDING_REGISTRY_ENVIRONMENT'},windowsCertification:'PENDING_WINDOWS',binaryArtifacts:'PENDING_WINDOWS_BUILD',authenticode:'PENDING_CERTIFICATE',certificationKit:'READY_SOURCE_TESTED'};
+ const outArg=process.argv.find(x=>x.startsWith('--out='));if(outArg){const out=path.resolve(root,outArg.slice(6));fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(report,null,2));}
+ console.log(JSON.stringify(report,null,2));
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/source-tree-fingerprint.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/source-tree-fingerprint.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/source-tree-fingerprint.cjs	2026-08-14 11:17:41.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/source-tree-fingerprint.cjs	2026-08-14 17:41:04.973239689 +0000
+@@ -2,11 +2,12 @@
+ const path=require('path');
+ const crypto=require('crypto');
+ const root=path.resolve(__dirname,'..');
+-const excluded=new Set(['node_modules','release','certification','.git','.workspace-agent-batch']);
++const excluded=new Set(['node_modules','release','dist','certification','.git','.workspace-agent-batch','coverage']);
++function excludedDir(name){return excluded.has(name)||name.startsWith('certification-');}
+ const excludedFiles=new Set();
+ function walk(dir,base=''){
+   const rows=[];for(const e of fs.readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){
+-    if(excluded.has(e.name))continue;const abs=path.join(dir,e.name),rel=path.posix.join(base,e.name);
++    if(e.isDirectory()&&excludedDir(e.name))continue;const abs=path.join(dir,e.name),rel=path.posix.join(base,e.name);
+     if(e.isDirectory())rows.push(...walk(abs,rel));else if(e.isFile()&&!excludedFiles.has(e.name))rows.push({abs,rel});
+   }return rows;
+ }
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-manual-evidence-rc1.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-manual-evidence-rc1.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-manual-evidence-rc1.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-manual-evidence-rc1.cjs	2026-08-14 17:39:29.229495820 +0000
+@@ -0,0 +1,21 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++const file=process.argv[2];
++const requireAll=process.argv.includes('--require-all');
++const expectedVersion='1.0.0-rc1';
++const schema='workspace-agent-manual-evidence-rc1-v1';
++const keys=['physicalUsbDisconnectReconnect','actualDiskFullRecovery','realAclReadOnlyRecovery','uncleanShutdownPowerLoss'];
++function fail(code,extra={}){console.error(JSON.stringify({status:'FAIL',code,...extra},null,2));process.exit(1)}
++function sha256(p){return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')}
++if(!file||!fs.existsSync(file)){
++  if(requireAll)fail('MANUAL_EVIDENCE_REQUIRED');
++  console.log(JSON.stringify({status:'SKIP',code:'MANUAL_EVIDENCE_NOT_PROVIDED'}));process.exit(0);
++}
++let d;try{d=JSON.parse(fs.readFileSync(path.resolve(file),'utf8'))}catch{fail('MANUAL_EVIDENCE_INVALID_JSON')}
++if(d.schemaVersion!==schema||String(d.version)!==expectedVersion)fail('MANUAL_EVIDENCE_SCHEMA_MISMATCH',{schemaVersion:d.schemaVersion,version:d.version,expectedSchema:schema,expectedVersion});
++const pending=[],failed=[];
++for(const k of keys){const s=String(d.evidence?.[k]?.status||'').toUpperCase();if(s==='FAIL')failed.push(k);else if(s!=='PASS')pending.push(k)}
++if(failed.length)fail('MANUAL_EVIDENCE_FAILED',{failed});
++if(requireAll&&pending.length)fail('MANUAL_EVIDENCE_INCOMPLETE',{pending});
++console.log(JSON.stringify({status:pending.length?'INCOMPLETE':'PASS',pending,operator:String(d.operator||''),machine:String(d.machine||''),sha256:sha256(path.resolve(file))},null,2));
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-rc1-source.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-rc1-source.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-rc1-source.cjs	2026-08-14 16:32:44.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/verify-rc1-source.cjs	2026-08-14 17:42:15.653979310 +0000
+@@ -7,10 +7,12 @@
+ const rc=pkg.workspaceAgentRelease||{};
+ if(pkg.version!=='1.0.0-rc1')fail('RC1_VERSION_REQUIRED','Source candidate باید دقیقاً version=1.0.0-rc1 باشد.',{version:pkg.version});
+ if(rc.channel!=='rc'||rc.releaseCandidate!=='rc1'||rc.featureFreeze!==true||rc.coreFeatureAdditionsAllowed!==false)fail('RC1_FREEZE_CONTRACT_INVALID','RC channel / feature-freeze contract نامعتبر است.',{workspaceAgentRelease:rc});
++if(rc.toolingRevision!=='cert-kit1')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit1 باشد.',{toolingRevision:rc.toolingRevision});
+ if(rc.baselineVersion!=='0.9.8'||compareVersions(pkg.version,rc.baselineVersion)<=0)fail('RC1_BASELINE_INVALID','Baseline باید 0.9.8 و RC جدیدتر از آن باشد.',{baseline:rc.baselineVersion,version:pkg.version});
+ if(Number(rc.dataEpoch)!==Number(DATA_EPOCH))fail('RC1_DATA_EPOCH_MISMATCH','Data Epoch package با Update Guard تطابق ندارد.',{packageEpoch:rc.dataEpoch,runtimeEpoch:DATA_EPOCH});
+ if(pkg.build?.appId!=='com.workspaceagent.windows')fail('RC1_APP_ID_CHANGED','App ID در RC نباید تغییر کند.',{appId:pkg.build?.appId});
+ if(pkg.engines?.node!=='24.14.1'||pkg.engines?.npm!=='11.11.0'||pkg.packageManager!=='npm@11.11.0')fail('RC1_RUNTIME_PINS_CHANGED','Runtime pins RC با lane مصوب تطابق ندارد.',{engines:pkg.engines,packageManager:pkg.packageManager});
+-for(const s of ['check:release-inputs','certify:windows:v097','release:win','release:win:rc1','test:rc1'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
++for(const file of ['scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/verify-manual-evidence-rc1.cjs','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
++for(const s of ['check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','verify:manual-evidence:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
+ if(compareVersions('1.0.0-rc1','1.0.0')>=0)fail('RC1_SEMVER_ORDER_INVALID','RC باید از نسخه stable همان ورژن کوچک‌تر باشد.');
+-console.log('verify-rc1-source PASS',{version:pkg.version,channel:rc.channel,featureFreeze:rc.featureFreeze,baseline:rc.baselineVersion,dataEpoch:DATA_EPOCH,lockfile:fs.existsSync(path.join(root,'package-lock.json'))?'present':'pending'});
++console.log('verify-rc1-source PASS',{version:pkg.version,channel:rc.channel,featureFreeze:rc.featureFreeze,baseline:rc.baselineVersion,dataEpoch:DATA_EPOCH,toolingRevision:rc.toolingRevision,lockfile:fs.existsSync(path.join(root,'package-lock.json'))?'present':'pending'});
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-certification-v097.ps1 /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-certification-v097.ps1
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-certification-v097.ps1	2026-08-14 11:17:15.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-certification-v097.ps1	2026-08-14 17:42:16.179260575 +0000
+@@ -49,7 +49,7 @@
+ Run-NpmGate 'test:windows-certification-v097-uat' $true $uatEnv | Out-Null
+ if($RunScale){$scaleEnv=@{WA_CERT_STRICT='1';WA_CERT_SCALE_ROOT=$(if($ScaleRoot){$ScaleRoot}else{$RootA});WA_CERT_SCALE_FILES=[string]$ScaleFiles;WA_CERT_RESULT=(Join-Path $out 'windows-scale-v097-uat.json')};Run-NpmGate 'test:windows-scale-v097-uat' $true $scaleEnv | Out-Null}else{Add-Gate 'test:windows-scale-v097-uat' 'INCOMPLETE' $true 3 '' 'Run certification with -RunScale'}
+ 
+-if($ManualEvidenceFile){$log=Join-Path $out 'gate-manual-evidence.log';$args=@('scripts/verify-manual-evidence-v097.cjs',$ManualEvidenceFile);if($RequireManualEvidence){$args+='--require-all'};$lines=& node @args 2>&1;$code=$LASTEXITCODE;$text=($lines|Out-String);$lines|Set-Content $log -Encoding utf8;$status=Classify $code $text $RequireManualEvidence;if(!$RequireManualEvidence -and $text -match 'INCOMPLETE'){$status='SKIP'};Add-Gate 'manual-evidence' $status ([bool]$RequireManualEvidence) $code $log $text}
++if($ManualEvidenceFile){$log=Join-Path $out 'gate-manual-evidence.log';$manualVerifier=if($pkg.version -eq '1.0.0-rc1'){'scripts/verify-manual-evidence-rc1.cjs'}else{'scripts/verify-manual-evidence-v097.cjs'};$args=@($manualVerifier,$ManualEvidenceFile);if($RequireManualEvidence){$args+='--require-all'};$lines=& node @args 2>&1;$code=$LASTEXITCODE;$text=($lines|Out-String);$lines|Set-Content $log -Encoding utf8;$status=Classify $code $text $RequireManualEvidence;if(!$RequireManualEvidence -and $text -match 'INCOMPLETE'){$status='SKIP'};Add-Gate 'manual-evidence' $status ([bool]$RequireManualEvidence) $code $log $text}
+ else{Add-Gate 'manual-evidence' $(if($RequireManualEvidence){'INCOMPLETE'}else{'SKIP'}) ([bool]$RequireManualEvidence) 3 '' 'manual evidence file not provided'}
+ 
+ $artifacts=@();$signatures=@()
+@@ -67,9 +67,9 @@
+ $sourceFingerprint=$null;try{$sourceFingerprint=Get-Content $fpFile -Raw|ConvertFrom-Json}catch{}
+ $osInfo=$null;$computer=$null;$volumes=@();try{$o=Get-CimInstance Win32_OperatingSystem;$osInfo=[pscustomobject]@{caption=$o.Caption;version=$o.Version;build=$o.BuildNumber;lastBoot=$o.LastBootUpTime}}catch{};try{$c=Get-CimInstance Win32_ComputerSystem;$computer=[pscustomobject]@{manufacturer=$c.Manufacturer;model=$c.Model;ramBytes=[int64]$c.TotalPhysicalMemory;processors=$c.NumberOfLogicalProcessors}}catch{};try{$volumes=Get-Volume|Select-Object DriveLetter,FileSystemLabel,FileSystem,DriveType,HealthStatus,OperationalStatus,UniqueId,Size,SizeRemaining}catch{}
+ $summary=[ordered]@{PASS=@($gates|Where-Object status -eq 'PASS').Count;FAIL=@($gates|Where-Object status -eq 'FAIL').Count;INCOMPLETE=@($gates|Where-Object status -eq 'INCOMPLETE').Count;SKIP=@($gates|Where-Object status -eq 'SKIP').Count}
+-$report=[ordered]@{schemaVersion='workspace-agent-windows-certification-v2';workspaceAgentVersion=$pkg.version;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;summary=$summary;sourceFingerprint=$sourceFingerprint;runtime=[ordered]@{node=$actualNode;npm=$actualNpm;electron=$pkg.devDependencies.electron;arch=$env:PROCESSOR_ARCHITECTURE};os=$osInfo;computer=$computer;volumes=$volumes;options=[ordered]@{rootA=$RootA;rootB=$RootB;runScale=[bool]$RunScale;scaleFiles=$ScaleFiles;buildArtifacts=[bool]$BuildArtifacts;requireSigning=[bool]$RequireSigning;requireManualEvidence=[bool]$RequireManualEvidence};gates=$gates;artifacts=$artifacts;signatures=$signatures}
++$report=[ordered]@{schemaVersion='workspace-agent-windows-certification-v3';workspaceAgentVersion=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;featureFreeze=[bool]$pkg.workspaceAgentRelease.featureFreeze;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;summary=$summary;sourceFingerprint=$sourceFingerprint;runtime=[ordered]@{node=$actualNode;npm=$actualNpm;electron=$pkg.devDependencies.electron;arch=$env:PROCESSOR_ARCHITECTURE};os=$osInfo;computer=$computer;volumes=$volumes;options=[ordered]@{rootA=$RootA;rootB=$RootB;runScale=[bool]$RunScale;scaleFiles=$ScaleFiles;buildArtifacts=[bool]$BuildArtifacts;requireSigning=[bool]$RequireSigning;requireManualEvidence=[bool]$RequireManualEvidence};gates=$gates;artifacts=$artifacts;signatures=$signatures}
+ $withoutId=$report|ConvertTo-Json -Depth 12 -Compress;$sha=[System.Security.Cryptography.SHA256]::Create();$bytes=[Text.Encoding]::UTF8.GetBytes($withoutId);$report['evidenceId']=([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant();$sha.Dispose()
+ $json=Join-Path $out 'certification-report.json';$report|ConvertTo-Json -Depth 12|Set-Content $json -Encoding utf8
+-$md=Join-Path $out 'certification-report.md';$lines=@("# Workspace Agent Windows Certification v0.9.7","","- Version: $($pkg.version)","- Overall: **$overall**","- Evidence ID: $($report.evidenceId)","- Created: $($report.createdAt)","","## Gates","");foreach($g in $gates){$lines += "- $($g.status) — $($g.name)"};$lines += @("","## Rule","","A required SKIP/PENDING prerequisite is INCOMPLETE, never PASS. Actual destructive evidence is never auto-triggered.");$lines|Set-Content $md -Encoding utf8
++$md=Join-Path $out 'certification-report.md';$lines=@("# Workspace Agent Windows Certification","","- Version: $($pkg.version)","- Overall: **$overall**","- Evidence ID: $($report.evidenceId)","- Created: $($report.createdAt)","","## Gates","");foreach($g in $gates){$lines += "- $($g.status) — $($g.name)"};$lines += @("","## Rule","","A required SKIP/PENDING prerequisite is INCOMPLETE, never PASS. Actual destructive evidence is never auto-triggered.");$lines|Set-Content $md -Encoding utf8
+ Write-Host "Certification: $overall — $json" -ForegroundColor $(if($overall -eq 'PASS'){'Green'}elseif($overall -eq 'INCOMPLETE'){'Yellow'}else{'Red'})
+ if($overall -eq 'FAIL'){exit 1};if($overall -eq 'INCOMPLETE'){exit 2};exit 0
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-rc1-certify.ps1 /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-rc1-certify.ps1
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-rc1-certify.ps1	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-rc1-certify.ps1	2026-08-14 17:41:04.973553042 +0000
+@@ -0,0 +1,113 @@
++param(
++  [string]$RootA = $env:WA_CERT_ROOT_A,
++  [string]$RootB = $env:WA_CERT_ROOT_B,
++  [string]$ScaleRoot = $env:WA_CERT_SCALE_ROOT,
++  [ValidateRange(10000,1000000)][int]$ScaleFiles = 100000,
++  [switch]$SkipScale,
++  [switch]$NoBuildArtifacts,
++  [switch]$RequireSigning,
++  [string]$ManualEvidenceFile = '',
++  [switch]$RequireManualEvidence,
++  [switch]$PreflightOnly,
++  [switch]$NoGenerateLockfile,
++  [string]$OutputDir = 'certification-rc1'
++)
++$ErrorActionPreference='Stop'
++if($env:OS -ne 'Windows_NT'){Write-Error 'RC1 Certification Kit فقط روی Windows اجرا می‌شود.';exit 3}
++Set-Location (Split-Path -Parent $PSScriptRoot)
++$pkg=Get-Content package.json -Raw | ConvertFrom-Json
++$stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
++$session=Join-Path (Get-Location) (Join-Path $OutputDir $stamp)
++New-Item -ItemType Directory -Path $session -Force | Out-Null
++$transcript=Join-Path $session 'operator-transcript.log'
++try{Start-Transcript -Path $transcript -Force | Out-Null}catch{}
++$checks=New-Object System.Collections.Generic.List[object]
++function Add-Check([string]$name,[string]$status,[object]$detail=$null){$checks.Add([pscustomobject]@{name=$name;status=$status;detail=$detail});Write-Host "$status $name" -ForegroundColor $(if($status -eq 'PASS'){'Green'}elseif($status -eq 'INCOMPLETE'){'Yellow'}else{'Red'})}
++function Save-Preflight([string]$overall){
++  $r=[ordered]@{schemaVersion='workspace-agent-rc1-certification-preflight-v1';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;rootA=$RootA;rootB=$RootB;scaleRoot=$ScaleRoot;scaleFiles=$ScaleFiles;checks=$checks}
++  $p=Join-Path $session 'preflight-report.json';$r|ConvertTo-Json -Depth 8|Set-Content $p -Encoding utf8;return $p
++}
++function Resolve-NtfsRoot([string]$p,[string]$label){
++  if(-not $p){throw "$label لازم است."}
++  $rp=(Resolve-Path -LiteralPath $p -ErrorAction Stop).Path
++  $root=[IO.Path]::GetPathRoot($rp)
++  if(-not $root -or $root -notmatch '^[A-Za-z]:\\$'){throw "$label باید روی Drive Letter محلی Windows باشد: $rp"}
++  $letter=$root.Substring(0,1)
++  $v=Get-Volume -DriveLetter $letter -ErrorAction Stop
++  if([string]$v.FileSystem -ne 'NTFS'){throw "$label باید NTFS باشد؛ فعلی: $($v.FileSystem)"}
++  if(-not $v.UniqueId){throw "$label Volume UniqueId ندارد."}
++  return [pscustomobject]@{input=$p;resolved=$rp;drive=$letter;uniqueId=[string]$v.UniqueId;fileSystem=[string]$v.FileSystem;driveType=[string]$v.DriveType;size=[int64]$v.Size;free=[int64]$v.SizeRemaining}
++}
++function Run([string]$name,[scriptblock]$cmd){
++  $log=Join-Path $session ("step-"+$name+'.log')
++  try{$lines=& $cmd 2>&1;$code=$LASTEXITCODE;if($null -eq $code){$code=0};$lines|Set-Content $log -Encoding utf8;if($code -ne 0){throw "$name failed ($code)"};Add-Check $name 'PASS' @{log=$log};return @{code=$code;log=$log;text=($lines|Out-String)}}catch{Add-Check $name 'FAIL' @{log=$log;error=$_.Exception.Message};throw}
++}
++try{
++  node scripts/verify-rc1-source.cjs | Out-Host
++  if($LASTEXITCODE -ne 0){throw 'RC1 source contract failed.'}
++  Add-Check 'rc1-source-contract' 'PASS'
++  $expectedNode=(Get-Content .nvmrc -Raw).Trim();$actualNode=(node -p "process.versions.node").Trim();$expectedNpm=([string]$pkg.packageManager).Replace('npm@','');$actualNpm=(npm -v).Trim()
++  if($actualNode -ne $expectedNode -or $actualNpm -ne $expectedNpm){Add-Check 'runtime-pins' 'FAIL' @{expectedNode=$expectedNode;actualNode=$actualNode;expectedNpm=$expectedNpm;actualNpm=$actualNpm};throw 'Node/npm release lane mismatch.'}
++  Add-Check 'runtime-pins' 'PASS' @{node=$actualNode;npm=$actualNpm}
++  $a=Resolve-NtfsRoot $RootA 'RootA';$b=Resolve-NtfsRoot $RootB 'RootB'
++  if($a.uniqueId -eq $b.uniqueId){Add-Check 'distinct-ntfs-volumes' 'FAIL' @{rootA=$a;rootB=$b};throw 'RootA و RootB باید روی دو Volume واقعی متفاوت باشند.'}
++  Add-Check 'distinct-ntfs-volumes' 'PASS' @{rootA=$a;rootB=$b}
++  if(-not $ScaleRoot){$ScaleRoot=$RootA}
++  $s=Resolve-NtfsRoot $ScaleRoot 'ScaleRoot'
++  $minScaleFree=if($ScaleFiles -ge 1000000){30GB}elseif($ScaleFiles -ge 100000){8GB}else{3GB}
++  if(-not $SkipScale -and $s.free -lt $minScaleFree){Add-Check 'scale-free-space' 'FAIL' @{requiredBytes=$minScaleFree;freeBytes=$s.free};throw 'فضای آزاد ScaleRoot برای Certification انتخابی کافی نیست.'}
++  Add-Check 'scale-free-space' 'PASS' @{requiredBytes=if($SkipScale){0}else{$minScaleFree};freeBytes=$s.free}
++  if($RequireSigning -and -not ($env:CSC_LINK -or $env:WIN_CSC_LINK)){Add-Check 'signing-config' 'FAIL';throw 'RequireSigning فعال است ولی CSC_LINK/WIN_CSC_LINK وجود ندارد.'}
++  Add-Check 'signing-config' 'PASS' @{required=[bool]$RequireSigning;configured=[bool]($env:CSC_LINK -or $env:WIN_CSC_LINK)}
++  if($RequireManualEvidence){
++    if(-not $ManualEvidenceFile){Add-Check 'manual-evidence' 'FAIL';throw 'ManualEvidenceFile لازم است.'}
++    node scripts/verify-manual-evidence-rc1.cjs $ManualEvidenceFile --require-all | Out-Host
++    if($LASTEXITCODE -ne 0){Add-Check 'manual-evidence' 'FAIL';throw 'Manual evidence RC1 ناقص یا نامعتبر است.'}
++    Add-Check 'manual-evidence' 'PASS' @{file=$ManualEvidenceFile}
++  }else{Add-Check 'manual-evidence' 'PASS' @{required=$false}}
++  if(-not (Test-Path package-lock.json)){
++    if($NoGenerateLockfile){Add-Check 'package-lock' 'INCOMPLETE' 'package-lock.json missing and generation disabled';$pre=Save-Preflight 'INCOMPLETE';Write-Host "Preflight INCOMPLETE: $pre" -ForegroundColor Yellow;exit 2}
++    $registry=(npm config get registry).Trim();$ping=& npm ping --registry $registry --fetch-retries=0 --fetch-timeout=10000 2>&1;$pingCode=$LASTEXITCODE;$ping|Set-Content (Join-Path $session 'npm-registry-ping.log') -Encoding utf8
++    if($pingCode -ne 0){Add-Check 'npm-registry' 'INCOMPLETE' @{registry=$registry};$pre=Save-Preflight 'INCOMPLETE';Write-Host "npm registry unavailable. $pre" -ForegroundColor Yellow;exit 2}
++    Add-Check 'npm-registry' 'PASS' @{registry=$registry}
++    npm run release:lock | Out-Host
++    if($LASTEXITCODE -ne 0){Add-Check 'package-lock' 'FAIL';throw 'package-lock generation failed.'}
++  }
++  node scripts/verify-release-inputs.cjs | Out-Host
++  if($LASTEXITCODE -ne 0){Add-Check 'package-lock' 'FAIL';throw 'package-lock integrity gate failed.'}
++  $lockHash=(Get-FileHash package-lock.json -Algorithm SHA256).Hash.ToLowerInvariant();Add-Check 'package-lock' 'PASS' @{sha256=$lockHash}
++  $pre=Save-Preflight 'PASS';Write-Host "Preflight PASS: $pre" -ForegroundColor Green
++  if($PreflightOnly){exit 0}
++  $certOut=Join-Path $OutputDir 'runs'
++  $args=@('-NoProfile','-ExecutionPolicy','Bypass','-File','scripts/windows-certification-v097.ps1','-RootA',$a.resolved,'-RootB',$b.resolved,'-ScaleRoot',$s.resolved,'-ScaleFiles',[string]$ScaleFiles,'-OutputDir',$certOut)
++  if(-not $SkipScale){$args+='-RunScale'}
++  if(-not $NoBuildArtifacts){$args+='-BuildArtifacts'}
++  if($RequireSigning){$args+='-RequireSigning'}
++  if($ManualEvidenceFile){$args+=@('-ManualEvidenceFile',$ManualEvidenceFile)}
++  if($RequireManualEvidence){$args+='-RequireManualEvidence'}
++  # Manual evidence is pre-verified here and also recorded by the underlying certification report.
++  $certLog=Join-Path $session 'windows-certification.log'
++  $certLines=& powershell.exe @args 2>&1;$certCode=$LASTEXITCODE;$certLines|Set-Content $certLog -Encoding utf8
++  $certRoot=Join-Path (Get-Location) $certOut
++  $report=Get-ChildItem $certRoot -Recurse -Filter 'certification-report.json' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
++  if(-not $report){Add-Check 'windows-certification' 'FAIL' @{exitCode=$certCode;log=$certLog};throw 'Certification report پیدا نشد.'}
++  $certJson=Get-Content $report.FullName -Raw|ConvertFrom-Json
++  $certStatus=[string]$certJson.overall
++  Add-Check 'windows-certification' $certStatus @{exitCode=$certCode;report=$report.FullName;evidenceId=$certJson.evidenceId}
++  $envOut=Join-Path $session 'rc1-certification-envelope.json'
++  $envArgs=@('scripts/rc1-certification-envelope.cjs',"--report=$($report.FullName)","--out=$envOut")
++  if(-not $NoBuildArtifacts){$envArgs+='--require-artifacts'}
++  if($RequireSigning){$envArgs+='--require-signing'}
++  if($ManualEvidenceFile){$envArgs+="--manual-evidence=$ManualEvidenceFile"}
++  if($RequireManualEvidence){$envArgs+='--require-manual-evidence'}
++  $envLines=& node @envArgs 2>&1;$envCode=$LASTEXITCODE;$envLines|Set-Content (Join-Path $session 'envelope.log') -Encoding utf8
++  $envelope=if(Test-Path $envOut){Get-Content $envOut -Raw|ConvertFrom-Json}else{$null}
++  $overall=if($certCode -eq 1 -or $envCode -eq 1){'FAIL'}elseif($certCode -ne 0 -or $envCode -ne 0){'INCOMPLETE'}else{'PASS'}
++  $final=[ordered]@{schemaVersion='workspace-agent-rc1-certification-kit-result-v1';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;preflight=$pre;certificationReport=$report.FullName;certificationEvidenceId=$certJson.evidenceId;envelope=$envOut;envelopeEvidenceId=if($envelope){$envelope.evidenceId}else{$null};packageLockSha256=$lockHash;transcript=$transcript}
++  $finalPath=Join-Path $session 'rc1-certification-result.json';$final|ConvertTo-Json -Depth 8|Set-Content $finalPath -Encoding utf8
++  Write-Host "RC1 Certification Kit: $overall" -ForegroundColor $(if($overall -eq 'PASS'){'Green'}elseif($overall -eq 'INCOMPLETE'){'Yellow'}else{'Red'})
++  Write-Host "Result: $finalPath"
++  if($overall -eq 'FAIL'){exit 1};if($overall -eq 'INCOMPLETE'){exit 2};exit 0
++}catch{
++  $err=$_.Exception.Message;Add-Check 'orchestrator' 'FAIL' @{error=$err};$pre=Save-Preflight 'FAIL';Write-Error "$err`nReport: $pre";exit 1
++}finally{try{Stop-Transcript|Out-Null}catch{}}
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-release.ps1 /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-release.ps1
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-release.ps1	2026-08-14 16:32:44.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/scripts/windows-release.ps1	2026-08-14 17:42:16.179099977 +0000
+@@ -28,7 +28,8 @@
+ if ($RequireSigning -and -not ($env:CSC_LINK -or $env:WIN_CSC_LINK)) { throw 'Code signing required است ولی CSC_LINK/WIN_CSC_LINK تنظیم نشده.' }
+ if ($RequireManualEvidence) {
+   if (-not $ManualEvidenceFile) { throw 'Manual certification evidence file is required.' }
+-  node scripts/verify-manual-evidence-v097.cjs $ManualEvidenceFile --require-all
++  $manualVerifier=if($pkg.version -eq '1.0.0-rc1'){'scripts/verify-manual-evidence-rc1.cjs'}else{'scripts/verify-manual-evidence-v097.cjs'}
++  node $manualVerifier $ManualEvidenceFile --require-all
+   if ($LASTEXITCODE -ne 0) { throw 'Manual certification evidence is incomplete/failed.' }
+ }
+ if (Test-Path release) { Remove-Item release -Recurse -Force }
+@@ -67,7 +68,7 @@
+ $lockHash=(Get-FileHash package-lock.json -Algorithm SHA256).Hash.ToLowerInvariant()
+ $fpJson=(node scripts/source-tree-fingerprint.cjs | ConvertFrom-Json)
+ $manifest=[ordered]@{
+-  schemaVersion='workspace-agent-release-v4';version=$pkg.version;createdAt=(Get-Date).ToUniversalTime().ToString('o');
++  schemaVersion='workspace-agent-release-v5';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;featureFreeze=[bool]$pkg.workspaceAgentRelease.featureFreeze;createdAt=(Get-Date).ToUniversalTime().ToString('o');
+   node=(node -v);npm=(npm -v);packageManager=$pkg.packageManager;packageLockSha256=$lockHash;sourceFingerprint=$fpJson.sha256;sourceFiles=$fpJson.files;electron=$pkg.devDependencies.electron;
+   signingRequired=[bool]$RequireSigning;signingConfigured=[bool]($env:CSC_LINK -or $env:WIN_CSC_LINK);systemResilienceUat=$true;twoVolumeCertUat=$true;scaleUat=[bool]$RunScaleUat;manualEvidenceRequired=[bool]$RequireManualEvidence;signatures=$signatures;artifacts=$rows
+ }
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/manual-evidence-rc1.test.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/manual-evidence-rc1.test.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/manual-evidence-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/manual-evidence-rc1.test.cjs	2026-08-14 17:39:29.231740517 +0000
+@@ -0,0 +1,2 @@
++const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');const cp=require('child_process');const cwd=path.resolve(__dirname,'..');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-rc1-evidence-')),file=path.join(dir,'e.json');const base={schemaVersion:'workspace-agent-manual-evidence-rc1-v1',version:'1.0.0-rc1',operator:'qa',machine:'win11',createdAt:new Date().toISOString(),evidence:{physicalUsbDisconnectReconnect:{status:'PASS'},actualDiskFullRecovery:{status:'PASS'},realAclReadOnlyRecovery:{status:'PASS'},uncleanShutdownPowerLoss:{status:'PASS'}}};fs.writeFileSync(file,JSON.stringify(base));let r=JSON.parse(cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all'],{cwd,encoding:'utf8'}));assert.equal(r.status,'PASS');assert(/^[a-f0-9]{64}$/.test(r.sha256));base.evidence.actualDiskFullRecovery.status='PENDING_MANUAL';fs.writeFileSync(file,JSON.stringify(base));let failed=false;try{cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all'],{cwd,stdio:'pipe'})}catch(e){failed=true;assert(String(e.stderr).includes('MANUAL_EVIDENCE_INCOMPLETE'))}assert(failed);fs.rmSync(dir,{recursive:true,force:true});console.log('manual-evidence-rc1.test.cjs PASS');
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-envelope.test.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-envelope.test.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-envelope.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-envelope.test.cjs	2026-08-14 17:39:29.231137244 +0000
+@@ -0,0 +1,26 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const cp=require('child_process');
++const crypto=require('crypto');
++const root=path.resolve(__dirname,'..');
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-rc1-envelope-'));
++function sh(p){return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')}
++try{
++  const fp=JSON.parse(cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd:root,encoding:'utf8'}));
++  const report=path.join(tmp,'certification-report.json');
++  fs.writeFileSync(report,JSON.stringify({schemaVersion:'workspace-agent-windows-certification-v2',overall:'PASS',evidenceId:'cert-evidence',sourceFingerprint:{sha256:fp.sha256}}));
++  const releaseDir=path.join(tmp,'release');fs.mkdirSync(releaseDir);
++  const artifact=path.join(releaseDir,'Workspace-Agent-Setup-1.0.0-rc1-x64.exe');fs.writeFileSync(artifact,'fixture');
++  const releaseManifest=path.join(tmp,'release-manifest.json');fs.writeFileSync(releaseManifest,JSON.stringify({sourceFingerprint:fp.sha256,artifacts:[{file:path.basename(artifact),sha256:sh(artifact)}],signatures:[{file:path.basename(artifact),status:'Valid'}]}));
++  // release artifact is expected under project release/; use incomplete path test without mutating repo.
++  let r=cp.spawnSync(process.execPath,['scripts/rc1-certification-envelope.cjs',`--report=${report}`,`--release-manifest=${releaseManifest}`],{cwd:root,encoding:'utf8'});
++  assert.equal(r.status,2,'without package-lock the envelope must be INCOMPLETE, never PASS');
++  assert(/INCOMPLETE/.test(r.stdout));
++  const parsed=JSON.parse(r.stdout);assert.equal(parsed.checks.reportPass,true);assert.equal(parsed.checks.sourceFingerprintMatch,true);assert.equal(parsed.checks.lockPresent,false);
++  const tampered=path.join(tmp,'bad-report.json');fs.writeFileSync(tampered,JSON.stringify({schemaVersion:'x',overall:'PASS',sourceFingerprint:{sha256:'deadbeef'}}));
++  r=cp.spawnSync(process.execPath,['scripts/rc1-certification-envelope.cjs',`--report=${tampered}`,`--release-manifest=${releaseManifest}`],{cwd:root,encoding:'utf8'});
++  assert.equal(r.status,1);assert(/sourceFingerprintMatch/.test(r.stdout));
++  console.log('rc1-certification-envelope.test.cjs PASS',{fingerprint:fp.sha256.slice(0,16)});
++}finally{fs.rmSync(tmp,{recursive:true,force:true})}
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-kit-contract.test.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-kit-contract.test.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-kit-contract.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-certification-kit-contract.test.cjs	2026-08-14 17:42:15.216894986 +0000
+@@ -0,0 +1,12 @@
++const assert=require('assert');
++const fs=require('fs');
++const path=require('path');
++const root=path.resolve(__dirname,'..');
++const p=path.join(root,'scripts','windows-rc1-certify.ps1');
++const s=fs.readFileSync(p,'utf8');
++for(const required of ['verify-rc1-source.cjs','Get-Volume','NTFS','UniqueId','release:lock','verify-release-inputs.cjs','windows-certification-v097.ps1','rc1-certification-envelope.cjs','package-lock.json','WA_CERT_ROOT_A','WA_CERT_ROOT_B'])assert(s.includes(required),`missing certification invariant: ${required}`);
++for(const forbidden of ['Format-Volume','Remove-Partition','Clear-Disk','Initialize-Disk','Stop-Computer','Restart-Computer','Remove-PhysicalDisk'])assert(!s.includes(forbidden),`destructive command forbidden in certification harness: ${forbidden}`);
++assert(/RootA و RootB باید روی دو Volume واقعی متفاوت باشند/.test(s));
++assert(/CSC_LINK|WIN_CSC_LINK/.test(s),'signing must come from environment, not embedded key material');
++assert(!/BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY/.test(s));
++console.log('rc1-certification-kit-contract.test.cjs PASS',{nonDestructive:true,distinctVolumes:true,envelope:true});
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-source-contract.test.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-source-contract.test.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-source-contract.test.cjs	2026-08-14 16:32:44.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/rc1-source-contract.test.cjs	2026-08-14 17:40:35.994506514 +0000
+@@ -8,7 +8,7 @@
+ assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+ assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+ assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+-assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');
++assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit1');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);
+ const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+ assert(/PASS/.test(out));
+ console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});
+diff -ruN '--exclude=node_modules' '--exclude=release' '--exclude=dist' '--exclude=certification' '--exclude=certification-*' '--exclude=DIFF_v1.0.0-rc1-cert-kit1.txt' /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/source-tree-fingerprint-generated-vrc1.test.cjs /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/source-tree-fingerprint-generated-vrc1.test.cjs
+--- /mnt/data/wa_rc1_original/windows-workspace-agent-v1.0.0-rc1-source/tests/source-tree-fingerprint-generated-vrc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_rc1_work/windows-workspace-agent-v1.0.0-rc1-source/tests/source-tree-fingerprint-generated-vrc1.test.cjs	2026-08-14 17:41:05.121915663 +0000
+@@ -0,0 +1,14 @@
++const assert=require('assert');
++const fs=require('fs');
++const path=require('path');
++const cp=require('child_process');
++const root=path.resolve(__dirname,'..');
++function fp(){return JSON.parse(cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd:root,encoding:'utf8'})).sha256}
++const before=fp();
++const dirs=[path.join(root,'dist'),path.join(root,'certification-rc1','fixture')];
++try{
++  fs.mkdirSync(dirs[0],{recursive:true});fs.writeFileSync(path.join(dirs[0],'generated.txt'),'generated');
++  fs.mkdirSync(dirs[1],{recursive:true});fs.writeFileSync(path.join(dirs[1],'report.json'),'generated');
++  const after=fp();assert.equal(after,before,'generated build/certification directories must not change source fingerprint');
++  console.log('source-tree-fingerprint-generated-vrc1.test.cjs PASS',{sha256:before.slice(0,16)});
++}finally{for(const d of [path.join(root,'dist'),path.join(root,'certification-rc1')])fs.rmSync(d,{recursive:true,force:true})}

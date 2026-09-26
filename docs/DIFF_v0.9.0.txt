@@ -1,0 +1,1081 @@
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/README_FA.md ./README_FA.md
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/README_FA.md	2026-08-13 10:06:34.000000000 +0000
++++ ./README_FA.md	2026-08-13 10:27:39.882254377 +0000
+@@ -1,71 +1,54 @@
+-# Workspace Agent v0.8.4 — Windows Certification Foundation
++# Workspace Agent v0.9.0 — Local AI Foundation
+ 
+ تمرکز فعال پروژه **Windows Agent امن برای مدیریت Workspace/هارد** است. CorelDRAW همچنان Deferred است.
+ 
+ ## چرخه اصلی
+ Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End
+ 
+-Writeهای فایل همچنان از Transaction Intent / Checkpoint / Recovery / Undo عبور می‌کنند و Permanent Delete و arbitrary shell غیرفعال‌اند.
++Writeهای فایل از Transaction / Recovery / Undo و Volume Identity Guard عبور می‌کنند. Permanent Delete و arbitrary shell غیرفعال‌اند.
+ 
+-## جدید در v0.8.4
+-- **Lifecycle / Unclean Shutdown Marker** با atomic write و heartbeat. اگر Process/برق بدون clean exit قطع شود، Startup بعدی آن را تشخیص می‌دهد.
+-- Startup پس از unclean session، SQLite `integrity_check` را اجرا و Rootهای Watch‌شده را برای gap علامت‌گذاری می‌کند؛ هیچ Recovery نوشتنی خودکار انجام نمی‌شود.
+-- **Resource Pressure Guard** برای RAM، Event-loop و CPU سهم خود Agent. در فشار بالا chunk اسکن و concurrency هش کاهش می‌یابد؛ correctness فدای سرعت نمی‌شود.
+-- **Multi-root isolation**: تغییر identity یا unavailable شدن یک Root نباید Root دیگر را block کند.
+-- **Packaged App Smoke Mode**: `win-unpacked` با userData ایزوله بالا می‌آید، سرویس‌ها bootstrap می‌شوند و گزارش JSON از Lifecycle/SQLite/Journal/Watcher/Root/Pressure می‌نویسد.
+-- **Windows Certification Harness** با خروجی JSON + Markdown و وضعیت صریح PASS/FAIL/SKIP/PENDING.
+-- Harness می‌تواند Runtime pins، Regression، UATهای UIA/Index/Volume/Removable/Multi-root، scale، packaged worker/app، artifact SHA-256 و Authenticode را بررسی کند.
+-- Actual hard power-loss عمداً خودکار trigger نمی‌شود و به‌عنوان شواهد دستی جدا باقی می‌ماند.
+-- UI یک تب `Certification` برای Runtime health دارد؛ این UI جایگزین Certification رسمی Windows نیست.
++## جدید در v0.9.0
++- **Local AI Provider** فقط روی loopback (`127.0.0.1/localhost/::1`).
++- OpenAI-compatible transport مناسب `llama.cpp / llama-server`.
++- Planner مدل فقط **Skillهای allowlisted** را در JSON Schema پیشنهاد می‌دهد؛ Tool execution مستقیم ندارد.
++- خروجی مدل دوباره در برنامه validate و inputهای Path/Shell/Secret حذف می‌شوند.
++- Plan معتبر به **token موقت 10 دقیقه‌ای** تبدیل و به Workspace فعلی bind می‌شود.
++- AI Mission از همان Mission DAG/Cycle/Safety Core نسخه‌های قبلی استفاده می‌کند.
++- Write Skill حتی اگر AI پیشنهاد داده باشد، Confirmation مستقل دارد.
++- Prompt/response safety: Secret redaction، max prompt/output، timeout، rate limit، single-flight و circuit breaker.
++- Skill Memory فقط آمار موفقیت/شکست Skill را نگه می‌دارد؛ prompt/path/content ذخیره نمی‌شود.
++- **Local Vision Advisory** فقط روی تصویر انتخابی کاربر؛ بدون background screenshot و بدون coordinate/action generation.
++- تب Local AI در UI برای endpoint/model، Health، Plan و Vision.
+ 
+-## تست عمومی
+-```bash
+-npm run check
+-npm run test:cert-core
+-```
++## Local AI سریع
++یک مدل GGUF سازگار را با llama.cpp روی loopback اجرا کنید، سپس:
+ 
+-## Windows Certification
+-ابتدا lockfile واقعی را روی Node/npm pin‌شده تولید و commit کنید:
+ ```powershell
+-npm run release:lock
+-npm run check:release-inputs
++powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1
+ ```
+ 
+-Certification پایه:
+-```powershell
+-npm run certify:windows
+-```
++در برنامه: Local AI → Enable → Base URL → Model → Save → Health Test.
+ 
+-با build واقعی `win-unpacked` و smoke:
+-```powershell
+-powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1 -BuildPackaged
+-```
++جزئیات: `docs/LOCAL_AI_MODEL_v0.9_FA.md`.
+ 
+-برای دو مسیر تست روی دو Volume واقعی:
+-```powershell
+-$env:WA_CERT_ROOT_A='D:\WA-Test'
+-$env:WA_CERT_ROOT_B='E:\WA-Test'
+-npm run test:windows-multiroot-uat
++## تست عمومی
++```bash
++npm run check
++npm run test:ai
+ ```
+ 
+-برای scale:
+-```powershell
+-powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1 -RunScale
+-```
++## Windows Certification
++Release رسمی v0.8.x همچنان gateهای Windows واقعی را حفظ کرده است:
+ 
+-برای artifact/signature verification:
+ ```powershell
+-powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1 -VerifyArtifacts -RequireSigning
++npm run release:lock
++npm run check:release-inputs
++npm run certify:windows
+ ```
+ 
+-## وضعیت فعلی
+-- Regression/Source Hygiene/Syntax/JSX: PASS
+-- forced-process-death lifecycle detection: PASS
+-- resource-aware cycle budgets: PASS
+-- multi-root RootResilience isolation: PASS
+-- multi-root SQLite isolation: PASS
+-- Windows-only Certification/UAT: PENDING روی Windows واقعی
+-- package-lock رسمی: PENDING
+-- NSIS/Portable/Authenticode: PENDING
+-
+-جزئیات: `docs/CERTIFICATION_MODEL_v0.8.4_FA.md`, `docs/VALIDATION_v0.8.4_FA.md`, `docs/CHANGELOG_v0.8.4_FA.md`.
++## مرزهای v0.9.0
++- مدل یا Runtime داخل سورس bundle نشده است.
++- Cloud provider/API key در این نسخه پشتیبانی نمی‌شود.
++- AI نمی‌تواند Windows UI Action مستقیم اجرا کند.
++- AI نمی‌تواند Shell/PowerShell/Executable بسازد یا اجرا کند.
++- Local AI واقعی با Qwen/llama.cpp روی Windows هنوز UAT جدا می‌خواهد.
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/CHANGELOG_v0.9.0_FA.md ./docs/CHANGELOG_v0.9.0_FA.md
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/CHANGELOG_v0.9.0_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/CHANGELOG_v0.9.0_FA.md	2026-08-13 10:32:55.462254377 +0000
+@@ -0,0 +1,23 @@
++# Changelog v0.9.0 — Local AI Foundation
++
++- Local OpenAI-compatible provider abstraction با loopback-only policy.
++- تنظیمات محلی AI با atomic persistence؛ secret/API key storage مسدود.
++- llama.cpp-compatible `/models` health و `/chat/completions` transport.
++- schema-constrained JSON planning.
++- Skill Retriever روی Registry موجود + reliability boost از Skill Memory.
++- AI Plan Validator با allowlist و حذف inputهای path/shell/secret.
++- Ephemeral AI Plan token با TTL ده دقیقه و binding به Workspace root.
++- Mission Cycle پشتیبانی از `workspace-ai-goal-plan-v1` فقط از مسیر token داخلی.
++- Generic IPC injection برای AI goalPlan مسدود.
++- Local AI rate/prompt/timeout/single-flight/circuit guards.
++- Secret redaction قبل از Provider.
++- Skill Memory بدون ذخیره prompt/path/content.
++- Local Vision advisory روی فایل تصویری انتخاب‌شده توسط کاربر؛ no background capture.
++- UI تب Local AI و نمایش Health/Model/Circuit/Plan/Vision.
++- Certification runtime report شامل Local AI status.
++- Capability Registry به v9.0 ارتقا یافت.
++- Base URL hardening: loopback + `/v1` path required؛ HTTP redirects blocked.
++- Provider response-size ceiling برای جلوگیری از memory abuse توسط local server خراب.
++- AI Skill input به safe-key allowlist محدود شد؛ unknown key/prototype keys حذف می‌شوند.
++- AI Plan به Workspace موجود و صریح نیاز دارد.
++- `local-ai-server-v090.uat.cjs` برای UAT واقعی llama.cpp/Qwen اضافه شد؛ بدون env صریح SKIP می‌شود.
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/LOCAL_AI_MODEL_v0.9_FA.md ./docs/LOCAL_AI_MODEL_v0.9_FA.md
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/LOCAL_AI_MODEL_v0.9_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/LOCAL_AI_MODEL_v0.9_FA.md	2026-08-13 10:32:02.982254377 +0000
+@@ -0,0 +1,117 @@
++# Local AI Model — v0.9.0
++
++## هدف
++Local AI در این پروژه **Planner / Interpreter** است، نه executor. مدل هیچ API برای اجرای Shell، کلیک، حذف فایل یا نوشتن مستقیم در Workspace دریافت نمی‌کند.
++
++مسیر اعتماد:
++
++User command → Secret redaction → Skill retrieval → Local model → JSON Schema → Application validation → Ephemeral plan token → Mission DAG → Existing Safety Core
++
++هر Skill نوشتنی همچنان Preview/Confirmation/Transaction/Verify/Undo خودش را دارد.
++
++## Provider
++v0.9 فقط OpenAI-compatible endpoint محلی روی loopback را می‌پذیرد:
++
++- `127.0.0.1`
++- `localhost`
++- `::1`
++
++Remote host، Credential داخل URL و API key storage در این نسخه عمداً مسدود است.
++
++پیش‌فرض:
++
++`http://127.0.0.1:8080/v1`
++
++Provider پیشنهادی: `llama.cpp / llama-server`.
++
++## مدل‌ها
++کد به مدل خاصی قفل نیست. در زمان ساخت v0.9 خانواده‌های Qwen3.6 و Qwen3.5 گزینه‌های باز و مناسب برای تست هستند.
++
++- Qwen3.6: نسل جدیدتر؛ مدل‌های باز 27B و 35B-A3B و پشتیبانی text+vision در llama.cpp.
++- Qwen3.5: اندازه‌های سبک‌تر از جمله 0.8B/2B/4B/9B؛ برای تست روی سخت‌افزار معمولی گزینه عملی‌تری است.
++
++هیچ weight یا GGUF داخل این سورس bundle نشده است. License/model card هر weight انتخابی باید جدا بررسی شود.
++
++## اجرای نمونه llama.cpp
++بسته به نسخه llama.cpp، executable ممکن است `llama-server` یا CLI جدید `llama serve` باشد. نمونه کلاسیک:
++
++```powershell
++llama-server -m C:\Models\your-model.gguf --host 127.0.0.1 --port 8080 --ctx-size 16384
++```
++
++برای VLM ممکن است فایل/projector یا تنظیم multimodal مخصوص GGUF انتخابی لازم باشد. دستور دقیق را از model card همان GGUF بگیرید.
++
++سپس:
++
++```powershell
++powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1
++```
++
++و در UI:
++
++1. Local AI → Enable Local AI
++2. Base URL = `http://127.0.0.1:8080/v1`
++3. Model = همان ID که `/v1/models` برمی‌گرداند
++4. Save
++5. Health Test
++
++## JSON Schema
++Planner از `response_format.type=json_schema` استفاده می‌کند. حتی با Schema، خروجی مدل دوباره در برنامه validate می‌شود.
++
++Model فقط می‌تواند از Skill IDهایی استفاده کند که Retriever همان لحظه در allowlist قرار داده است. Interactive UIA Skill به مدل ارائه نمی‌شود.
++
++Inputهای پرخطر از خروجی مدل حذف می‌شوند، از جمله:
++
++- root/path/source/destination/target
++- shell/script/powershell/cmd/executable
++- URL
++- password/secret/token/api-key
++
++Root واقعی فقط توسط برنامه از Workspace انتخاب‌شده اضافه می‌شود.
++
++## Privacy
++- Raw prompt روی Disk ذخیره نمی‌شود.
++- Journal فقط hash فرمان، Skill IDها، latency/model و outcome را ثبت می‌کند.
++- Skill Memory فقط used/success/failed/lastUsed را نگه می‌دارد.
++- Vision فقط روی تصویری است که کاربر با File Picker انتخاب می‌کند.
++- Background screen capture وجود ندارد.
++- Vision output advisory است و coordinate/click execution تولید نمی‌کند.
++
++## Runtime guards
++- Prompt-size budget
++- timeout
++- single in-flight request
++- calls-per-minute
++- consecutive-failure circuit breaker
++- loopback-only network validation
++- redirect disabled
++- plan token TTL = 10 minutes
++- plan token bound to Workspace root
++
++## چیزهایی که هنوز در v0.9.0 نیست
++- auto-download مدل
++- start/stop خودکار llama-server
++- Cloud AI provider
++- API key storage
++- background screenshot/VLM loop
++- autonomous tool calling
++- arbitrary MCP execution
++- مدل‌محور کردن File Mutation
++
++## UAT واقعی مدل محلی
++بعد از اجرای llama-server:
++
++```powershell
++$env:WA_LOCAL_AI_BASE_URL='http://127.0.0.1:8080/v1'
++$env:WA_LOCAL_AI_MODEL='MODEL_ID_FROM_/v1/models'
++npm run test:local-ai-uat
++```
++
++برای Vision اختیاری:
++
++```powershell
++$env:WA_LOCAL_AI_VISION_FILE='C:\WA-Test\screen.png'
++npm run test:local-ai-uat
++```
++
++این UAT Plan واقعی مدل را از همان Validator/allowlist عبور می‌دهد ولی هیچ Plan را خودکار Execute نمی‌کند.
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/RELEASE_READINESS_v0.9.0.json ./docs/RELEASE_READINESS_v0.9.0.json
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/RELEASE_READINESS_v0.9.0.json	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/RELEASE_READINESS_v0.9.0.json	2026-08-13 10:32:57.124641957 +0000
+@@ -0,0 +1,30 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-v0.9.0",
++  "version": "0.9.0",
++  "sourceRegression": "PASS",
++  "sourceHygiene": "PASS",
++  "localAiConfigPolicy": "PASS_UNIT",
++  "localAiLoopbackPolicy": "PASS_UNIT",
++  "localAiSchemaPlanner": "PASS_MOCK_PROVIDER",
++  "localAiPlanTokenBinding": "PASS_UNIT",
++  "localAiVisionAdvisory": "PASS_MOCK_PROVIDER",
++  "localAiRealLlamaCpp": "PENDING_WINDOWS_LOCAL_MODEL_UAT",
++  "qwenTextModelUat": "PENDING",
++  "qwenVisionModelUat": "PENDING",
++  "packageLock": "PENDING",
++  "windows10Uat": "PENDING",
++  "windows11Uat": "PENDING",
++  "packagedWorkerSmoke": "PENDING_WINDOWS_BUILD",
++  "packagedAppSmoke": "PENDING_WINDOWS_BUILD",
++  "nsis": "PENDING",
++  "portable": "PENDING",
++  "authenticode": "PENDING",
++  "actualHardPowerLoss": "PENDING_MANUAL",
++  "sourceSyntax": "PASS",
++  "jsxGate": "PASS",
++  "testFiles": 29,
++  "buildCurrentEnvironment": "BLOCKED_NODE_MODULES_VITE_NOT_FOUND",
++  "strictReleaseInputGate": "FAIL_CLOSED_LOCKFILE_REQUIRED",
++  "localAiRealUatHarness": "READY",
++  "localAiRealUatCurrentRun": "SKIP_NO_LOCAL_SERVER"
++}
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/ROADMAP_FA.md ./docs/ROADMAP_FA.md
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/ROADMAP_FA.md	2026-08-13 10:06:36.000000000 +0000
++++ ./docs/ROADMAP_FA.md	2026-08-13 10:27:39.890254377 +0000
+@@ -1,69 +1,45 @@
+-# Roadmap پس از v0.8.4
++# Roadmap پس از v0.9.0
+ 
+-## v0.8.0 — انجام‌شده: Persistent File Index Foundation
+-- SQLite WAL persistent local index.
+-- generation-based stale commit.
+-- crash-resumable `scan_queue`.
+-- streaming/chunked Workspace scans.
+-- Indexed Search + pagination.
+-- Indexed Duplicate candidate query + SHA-256 cache.
+-
+-## v0.8.1 — انجام‌شده: Production Hardening
+-- Watch path coalescing + bounded backpressure.
+-- Dirty-root detection برای event gaps.
+-- Worker Thread برای duplicate SHA-256 + fallback.
+-- SQLite health/maintenance.
+-- process-kill وسط scan + restart/resume automated test.
+-
+-## v0.8.2 — انجام‌شده: Windows Path + Reproducible Release Foundation
+-- long-path/UNC namespaced I/O.
+-- Unicode-safe path preservation.
+-- symlink/junction traversal guards.
+-- packaged Worker resolver/smoke path.
+-- exact dependency pins + release runtime pin.
+-- lockfile-required `npm ci` gate.
+-- Source Hygiene + NSIS/Portable naming + Authenticode gate.
+-
+-## v0.8.3 — انجام‌شده در سورس: System-Level Windows Resilience
+-- Persistent Index schema v2 + additive migration.
+-- Volume identity probe (`UniqueId` / Volume Path) با PowerShell read-only.
+-- strong/weak identity policy برای جلوگیری از false mismatch.
+-- Root availability state machine.
+-- same-letter/different-volume detection.
+-- same-volume/new-letter Rebind Candidate بدون Auto-Rebind.
+-- blocked-root registry در File Watcher.
+-- block persistence در suspend/resume.
+-- Electron power suspend/resume integration.
+-- Root outage وسط scan: queue preservation + no stale commit.
+-- mid-directory outage bug fix و automated 200/200 resume test.
+-- Fresh Reindex-only identity acknowledgement.
+-- Windows system/removable/scale UAT scripts.
+-
+-## v0.8.4 — انجام‌شده در سورس: Certification Foundation
+-- atomic lifecycle marker + unclean shutdown detection.
+-- startup integrity/recovery evidence بعد از forced termination.
+-- adaptive resource-pressure budget برای scan/hash.
+-- multi-root isolation در resilience و SQLite.
+-- packaged executable bootstrap smoke با userData ایزوله.
+-- Windows certification harness با JSON/Markdown evidence.
+-- multi-root Windows UAT با `WA_CERT_ROOT_A/B`.
+-- Release gate شامل packaged worker + packaged app smoke.
+-- Actual hard power-loss همچنان manual evidence و خودکار اجرا نمی‌شود.
+-
+-## v0.9 — Local AI Layer (اختیاری)
+-- provider abstraction برای local/remote opt-in.
+-- semantic recommendation/explanation روی Index موجود.
+-- local model routing و resource budget.
+-- Vision فقط با opt-in صریح.
+-- LLM فقط Planner/Interpreter؛ File mutation همچنان deterministic skill + safety gate.
+-- Skill memory با provenance و versioning.
++## v0.8.0 تا v0.8.4 — انجام‌شده
++- Persistent SQLite Index، crash resume، low-RAM scan.
++- bounded watcher/backpressure و hash workers.
++- Windows long-path/Unicode/reparse safety.
++- Volume identity / suspend-resume / removable-drive resilience.
++- lifecycle marker، resource pressure، multi-root isolation.
++- Windows Certification Harness و packaged app/worker smoke foundation.
++
++## v0.9.0 — انجام‌شده در سورس: Local AI Foundation
++- loopback-only OpenAI-compatible provider.
++- llama.cpp transport health + schema JSON planning.
++- Qwen/model-agnostic configuration.
++- Skill retrieval از Registry موجود.
++- Skill outcome memory بدون raw prompt/path/content.
++- secret redaction + prompt/rate/timeout/single-flight/circuit guards.
++- model output allowlist validation.
++- ephemeral Workspace-bound plan token.
++- Local Vision advisory فقط روی user-selected image.
++- AI Mission همچنان از deterministic Skill/Cycle/Safety Core عبور می‌کند.
++
++## v0.9.1 — Local Runtime UAT / Model Profiles
++- UAT واقعی llama.cpp روی Windows 10/11.
++- profiles برای low/medium/high hardware بدون hard-code مدل واحد.
++- context/token budget بر اساس RAM/VRAM و Resource Pressure.
++- model capability discovery: text / vision / schema support.
++- startup detection اختیاری برای llama-server موجود؛ بدون auto-download.
++- Vision grounding comparison: UIA first, VLM advisory fallback.
++
++## v0.9.2 — Skill Learning / Retrieval v2
++- outcome-aware retrieval با provenance/versioning.
++- task pattern memory opt-in بدون raw content.
++- failure/recovery examples با privacy budget.
++- plan quality scorer و deterministic fallback comparison.
+ 
+ ## v1.0 candidate
+ - versioned state migration policy.
+ - installer/update/rollback strategy.
+ - signed release + recovery runbook.
+-- privacy-first optional telemetry.
+-- Windows certification matrix به‌عنوان release gate.
++- Windows certification matrix release gate.
++- Local AI UAT matrix و documented minimum hardware profiles.
+ 
+ ## Deferred
+-Corel/Design automation تا بلوغ Windows Agent core خارج از Scope فعال باقی می‌ماند.
++Corel/Design automation تا بلوغ Windows Agent و Local AI core خارج از Scope فعال باقی می‌ماند.
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/UPSTREAM_PROVENANCE.md ./docs/UPSTREAM_PROVENANCE.md
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/UPSTREAM_PROVENANCE.md	2026-08-13 06:45:11.000000000 +0000
++++ ./docs/UPSTREAM_PROVENANCE.md	2026-08-13 10:27:41.594021076 +0000
+@@ -1,12 +1,14 @@
+ # Upstream provenance / design references
+ 
+-No upstream repository is vendored in v0.7.1. The files in this source tree are project-local implementations. The following projects were reviewed as architecture/design references before this revision:
++No upstream repository is vendored in v0.9.0. The files in this source tree are project-local implementations. The following projects were reviewed as architecture/design references before this revision:
+ 
+ - Microsoft UFO / UFO² — Windows agent / UI Automation architecture — MIT repository license.
+ - Microsoft CUA Skill — reusable computer-use skill architecture — MIT repository license.
+ - Microsoft WindowsAgentArena — Windows agent evaluation environment — MIT repository license.
+ - Microsoft OmniParser — optional visual UI parsing reference; kept out of Core and not vendored.
+-- pywinauto — optional future Windows automation dependency/reference; not bundled in v0.7.1.
+-- llama.cpp / Qwen-family providers — optional future local-model layer; not bundled in v0.7.1.
++- pywinauto — optional future Windows automation dependency/reference; not bundled in v0.9.0.
++- llama.cpp — Local OpenAI-compatible inference/server design reference; no upstream code is vendored.
++- Qwen3.6 / Qwen3.5 — current open model families considered for optional local text/vision UAT; no model weights are bundled.
++- Qwen-Agent — planning/tool/memory architecture reference only; Python framework is not bundled because v0.9 keeps execution inside the existing Electron Skill/Cycle safety core.
+ 
+ If any upstream source code or model weights are vendored in a future release, add the exact pinned commit/version and required license/notice files to that release before distribution.
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/VALIDATION_v0.9.0_FA.md ./docs/VALIDATION_v0.9.0_FA.md
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/docs/VALIDATION_v0.9.0_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/VALIDATION_v0.9.0_FA.md	2026-08-13 10:32:55.474254377 +0000
+@@ -0,0 +1,93 @@
++# Validation v0.9.0 — Local AI Foundation
++
++تاریخ Validation: 2026-08-13
++
++## Source gates
++- Exact dependency pins: PASS
++- Source hygiene: PASS
++- JavaScript syntax: PASS
++- JSX parse/type syntax gate: PASS
++- Legacy + current regression: PASS
++
++## Regression count
++`npm test` شامل 29 فایل تست است و همگی PASS شدند.
++
++## Local AI tests
++### local-ai-foundation-v090
++PASS:
++- non-loopback endpoint blocked
++- non-`/v1` base path blocked
++- secret redaction
++- interactive-only UIA skill از retrieval حذف می‌شود
++- local `/models` health
++- explicit Workspace required
++- provider response-size ceiling
++- schema-constrained Plan parse
++- unknown/path/shell input removal
++- write skill retains Confirmation
++- Mission DAG validation
++- plan token Workspace binding
++- token one-time consumption
++- user-selected Vision advisory transport
++- no raw prompt / external network privacy status
++
++### local-ai-guard-v090
++PASS:
++- single-flight
++- consecutive-failure circuit breaker
++- circuit reset
++- prompt-size ceiling
++
++### ai-mission-v090
++PASS:
++- `workspace-ai-goal-plan-v1` از مسیر `local-ai-token`
++- read Skill قبل از write Skill
++- write child cycle روی Confirmation متوقف می‌شود
++- approve → deterministic child execution
++- mission completion → outcome memory hook
++
++## Existing safety regression
++PASS از نسخه‌های قبل:
++- Cycle Engine / confirmation / rollback
++- File Guardian / Quarantine / Transaction Recovery
++- Persistent SQLite Index / Crash Resume
++- Watcher backpressure / Worker hashing
++- Long path / Unicode / symlink/reparse guards
++- Volume identity / removable-drive state model
++- suspend/resume safeguards
++- Root outage وسط scan
++- pre-write و post-confirmation root guard
++- lifecycle/unclean shutdown marker
++- resource-pressure adaptive budgets
++- multi-root isolation
++- UIA pinned action safety
++
++## Release boundary
++`npm run check:release-inputs` در این محیط عمداً:
++
++`LOCKFILE_REQUIRED`
++
++برگشت داد. package-lock رسمی هنوز باید روی محیط آنلاین Node/npm pin‌شده تولید و commit شود.
++
++`npm run build` در این محیط:
++
++`vite: not found`
++
++برگشت داد چون `node_modules` نصب نیست. این مورد به‌عنوان Build PASS ثبت نشده است.
++
++## UATهای باقی‌مانده
++- Windows 10 واقعی
++- Windows 11 واقعی
++- llama.cpp واقعی روی loopback
++- Qwen text model UAT
++- Qwen vision model UAT
++- packaged app + local AI health
++- NSIS / Portable
++- Authenticode
++- power-loss manual evidence
++
++## نتیجه
++Source foundation v0.9.0 برای Local AI از نظر unit/integration/regression آماده است؛ ادعای Certification مدل/باینری Windows تا اجرای UATهای فوق انجام نمی‌شود.
++
++## Real Local Model UAT source
++`tests/local-ai-server-v090.uat.cjs` از نظر Syntax PASS شد و در محیط فعلی به‌علت نبودن `WA_LOCAL_AI_BASE_URL` و `WA_LOCAL_AI_MODEL` به‌صورت صریح `SKIP` شد. این تست برای PASS واقعی باید کنار llama.cpp/Qwen اجرا شود.
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/ipc.cjs ./electron/ipc.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/ipc.cjs	2026-08-13 10:00:23.000000000 +0000
++++ ./electron/ipc.cjs	2026-08-13 10:26:10.191530094 +0000
+@@ -5,7 +5,7 @@
+ const { planGoal } = require('./services/goal-planner.cjs');
+ function trusted(event) { const url = String(event.senderFrame?.url || event.sender?.getURL?.() || ''); return url.startsWith('file://') || /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(url); }
+ function deny(){ return {ok:false,code:'UNTRUSTED_IPC'}; }
+-function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null }) {
++function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null, localAIService=null }) {
+   const importTokens=new Map();
+   ipcMain.handle('wa:select-folder', async e => trusted(e) ? (await dialog.showOpenDialog({properties:['openDirectory']})).filePaths[0] || '' : '');
+   ipcMain.handle('wa:cycles', e => trusted(e) ? store.list(100) : deny());
+@@ -18,7 +18,14 @@
+   ipcMain.handle('wa:index-errors', (e,root='',limit=200) => trusted(e) ? (persistentFileIndex?persistentFileIndex.recentErrors(root,{limit}):[]) : deny());
+   ipcMain.handle('wa:snapshots', (e,root='') => trusted(e) ? snapshotStore.list(root) : deny());
+   ipcMain.handle('wa:plan-goal', (e,command='') => trusted(e) ? planGoal(command) : deny());
+-  ipcMain.handle('wa:start-cycle', async (e,type,input={}) => { if(!trusted(e)) return deny(); if(String(type)==='windows-ui-action')return{ok:false,code:'RESTRICTED_CYCLE_ENTRYPOINT',message:'Windows UI Action فقط از entrypoint تعاملی امن با ephemeral session قابل شروع است.'}; const c=engine.create(type,input); const result=await engine.run(c.id);if(String(type)==='persistent-index-scan'&&result?.status==='completed'&&input?.root){watcherService.clearDirty(input.root);if(input?.resume===false)await rootResilienceService?.acknowledgeRoot?.(input.root);}return result; });
++  ipcMain.handle('wa:ai-status', e => trusted(e) ? (localAIService?localAIService.status():{ok:false,code:'AI_RUNTIME_UNAVAILABLE'}) : deny());
++  ipcMain.handle('wa:ai-settings', e => trusted(e) ? (localAIService?localAIService.settings():{ok:false,code:'AI_RUNTIME_UNAVAILABLE'}) : deny());
++  ipcMain.handle('wa:ai-settings-update', (e,patch={}) => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,settings:localAIService.updateSettings(patch)}}catch(error){return{ok:false,code:error.code||'AI_SETTINGS_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-health', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};return localAIService.health();});
++  ipcMain.handle('wa:ai-plan', async (e,command='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.plan(command,{root});}catch(error){return{ok:false,code:error.code||'AI_PLAN_FAILED',message:error.message,retryAfterMs:error.retryAfterMs||null}}});
++  ipcMain.handle('wa:ai-start-mission', async (e,planToken='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const rec=localAIService.consumePlan(planToken,{root});const c=engine.create('mission',{root,command:'[LOCAL_AI_PLAN]',goalPlan:rec.goalPlan,planSource:'local-ai-token',aiCommandHash:rec.commandHash},{source:'local-ai-token',budget:{maxIterations:80,maxWallTimeMs:30*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'AI_MISSION_START_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-vision-file', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};const r=await dialog.showOpenDialog({title:'انتخاب تصویر برای Local Vision',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true};try{return await localAIService.analyzeImageFile(r.filePaths[0]);}catch(error){return{ok:false,code:error.code||'AI_VISION_FAILED',message:error.message}}});
++  ipcMain.handle('wa:start-cycle', async (e,type,input={}) => { if(!trusted(e)) return deny(); if(String(type)==='windows-ui-action')return{ok:false,code:'RESTRICTED_CYCLE_ENTRYPOINT',message:'Windows UI Action فقط از entrypoint تعاملی امن با ephemeral session قابل شروع است.'}; if(String(type)==='mission'&&(input?.goalPlan||input?.planToken||input?.planSource))return{ok:false,code:'AI_PLAN_DIRECT_INJECTION_BLOCKED',message:'AI Plan فقط با token موقت صادرشده از Local AI Service قابل اجراست.'}; const c=engine.create(type,input); const result=await engine.run(c.id);if(String(type)==='persistent-index-scan'&&result?.status==='completed'&&input?.root){watcherService.clearDirty(input.root);if(input?.resume===false)await rootResilienceService?.acknowledgeRoot?.(input.root);}return result; });
+   ipcMain.handle('wa:start-uia-action', async (e,request={}) => {
+     if(!trusted(e))return deny();
+     const session=windowsActionSessionStore.create(request);if(!session.ok)return session;
+@@ -43,7 +50,7 @@
+   ipcMain.handle('wa:recovery-act', async (e,id,action) => trusted(e) ? recoveryService.act(id,action) : deny());
+   ipcMain.handle('wa:resilience-status', e => trusted(e) ? (rootResilienceService?rootResilienceService.status():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
+   ipcMain.handle('wa:resilience-probe', async e => trusted(e) ? (rootResilienceService?rootResilienceService.probeNow():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
+-  ipcMain.handle('wa:cert-status', e => trusted(e) ? ({schemaVersion:'workspace-agent-cert-runtime-v1',at:new Date().toISOString(),platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal.verify()}) : deny());
++  ipcMain.handle('wa:cert-status', e => trusted(e) ? ({schemaVersion:'workspace-agent-cert-runtime-v1',at:new Date().toISOString(),platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal.verify(),localAI:localAIService?.status?.()||null}) : deny());
+   ipcMain.handle('wa:resource-pressure', e => trusted(e) ? (resourcePressureGuard?.snapshot?.()||{schemaVersion:'resource-pressure-v1',state:'unavailable'}) : deny());
+   ipcMain.handle('wa:watch-list', e => trusted(e) ? watcherService.configs() : deny());
+   ipcMain.handle('wa:watch-events', (e,limit=300) => trusted(e) ? watcherService.events(limit) : deny());
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/main.cjs ./electron/main.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/main.cjs	2026-08-13 10:02:23.000000000 +0000
++++ ./electron/main.cjs	2026-08-13 10:26:10.191117559 +0000
+@@ -20,6 +20,7 @@
+ const { SystemResilienceController } = require('./services/system-resilience-controller.cjs');
+ const { LifecycleState } = require('./services/lifecycle-state.cjs');
+ const { ResourcePressureGuard } = require('./services/resource-pressure-guard.cjs');
++const { LocalAIService } = require('./services/local-ai-service.cjs');
+ const { CycleEngine } = require('./services/cycle-engine.cjs');
+ const { skillByCycleType } = require('./services/skill-registry.cjs');
+ const { scanCycle, healthCycle, duplicateCycle, duplicateReviewCycle, organizeCycle } = require('./services/file-cycles.cjs');
+@@ -32,20 +33,20 @@
+ function certificationSmokeOutput(){const eq=process.argv.find(x=>String(x).startsWith('--cert-smoke-output='));if(eq)return String(eq).slice('--cert-smoke-output='.length);const i=process.argv.indexOf('--cert-smoke-output');return i>=0?String(process.argv[i+1]||''):'';}
+ function certificationUserData(){const eq=process.argv.find(x=>String(x).startsWith('--cert-user-data='));if(eq)return String(eq).slice('--cert-user-data='.length);const i=process.argv.indexOf('--cert-user-data');return i>=0?String(process.argv[i+1]||''):'';}
+ const certUserData=certificationUserData();if(certUserData){try{app.setPath('userData',path.resolve(certUserData));}catch{}}
+-function writeCertificationSmoke(file,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard}={}){if(!file)return null;const out=path.resolve(file);fs.mkdirSync(path.dirname(out),{recursive:true});const report={schemaVersion:'workspace-agent-packaged-smoke-v1',ok:true,at:new Date().toISOString(),appVersion:app.getVersion(),platform:process.platform,arch:process.arch,electron:process.versions.electron,node:process.versions.node,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal?.verify?.()||null};fs.writeFileSync(out,JSON.stringify(report,null,2),'utf8');journal?.append('PACKAGED_CERT_SMOKE_WRITTEN',{payload:{file:out,ok:report.ok}});return report;}
++function writeCertificationSmoke(file,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService}={}){if(!file)return null;const out=path.resolve(file);fs.mkdirSync(path.dirname(out),{recursive:true});const report={schemaVersion:'workspace-agent-packaged-smoke-v1',ok:true,at:new Date().toISOString(),appVersion:app.getVersion(),platform:process.platform,arch:process.arch,electron:process.versions.electron,node:process.versions.node,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal?.verify?.()||null,localAI:localAIService?.status?.()||null};fs.writeFileSync(out,JSON.stringify(report,null,2),'utf8');journal?.append('PACKAGED_CERT_SMOKE_WRITTEN',{payload:{file:out,ok:report.ok}});return report;}
+ 
+ function createWindow(){
+   mainWindow = new BrowserWindow({width:1540,height:980,minWidth:1120,minHeight:740,backgroundColor:'#0b1020',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+   const dev=process.env.VITE_DEV_SERVER_URL; if(dev) mainWindow.loadURL(dev); else mainWindow.loadFile(path.join(__dirname,'..','dist','index.html'));
+ }
+ app.whenReady().then(async()=>{
+-  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+-  engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine}));
++  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); const localAIService=new LocalAIService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
++  engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+   }});automationService.start();
+-  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard});app.quit();return;}createWindow();
++  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});app.quit();return;}createWindow();
+   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0) createWindow();});
+ });
+ app.on('before-quit',()=>{automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();persistentFileIndex?.close();});
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/preload.cjs ./electron/preload.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/preload.cjs	2026-08-13 10:00:26.000000000 +0000
++++ ./electron/preload.cjs	2026-08-13 10:23:13.197111532 +0000
+@@ -1,6 +1,7 @@
+ const { contextBridge, ipcRenderer } = require('electron');
+ contextBridge.exposeInMainWorld('workspaceAgent', {
+   selectFolder: () => ipcRenderer.invoke('wa:select-folder'), cycles: () => ipcRenderer.invoke('wa:cycles'), capabilities: () => ipcRenderer.invoke('wa:capabilities'), skills: () => ipcRenderer.invoke('wa:skills'), indexStatus: root => ipcRenderer.invoke('wa:index-status',root), indexRoots: () => ipcRenderer.invoke('wa:index-roots'), indexHealth: deep => ipcRenderer.invoke('wa:index-health',deep), indexSearch: input => ipcRenderer.invoke('wa:index-search',input), indexErrors: (root,limit=200) => ipcRenderer.invoke('wa:index-errors',root,limit), snapshots: root => ipcRenderer.invoke('wa:snapshots',root), planGoal: command => ipcRenderer.invoke('wa:plan-goal',command),
++  aiStatus:()=>ipcRenderer.invoke('wa:ai-status'), aiSettings:()=>ipcRenderer.invoke('wa:ai-settings'), aiSettingsUpdate:patch=>ipcRenderer.invoke('wa:ai-settings-update',patch), aiHealth:()=>ipcRenderer.invoke('wa:ai-health'), aiPlan:(command,root)=>ipcRenderer.invoke('wa:ai-plan',command,root), aiStartMission:(token,root)=>ipcRenderer.invoke('wa:ai-start-mission',token,root), aiVisionFile:()=>ipcRenderer.invoke('wa:ai-vision-file'),
+   startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
+   reviewList:root=>ipcRenderer.invoke('wa:review-list',root),reviewUpdate:(id,patch)=>ipcRenderer.invoke('wa:review-update',id,patch),reviewClear:root=>ipcRenderer.invoke('wa:review-clear',root),
+   zonesList:()=>ipcRenderer.invoke('wa:zones-list'),zonesAdd:input=>ipcRenderer.invoke('wa:zones-add',input),zonesRemove:id=>ipcRenderer.invoke('wa:zones-remove',id),storageTrend:root=>ipcRenderer.invoke('wa:storage-trend',root),
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/ai-call-guard.cjs ./electron/services/ai-call-guard.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/ai-call-guard.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/ai-call-guard.cjs	2026-08-13 10:21:31.254254377 +0000
+@@ -0,0 +1,9 @@
++class AICallGuard{
++  constructor({journal=null,getConfig=()=>({})}={}){this.journal=journal;this.getConfig=getConfig;this.calls=[];this.inFlight=0;this.failures=0;this.openUntil=0;}
++  snapshot(){const now=Date.now();this.calls=this.calls.filter(t=>now-t<60000);return{schemaVersion:'workspace-ai-guard-v1',callsLastMinute:this.calls.length,inFlight:this.inFlight,consecutiveFailures:this.failures,circuitOpen:now<this.openUntil,openUntil:this.openUntil?new Date(this.openUntil).toISOString():null};}
++  begin({promptChars=0,kind='plan'}={}){const cfg=this.getConfig();const now=Date.now();this.calls=this.calls.filter(t=>now-t<60000);if(!cfg.enabled)throw Object.assign(new Error('Local AI غیرفعال است.'),{code:'AI_DISABLED'});if(now<this.openUntil)throw Object.assign(new Error('Circuit breaker موقتاً باز است.'),{code:'AI_CIRCUIT_OPEN',retryAfterMs:this.openUntil-now});if(this.inFlight>=1)throw Object.assign(new Error('یک درخواست Local AI در حال اجراست.'),{code:'AI_BUSY'});if(this.calls.length>=cfg.callsPerMinute)throw Object.assign(new Error('سقف درخواست Local AI در دقیقه پر شده است.'),{code:'AI_RATE_LIMIT'});if(promptChars>cfg.maxPromptChars)throw Object.assign(new Error('Prompt از سقف محلی بزرگ‌تر است.'),{code:'AI_PROMPT_TOO_LARGE'});this.calls.push(now);this.inFlight++;this.journal?.append('AI_CALL_STARTED',{payload:{kind,promptChars}});return{startedAt:now,kind};}
++  success(ticket,{latencyMs=0}={}){this.inFlight=Math.max(0,this.inFlight-1);this.failures=0;this.journal?.append('AI_CALL_COMPLETED',{payload:{kind:ticket?.kind||'unknown',latencyMs}});}
++  failure(ticket,error){const cfg=this.getConfig();this.inFlight=Math.max(0,this.inFlight-1);this.failures++;if(this.failures>=cfg.breakerFailures)this.openUntil=Date.now()+cfg.breakerCooldownMs;this.journal?.append('AI_CALL_FAILED',{payload:{kind:ticket?.kind||'unknown',code:error?.code||'AI_PROVIDER_FAILED',consecutiveFailures:this.failures,circuitOpenUntil:this.openUntil||null}});}
++  resetCircuit(){this.failures=0;this.openUntil=0;return this.snapshot();}
++}
++module.exports={AICallGuard};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/ai-planner.cjs ./electron/services/ai-planner.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/ai-planner.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/ai-planner.cjs	2026-08-13 10:29:08.242067802 +0000
+@@ -0,0 +1,37 @@
++const {skillById}=require('./skill-registry.cjs');
++const {compileMissionPlan,verifyDag}=require('./mission-compiler.cjs');
++const {retrieveSkills}=require('./skill-retriever.cjs');
++const {redactText,safeBasename,hashText}=require('./ai-redaction.cjs');
++
++function schemaFor(skills,maxNodes=12){
++  return {
++    type:'object',
++    additionalProperties:false,
++    required:['summary','confidence','assumptions','nodes'],
++    properties:{
++      summary:{type:'string',maxLength:500},
++      confidence:{type:'number',minimum:0,maximum:1},
++      assumptions:{type:'array',maxItems:8,items:{type:'string',maxLength:220}},
++      nodes:{
++        type:'array',minItems:1,maxItems:maxNodes,
++        items:{
++          type:'object',additionalProperties:false,required:['skillId','reason','input'],
++          properties:{
++            skillId:{type:'string',enum:skills.map(x=>x.id)},
++            reason:{type:'string',maxLength:320},
++            input:{type:'object',additionalProperties:true}
++          }
++        }
++      }
++    }
++  };
++}
++const FORBIDDEN_INPUT_KEYS=/^(root|path|source|destination|target|command|shell|script|powershell|cmd|executable|url|password|secret|token|api.?key|__proto__|prototype|constructor)$/i;
++const SAFE_INPUT_KEYS=new Set(['query','extension','category','minSize','maxSize','olderThanDays','mode','resume','includeLowRiskJunk','includeEmptyFolders','includeZeroByte','find','replace','prefix','suffix','sequence','threshold','maxGroups','minConfidence','deep']);
++function safeInput(input={}){if(!input||typeof input!=='object'||Array.isArray(input))return{};const out=Object.create(null);for(const [k,v] of Object.entries(input).slice(0,30)){if(FORBIDDEN_INPUT_KEYS.test(k)||!SAFE_INPUT_KEYS.has(k))continue;if(typeof v==='string')out[k]=redactText(v,500);else if(typeof v==='number'||typeof v==='boolean'||v===null)out[k]=v;else if(Array.isArray(v))out[k]=v.slice(0,20).filter(x=>['string','number','boolean'].includes(typeof x)).map(x=>typeof x==='string'?redactText(x,200):x);}return out;}
++function validateAiResult(raw,{candidates,maxNodes=12}={}){if(!raw||typeof raw!=='object')throw Object.assign(new Error('AI plan object نامعتبر است.'),{code:'AI_PLAN_INVALID'});const allowed=new Set(candidates.map(x=>x.id));const nodes=Array.isArray(raw.nodes)?raw.nodes:[];if(!nodes.length||nodes.length>maxNodes)throw Object.assign(new Error('تعداد گام‌های AI plan نامعتبر است.'),{code:'AI_PLAN_NODE_LIMIT'});const seen=new Set();const steps=[];for(const n of nodes){const skill=skillById(n?.skillId);if(!skill||!allowed.has(skill.id)||skill.interactiveOnly)throw Object.assign(new Error(`Skill غیرمجاز در AI plan: ${n?.skillId||'-'}`),{code:'AI_PLAN_SKILL_BLOCKED'});const sig=`${skill.id}:${JSON.stringify(safeInput(n.input))}`;if(seen.has(sig))continue;seen.add(sig);steps.push({id:`ai-step-${steps.length+1}`,skillId:skill.id,type:skill.cycleType,label:skill.title,input:safeInput(n.input),reason:redactText(n.reason||'',320),requiresConfirmation:Boolean(skill.confirmation)});}if(!steps.length)throw Object.assign(new Error('AI plan پس از validation خالی شد.'),{code:'AI_PLAN_EMPTY'});steps.sort((a,b)=>Number(a.requiresConfirmation)-Number(b.requiresConfirmation));const goalPlan={schemaVersion:'workspace-ai-goal-plan-v1',commandHash:null,text:'[LOCAL_AI_REDACTED_COMMAND]',confidence:Math.max(0,Math.min(1,Number(raw.confidence)||0)),confidenceBand:Number(raw.confidence)>=.9?'high':Number(raw.confidence)>=.7?'medium':'low',constraints:{noArbitraryShell:true,writeRequiresConfirmation:true,interactiveSkillsBlocked:true},notes:(raw.assumptions||[]).slice(0,8).map(x=>redactText(x,220)),blocked:[],steps,summary:redactText(raw.summary||`${steps.length} گام توسط Local AI پیشنهاد شد.`,500)};const dag=compileMissionPlan(goalPlan,{maxNodes,maxWallTimeMs:30*60*1000});const check=verifyDag(dag);if(!check.ok)throw Object.assign(new Error('AI Mission DAG معتبر نیست.'),{code:check.code});return{goalPlan,dag};}
++class AIPlanner{
++ constructor({provider,guard,memory,journal=null,getConfig}={}){this.provider=provider;this.guard=guard;this.memory=memory;this.journal=journal;this.getConfig=getConfig;}
++ async plan(command,{root=''}={}){const cfg=this.getConfig();const clean=redactText(command,6000);if(clean.trim().length<3)throw Object.assign(new Error('فرمان برای AI plan خیلی کوتاه است.'),{code:'AI_COMMAND_TOO_SHORT'});const candidates=retrieveSkills(clean,{limit:Math.min(14,Math.max(6,cfg.maxPlanNodes+2)),memory:this.memory});if(!candidates.length)throw Object.assign(new Error('Skill مناسبی برای فرمان پیدا نشد.'),{code:'AI_NO_SKILLS'});const skillText=candidates.map(s=>`- ${s.id} | ${s.title} | risk=${s.risk} | confirm=${s.confirmation} | cycle=${s.cycleType}`).join('\n');const system=`You are the LOCAL planner for a Windows workspace agent. You NEVER execute tools. You may ONLY choose skillId values listed by the application. Never invent shell commands, paths, URLs, executables, UI clicks, registry edits, deletion, or credentials. Prefer read-only discovery before write skills. Write skills are only proposals; the application enforces a separate user confirmation. Do not include root/path/source/destination in input. Return only schema-valid JSON.`;const user=`User command (redacted):\n${clean}\n\nWorkspace label only: ${safeBasename(root)||'(none)'}\n\nAllowed skills:\n${skillText}\n\nCreate the smallest safe plan that satisfies the command.`;const promptChars=system.length+user.length;const ticket=this.guard.begin({promptChars,kind:'plan'});try{const out=await this.provider.chatJson({messages:[{role:'system',content:system},{role:'user',content:user}],schema:schemaFor(candidates,cfg.maxPlanNodes),kind:'plan'});const checked=validateAiResult(out.parsed,{candidates,maxNodes:cfg.maxPlanNodes});checked.goalPlan.commandHash=hashText(command);this.guard.success(ticket,{latencyMs:out.latencyMs});this.journal?.append('AI_PLAN_VALIDATED',{payload:{commandHash:checked.goalPlan.commandHash.slice(0,16),skills:checked.goalPlan.steps.map(x=>x.skillId),writes:checked.goalPlan.steps.filter(x=>x.requiresConfirmation).length,confidence:checked.goalPlan.confidence,model:out.model,latencyMs:out.latencyMs}});return{ok:true,source:'local-ai',model:out.model,latencyMs:out.latencyMs,usage:out.usage||null,goalPlan:checked.goalPlan,missionDag:checked.dag,candidates:candidates.map(x=>({id:x.id,title:x.title,risk:x.risk,confirmation:x.confirmation,score:x.score}))};}catch(error){this.guard.failure(ticket,error);throw error;}}
++}
++module.exports={AIPlanner,schemaFor,validateAiResult,safeInput,SAFE_INPUT_KEYS};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/ai-redaction.cjs ./electron/services/ai-redaction.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/ai-redaction.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/ai-redaction.cjs	2026-08-13 10:21:31.246254377 +0000
+@@ -0,0 +1,14 @@
++const crypto=require('crypto');
++const SECRET_PATTERNS=[
++  [/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi,'[REDACTED_PRIVATE_KEY]'],
++  [/\bsk-[A-Za-z0-9_-]{16,}\b/g,'[REDACTED_API_KEY]'],
++  [/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g,'[REDACTED_ACCESS_KEY]'],
++  [/\bBearer\s+[A-Za-z0-9._~+\/-]{12,}=*/gi,'Bearer [REDACTED]'],
++  [/(https?:\/\/)([^\s/@:]+):([^\s/@]+)@/gi,'$1[REDACTED]@'],
++  [/\b(password|passwd|pwd|secret|token|api[_-]?key)\s*[:=]\s*([^\s,;]{4,})/gi,'$1=[REDACTED]']
++];
++function redactText(value,max=8000){let s=String(value??'');for(const [rx,repl] of SECRET_PATTERNS)s=s.replace(rx,repl);s=s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,' ');if(s.length>max)s=`${s.slice(0,max)}…[TRUNCATED ${s.length-max}]`;return s;}
++function safeBasename(value=''){const s=String(value||'').replace(/[\\/]+$/,'');const parts=s.split(/[\\/]/);return redactText(parts[parts.length-1]||'',260);}
++function sanitizeObject(value,{maxDepth=4,maxArray=80,maxString=2000}={},depth=0){if(depth>maxDepth)return'[DEPTH_LIMIT]';if(value===null||value===undefined||typeof value==='number'||typeof value==='boolean')return value;if(typeof value==='string')return redactText(value,maxString);if(Array.isArray(value))return value.slice(0,maxArray).map(x=>sanitizeObject(x,{maxDepth,maxArray,maxString},depth+1));if(typeof value==='object'){const out={};for(const [k,v] of Object.entries(value).slice(0,100)){if(/password|secret|token|api.?key|credential/i.test(k)){out[k]='[REDACTED]';continue;}out[k]=sanitizeObject(v,{maxDepth,maxArray,maxString},depth+1);}return out;}return redactText(String(value),maxString);}
++function hashText(value=''){return crypto.createHash('sha256').update(String(value)).digest('hex');}
++module.exports={redactText,safeBasename,sanitizeObject,hashText};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/capability-registry.cjs ./electron/services/capability-registry.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/capability-registry.cjs	2026-08-13 10:05:31.000000000 +0000
++++ ./electron/services/capability-registry.cjs	2026-08-13 10:23:28.278233004 +0000
+@@ -50,7 +50,11 @@
+   { id:'pdf-intelligence', group:'intelligence', title:'PDF Base Intelligence', mode:'read-only', status:'beta', detail:'Metadata و text operators روی PDFهای غیررمزشده؛ بدون OCR و با اعلام محدودیت encoding' },
+   { id:'settings-portability', group:'agent', title:'Settings Export/Import', mode:'agent-local-config', status:'active', detail:'Export/Import Ruleها، Managed Zoneها و Watch Rootها؛ بدون فایل Workspace و بدون Secret' },
+   { id:'startup-review-advisor', group:'windows', title:'Startup Review Advisor', mode:'analysis-suggestion-only', status:'beta', detail:'اولویت‌بندی ورودی‌های Startup برای Review؛ بدون Disable/Registry Write/Process Kill' },
+-  { id:'semantic-vision-labeling', group:'intelligence', title:'Semantic Vision Labeling', mode:'analysis', status:'planned', detail:'تشخیص اشیاء/موضوع تصویر با مدل محلی یا provider اختیاری؛ در این نسخه فعال نیست' },
++  { id:'local-ai-provider', group:'agent', title:'Local AI Provider', mode:'loopback-openai-compatible', status:'beta', detail:'اتصال فقط به endpoint محلی loopback مانند llama-server؛ بدون Cloud credential و بدون دانلود خودکار مدل' },
++  { id:'local-ai-safe-planner', group:'agent', title:'Schema-constrained Local AI Planner', mode:'plan-only-allowlist', status:'beta', detail:'LLM فقط Skillهای allowlisted را در JSON Schema پیشنهاد می‌دهد؛ Tool execution مستقیم، Shell و interactive UI action برای مدل وجود ندارد' },
++  { id:'local-ai-privacy-guard', group:'safety', title:'Local AI Privacy / Circuit Guard', mode:'redaction-budget-breaker', status:'beta', detail:'Secret redaction، loopback-only network، prompt budget، timeout، rate limit، single-flight و circuit breaker؛ raw prompt ذخیره نمی‌شود' },
++  { id:'local-ai-vision-advisory', group:'intelligence', title:'Local Vision Advisory', mode:'user-selected-image-read-only', status:'beta', detail:'تحلیل تصویر انتخاب‌شده توسط کاربر با VLM محلی؛ بدون capture پس‌زمینه، coordinate/action generation یا اجرای UI' },
++  { id:'semantic-vision-labeling', group:'intelligence', title:'Semantic Vision Labeling', mode:'analysis', status:'beta', detail:'Foundation محلی Vision در v0.9 فعال شده؛ grounding اجرایی همچنان از UIA/Policy مستقل عبور می‌کند' },
+ ]);
+-function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v8.4', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
++function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v9.0', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
+ module.exports = { CAPABILITIES, capabilitySummary };
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/local-ai-config-store.cjs ./electron/services/local-ai-config-store.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/local-ai-config-store.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/local-ai-config-store.cjs	2026-08-13 10:29:08.241435615 +0000
+@@ -0,0 +1,38 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++
++const SCHEMA='workspace-local-ai-config-v1';
++const DEFAULTS=Object.freeze({
++  schemaVersion:SCHEMA,
++  enabled:false,
++  provider:'local-openai-compatible',
++  baseUrl:'http://127.0.0.1:8080/v1',
++  model:'',
++  timeoutMs:60000,
++  maxOutputTokens:1400,
++  temperature:0.1,
++  maxPlanNodes:12,
++  maxPromptChars:24000,
++  callsPerMinute:10,
++  breakerFailures:3,
++  breakerCooldownMs:60000,
++  allowVision:false,
++  maxVisionBytes:8*1024*1024,
++  storeRawPrompts:false,
++  networkPolicy:'loopback-only'
++});
++
++function clone(v){return JSON.parse(JSON.stringify(v));}
++function atomicWrite(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=`${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,file);}
++function isLoopbackHost(hostname=''){const h=String(hostname||'').toLowerCase().replace(/^\[|\]$/g,'');return h==='localhost'||h==='127.0.0.1'||h==='::1'||h==='0:0:0:0:0:0:0:1';}
++function validateBaseUrl(value){let u;try{u=new URL(String(value||''));}catch{throw Object.assign(new Error('آدرس Local AI معتبر نیست.'),{code:'AI_BASE_URL_INVALID'});}if(!['http:','https:'].includes(u.protocol))throw Object.assign(new Error('فقط HTTP/HTTPS برای Local AI پشتیبانی می‌شود.'),{code:'AI_PROTOCOL_BLOCKED'});if(u.username||u.password)throw Object.assign(new Error('Credential داخل URL مجاز نیست.'),{code:'AI_URL_CREDENTIAL_BLOCKED'});if(!isLoopbackHost(u.hostname))throw Object.assign(new Error('v0.9 فقط endpoint محلی loopback را می‌پذیرد.'),{code:'AI_NON_LOOPBACK_BLOCKED'});u.hash='';u.search='';u.pathname=u.pathname.replace(/\/+$/,'')||'/v1';if(!u.pathname.endsWith('/v1'))throw Object.assign(new Error('Base URL باید به مسیر OpenAI-compatible /v1 ختم شود.'),{code:'AI_BASE_PATH_BLOCKED'});return u.toString().replace(/\/$/,'');}
++function normalize(input={}){const v={...DEFAULTS,...input,schemaVersion:SCHEMA};v.enabled=Boolean(v.enabled);v.allowVision=Boolean(v.allowVision);v.storeRawPrompts=false;v.baseUrl=validateBaseUrl(v.baseUrl);v.provider='local-openai-compatible';v.model=String(v.model||'').trim().slice(0,200);v.timeoutMs=Math.max(5000,Math.min(180000,Number(v.timeoutMs)||DEFAULTS.timeoutMs));v.maxOutputTokens=Math.max(128,Math.min(4096,Number(v.maxOutputTokens)||DEFAULTS.maxOutputTokens));{const t=Number(v.temperature);v.temperature=Number.isFinite(t)?Math.max(0,Math.min(1,t)):DEFAULTS.temperature;}v.maxPlanNodes=Math.max(1,Math.min(24,Number(v.maxPlanNodes)||DEFAULTS.maxPlanNodes));v.maxPromptChars=Math.max(4000,Math.min(64000,Number(v.maxPromptChars)||DEFAULTS.maxPromptChars));v.callsPerMinute=Math.max(1,Math.min(60,Number(v.callsPerMinute)||DEFAULTS.callsPerMinute));v.breakerFailures=Math.max(2,Math.min(10,Number(v.breakerFailures)||DEFAULTS.breakerFailures));v.breakerCooldownMs=Math.max(10000,Math.min(10*60*1000,Number(v.breakerCooldownMs)||DEFAULTS.breakerCooldownMs));v.maxVisionBytes=Math.max(256*1024,Math.min(16*1024*1024,Number(v.maxVisionBytes)||DEFAULTS.maxVisionBytes));v.networkPolicy='loopback-only';return v;}
++class LocalAIConfigStore{
++  constructor(userData){this.file=path.join(userData,'local-ai-settings.json');this.value=this.load();}
++  load(){try{const raw=JSON.parse(fs.readFileSync(this.file,'utf8'));return normalize(raw);}catch{return normalize(DEFAULTS);}}
++  get(){return clone(this.value);}
++  update(patch={}){const forbidden=['apiKey','token','secret','password'];for(const key of forbidden)if(Object.prototype.hasOwnProperty.call(patch,key))throw Object.assign(new Error('ذخیره Credential در Local AI v0.9 پشتیبانی نمی‌شود.'),{code:'AI_SECRET_STORAGE_BLOCKED'});this.value=normalize({...this.value,...patch});atomicWrite(this.file,this.value);return this.get();}
++  reset(){this.value=normalize(DEFAULTS);atomicWrite(this.file,this.value);return this.get();}
++}
++module.exports={SCHEMA,DEFAULTS,LocalAIConfigStore,validateBaseUrl,isLoopbackHost,normalize};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/local-ai-service.cjs ./electron/services/local-ai-service.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/local-ai-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/local-ai-service.cjs	2026-08-13 10:29:08.242396330 +0000
+@@ -0,0 +1,24 @@
++const fs=require('fs');
++const crypto=require('crypto');
++const path=require('path');
++const {LocalAIConfigStore}=require('./local-ai-config-store.cjs');
++const {LocalOpenAIProvider}=require('./local-openai-provider.cjs');
++const {AICallGuard}=require('./ai-call-guard.cjs');
++const {SkillMemoryStore}=require('./skill-memory-store.cjs');
++const {AIPlanner}=require('./ai-planner.cjs');
++const {hashText,redactText}=require('./ai-redaction.cjs');
++function token(){return`ai-plan-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;}
++class LocalAIService{
++ constructor(userData,{journal=null}={}){this.userData=userData;this.journal=journal;this.configStore=new LocalAIConfigStore(userData);this.memory=new SkillMemoryStore(userData,{journal});this.guard=new AICallGuard({journal,getConfig:()=>this.configStore.get()});this.provider=new LocalOpenAIProvider({getConfig:()=>this.configStore.get()});this.planner=new AIPlanner({provider:this.provider,guard:this.guard,memory:this.memory,journal,getConfig:()=>this.configStore.get()});this.tokens=new Map();}
++ settings(){return this.configStore.get();}
++ updateSettings(patch){const v=this.configStore.update(patch);this.guard.resetCircuit();this.journal?.append('AI_SETTINGS_UPDATED',{payload:{enabled:v.enabled,provider:v.provider,baseUrl:v.baseUrl,model:v.model||null,allowVision:v.allowVision,networkPolicy:v.networkPolicy}});return v;}
++ status(){const c=this.settings();return{schemaVersion:'workspace-local-ai-status-v1',enabled:c.enabled,provider:c.provider,baseUrl:c.baseUrl,model:c.model||null,allowVision:c.allowVision,networkPolicy:c.networkPolicy,privacy:{rawPromptsStored:false,secretsStored:false,externalNetworkAllowed:false},guard:this.guard.snapshot(),memory:this.memory.summary(),recommendation:{runtime:'llama.cpp llama-server',families:['Qwen3.6','Qwen3.5'],note:'مدل در این پروژه دانلود یا bundle نمی‌شود؛ کاربر Runtime/Model محلی را جدا نصب می‌کند.'}};}
++ async health(){if(!this.settings().enabled)return{ok:false,code:'AI_DISABLED'};const out=await this.provider.health();this.journal?.append('AI_PROVIDER_HEALTH',{payload:{ok:out.ok,code:out.code,latencyMs:out.latencyMs,models:out.models?.slice(0,10)||[]}});return out;}
++ cleanupTokens(){const now=Date.now();for(const [k,v] of this.tokens)if(v.expiresAt<=now)this.tokens.delete(k);}
++ validateWorkspaceRoot(root){const raw=String(root||'').trim();if(!raw)throw Object.assign(new Error('برای Local AI Plan باید Workspace صریح انتخاب شود.'),{code:'AI_WORKSPACE_REQUIRED'});const resolved=path.resolve(raw);let stat;try{stat=fs.statSync(resolved);}catch{throw Object.assign(new Error('Workspace انتخاب‌شده در دسترس نیست.'),{code:'AI_WORKSPACE_UNAVAILABLE'});}if(!stat.isDirectory())throw Object.assign(new Error('Workspace باید پوشه باشد.'),{code:'AI_WORKSPACE_NOT_DIRECTORY'});return resolved;}
++ async plan(command,{root=''}={}){this.cleanupTokens();const resolvedRoot=this.validateWorkspaceRoot(root);const p=await this.planner.plan(command,{root:resolvedRoot});const t=token();const record={token:t,root:resolvedRoot,goalPlan:p.goalPlan,missionDag:p.missionDag,commandHash:hashText(command),createdAt:Date.now(),expiresAt:Date.now()+10*60*1000};this.tokens.set(t,record);return{...p,token:t,expiresAt:new Date(record.expiresAt).toISOString()};}
++ consumePlan(t,{root=''}={}){this.cleanupTokens();const rec=this.tokens.get(String(t||''));if(!rec)throw Object.assign(new Error('AI Plan منقضی یا نامعتبر است؛ Plan جدید بسازید.'),{code:'AI_PLAN_TOKEN_INVALID'});const resolved=this.validateWorkspaceRoot(root);if(resolved!==rec.root)throw Object.assign(new Error('Workspace از زمان ساخت AI Plan تغییر کرده است.'),{code:'AI_PLAN_ROOT_CHANGED'});this.tokens.delete(String(t));return rec;}
++ recordMissionOutcome(goalPlan,status){const ids=(goalPlan?.steps||[]).map(x=>x.skillId).filter(Boolean);if(ids.length)this.memory.record(ids,status);}
++ async analyzeImageFile(file){const cfg=this.settings();if(!cfg.enabled)throw Object.assign(new Error('Local AI غیرفعال است.'),{code:'AI_DISABLED'});if(!cfg.allowVision)throw Object.assign(new Error('Vision در تنظیمات Local AI غیرفعال است.'),{code:'AI_VISION_DISABLED'});const stat=fs.statSync(file);if(!stat.isFile()||stat.size>cfg.maxVisionBytes)throw Object.assign(new Error('فایل تصویر از سقف Vision بزرگ‌تر است.'),{code:'AI_VISION_FILE_LIMIT'});const ext=path.extname(file).toLowerCase();const mime=ext==='.png'?'image/png':ext==='.webp'?'image/webp':'image/jpeg';if(!['.png','.jpg','.jpeg','.webp'].includes(ext))throw Object.assign(new Error('فرمت تصویر Vision پشتیبانی نمی‌شود.'),{code:'AI_VISION_FORMAT_BLOCKED'});const b64=fs.readFileSync(file).toString('base64');const schema={type:'object',additionalProperties:false,required:['summary','warnings','elements'],properties:{summary:{type:'string',maxLength:800},warnings:{type:'array',maxItems:8,items:{type:'string',maxLength:260}},elements:{type:'array',maxItems:40,items:{type:'object',additionalProperties:false,required:['label','role','confidence'],properties:{label:{type:'string',maxLength:160},role:{type:'string',maxLength:80},confidence:{type:'number',minimum:0,maximum:1}}}}}};const prompt='Analyze this user-selected local screenshot/image. Identify visible UI or document elements at a high level. Do not output coordinates, click instructions, passwords, hidden text, or executable actions.';const ticket=this.guard.begin({promptChars:prompt.length,kind:'vision'});try{const out=await this.provider.visionJson({prompt,imageDataUrl:`data:${mime};base64,${b64}`,schema});this.guard.success(ticket,{latencyMs:out.latencyMs});const result={ok:true,schemaVersion:'workspace-ai-vision-v1',model:out.model,latencyMs:out.latencyMs,fileLabel:redactText(path.basename(file),260),summary:redactText(out.parsed?.summary||'',800),warnings:(out.parsed?.warnings||[]).slice(0,8).map(x=>redactText(x,260)),elements:(out.parsed?.elements||[]).slice(0,40).map(x=>({label:redactText(x.label||'',160),role:redactText(x.role||'',80),confidence:Math.max(0,Math.min(1,Number(x.confidence)||0))}))};this.journal?.append('AI_VISION_ANALYZED',{payload:{fileLabel:result.fileLabel,elements:result.elements.length,model:out.model,latencyMs:out.latencyMs}});return result;}catch(error){this.guard.failure(ticket,error);throw error;}}
++}
++module.exports={LocalAIService};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/local-openai-provider.cjs ./electron/services/local-openai-provider.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/local-openai-provider.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/local-openai-provider.cjs	2026-08-13 10:29:10.228572369 +0000
+@@ -0,0 +1,11 @@
++const {validateBaseUrl}=require('./local-ai-config-store.cjs');
++function parseContent(value){if(value&&typeof value==='object')return value;let s=String(value??'').trim();s=s.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();return JSON.parse(s);}
++class LocalOpenAIProvider{
++ constructor({getConfig}={}){this.getConfig=getConfig;}
++ cfg(){const c=this.getConfig();return{...c,baseUrl:validateBaseUrl(c.baseUrl)};}
++ async request(pathname,{method='GET',body=null,timeoutMs=null,maxResponseBytes=4*1024*1024}={}){const c=this.cfg();const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs||c.timeoutMs);try{const res=await fetch(`${c.baseUrl}${pathname}`,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:ctrl.signal,redirect:'error'});const declared=Number(res.headers.get('content-length')||0);if(declared>maxResponseBytes){ctrl.abort();throw Object.assign(new Error('پاسخ Local AI از سقف مجاز بزرگ‌تر است.'),{code:'AI_RESPONSE_TOO_LARGE'});}let total=0;const chunks=[];if(res.body){for await(const chunk of res.body){total+=chunk.length;if(total>maxResponseBytes){ctrl.abort();throw Object.assign(new Error('پاسخ Local AI از سقف مجاز بزرگ‌تر است.'),{code:'AI_RESPONSE_TOO_LARGE'});}chunks.push(Buffer.from(chunk));}}const text=Buffer.concat(chunks,total).toString('utf8');let json=null;try{json=text?JSON.parse(text):null}catch{}if(!res.ok)throw Object.assign(new Error(json?.error?.message||`Local AI HTTP ${res.status}`),{code:'AI_HTTP_ERROR',status:res.status});return json;}catch(error){if(error?.name==='AbortError'&&!error?.code)throw Object.assign(new Error('Local AI timeout.'),{code:'AI_TIMEOUT'});if(error?.code)throw error;throw Object.assign(new Error(error.message||'Local AI unavailable.'),{code:'AI_CONNECTION_FAILED'});}finally{clearTimeout(timer);}}
++ async health(){const started=Date.now();try{const json=await this.request('/models',{timeoutMs:5000});const models=Array.isArray(json?.data)?json.data.map(x=>String(x.id||'')).filter(Boolean).slice(0,50):[];return{ok:true,code:'AI_PROVIDER_READY',latencyMs:Date.now()-started,models};}catch(error){return{ok:false,code:error.code||'AI_PROVIDER_UNAVAILABLE',message:error.message,latencyMs:Date.now()-started,models:[]};}}
++ async chatJson({messages,schema,kind='plan',maxTokens=null,temperature=null}){const c=this.cfg();if(!c.model)throw Object.assign(new Error('نام مدل Local AI تنظیم نشده است.'),{code:'AI_MODEL_REQUIRED'});const payload={model:c.model,messages,temperature:temperature??c.temperature,max_tokens:maxTokens||c.maxOutputTokens,stream:false,response_format:{type:'json_schema',schema},reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}};const started=Date.now();const json=await this.request('/chat/completions',{method:'POST',body:payload});const content=json?.choices?.[0]?.message?.content;if(content===undefined||content===null)throw Object.assign(new Error('Local AI پاسخ متنی معتبر نداد.'),{code:'AI_EMPTY_RESPONSE'});let parsed;try{parsed=parseContent(content);}catch{throw Object.assign(new Error('پاسخ Local AI JSON معتبر نبود.'),{code:'AI_JSON_INVALID'});}return{parsed,latencyMs:Date.now()-started,usage:json?.usage||null,model:json?.model||c.model,kind};}
++ async visionJson({prompt,imageDataUrl,schema}){return this.chatJson({kind:'vision',messages:[{role:'system',content:'You are a local visual analysis component. Describe only visible evidence. Never suggest clicking or executing actions. Return only schema-valid JSON.'},{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:imageDataUrl}}]}],schema,maxTokens:1200,temperature:0.1});}
++}
++module.exports={LocalOpenAIProvider,parseContent};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/skill-memory-store.cjs ./electron/services/skill-memory-store.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/skill-memory-store.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/skill-memory-store.cjs	2026-08-13 10:21:31.262254377 +0000
+@@ -0,0 +1,12 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=`${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,file);}
++class SkillMemoryStore{
++ constructor(userData,{journal=null}={}){this.file=path.join(userData,'ai-skill-memory.json');this.journal=journal;this.state=this.load();}
++ load(){try{const x=JSON.parse(fs.readFileSync(this.file,'utf8'));if(x?.schemaVersion==='workspace-ai-skill-memory-v1')return x;}catch{}return{schemaVersion:'workspace-ai-skill-memory-v1',updatedAt:null,skills:{}};}
++ stats(skillId){const x=this.state.skills[String(skillId||'')]||{};return{used:x.used||0,success:x.success||0,failed:x.failed||0,lastUsedAt:x.lastUsedAt||null,reliability:x.used?Math.max(0,Math.min(1,(x.success+1)/(x.used+2))):0.5};}
++ record(skillIds=[],status='completed'){for(const id of [...new Set(skillIds.map(String))]){const x=this.state.skills[id]||{used:0,success:0,failed:0,lastUsedAt:null};x.used++;if(status==='completed'||status==='rolled-back')x.success++;else if(status==='failed')x.failed++;x.lastUsedAt=new Date().toISOString();this.state.skills[id]=x;}this.state.updatedAt=new Date().toISOString();atomic(this.file,this.state);this.journal?.append('AI_SKILL_MEMORY_UPDATED',{payload:{skills:[...new Set(skillIds.map(String))],status}});}
++ summary(){return{schemaVersion:this.state.schemaVersion,updatedAt:this.state.updatedAt,totalSkills:Object.keys(this.state.skills).length,rows:Object.entries(this.state.skills).map(([skillId])=>({skillId,...this.stats(skillId)})).sort((a,b)=>b.used-a.used).slice(0,100)};}
++}
++module.exports={SkillMemoryStore};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/skill-retriever.cjs ./electron/services/skill-retriever.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/skill-retriever.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/skill-retriever.cjs	2026-08-13 10:21:31.270254377 +0000
+@@ -0,0 +1,10 @@
++const {listSkills}=require('./skill-registry.cjs');
++function norm(v=''){return String(v||'').toLowerCase().replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\u200f\u202a-\u202e]/g,' ').replace(/[^\p{L}\p{N}._-]+/gu,' ').replace(/\s+/g,' ').trim();}
++function tokens(v=''){return new Set(norm(v).split(' ').filter(x=>x.length>1));}
++function overlap(a,b){let n=0;for(const x of a)if(b.has(x))n++;return n;}
++const HINTS=[
++  [/تکراری|duplicate|کپی/,['duplicate','duplicates']], [/جست|search|پیدا/,['search']], [/مرتب|organize|دسته/,['organize']], [/rename|تغییر نام|نام فایل/,['rename']],
++  [/سلامت|health|فضا|حجم/,['health','audit']], [/pdf/,['pdf']], [/عکس|image|photo/,['image']], [/متن|document|سند/,['text','intelligence']], [/ویندوز|windows/,['windows']], [/index|ایندکس/,['index']]
++];
++function retrieveSkills(command,{limit=10,memory=null}={}){const q=tokens(command);const hintWords=HINTS.filter(([rx])=>rx.test(norm(command))).flatMap(([,w])=>w);const rows=listSkills().filter(s=>!s.interactiveOnly&&['active','beta'].includes(s.status)).map(s=>{const hay=tokens(`${s.id} ${s.title} ${s.group} ${s.cycleType}`);let score=overlap(q,hay)*5;for(const h of hintWords)if(norm(`${s.id} ${s.title} ${s.cycleType}`).includes(h))score+=4;if(s.risk==='read')score+=0.6;if(s.risk==='write')score-=0.2;const m=memory?.stats?.(s.id);if(m)score+=(m.reliability-0.5)*1.5;return{...s,score:Number(score.toFixed(3)),reliability:m?.reliability??0.5};}).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));const picked=rows.filter(x=>x.score>0).slice(0,limit);const defaults=rows.filter(x=>['skill.workspace.health','skill.index.search','skill.workspace.intelligence'].includes(x.id));for(const d of defaults)if(picked.length<Math.min(limit,5)&&!picked.some(x=>x.id===d.id))picked.push(d);return picked.slice(0,limit);}
++module.exports={retrieveSkills,norm,tokens};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/workspace-cycles.cjs ./electron/services/workspace-cycles.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/workspace-cycles.cjs	2026-08-13 06:55:28.000000000 +0000
++++ ./electron/services/workspace-cycles.cjs	2026-08-13 10:22:29.080517693 +0000
+@@ -205,14 +205,15 @@
+   },async onEnd(cycle){sessionStore.forget(cycle.input.sessionToken||'');const ex=cycle.result?.execution;return{summary:cycle.status==='completed'&&cycle.result?.phase==='executed'?`UIA Action «${cycle.actionPlan?.action||'-'}» اجرا و با ${ex?.verification?.mode||'verification'} بررسی شد.`:cycle.status==='completed'&&!cycle.result?.supported?'UI Automation Action فقط روی Windows runtime فعال است.':cycle.status==='cancelled'?'UIA Action توسط کاربر لغو شد؛ هیچ Action اجرا نشد.':'UIA Action متوقف شد؛ در خطای Pin/Verify اجرای آزاد یا Retry کور انجام نشد.',quality:cycle.status==='completed'?(cycle.actionPlan?.action==='invoke'?'execution-verified':'verified'):cycle.status==='cancelled'?'cancelled':'failed',nextCycleSuggestions:['windows-ui-map']};}};
+ }
+ 
+-function missionCycle({getEngine}){
++function missionCycle({getEngine,onOutcome=null}){
+   return{async next(cycle){
+     const engine=getEngine();
+     if(!cycle.goalPlan){
+-      const goalPlan=planGoal(cycle.input.command||'');
++      const external=cycle.input?.planSource==='local-ai-token'&&cycle.input?.goalPlan?.schemaVersion==='workspace-ai-goal-plan-v1';
++      const goalPlan=external?JSON.parse(JSON.stringify(cycle.input.goalPlan)):planGoal(cycle.input.command||'');
+       const missionDag=compileMissionPlan(goalPlan,{maxNodes:cycle.input.maxNodes||24,maxWallTimeMs:cycle.input.maxWallTimeMs||30*60*1000});
+       const dagCheck=verifyDag(missionDag);if(!dagCheck.ok)throw Object.assign(new Error('Mission DAG معتبر نیست.'),{code:dagCheck.code,details:dagCheck});
+-      return{goalPlan,missionDag,missionIndex:0,childCycles:[],steps:[step('understand','analysis','completed','فهم فرمان فارسی',`Confidence ${Math.round(goalPlan.confidence*100)}%`),step('plan','planning','completed','ساخت Skill DAG',`${missionDag.summary.nodes} node · ${missionDag.summary.write} write`) ],evidence:[...cycle.evidence,evidence('MISSION_PLANNED',{confidence:goalPlan.confidence,steps:goalPlan.steps.map(s=>s.type),constraints:goalPlan.constraints,dag:missionDag.summary,policy:missionDag.policy})]};
++      return{goalPlan,missionDag,missionIndex:0,childCycles:[],steps:[step('understand','analysis','completed',external?'اعتبارسنجی Local AI Plan':'فهم فرمان فارسی',`Confidence ${Math.round(goalPlan.confidence*100)}%`),step('plan','planning','completed','ساخت Skill DAG',`${missionDag.summary.nodes} node · ${missionDag.summary.write} write`) ],evidence:[...cycle.evidence,evidence('MISSION_PLANNED',{source:external?'local-ai-token':'deterministic',confidence:goalPlan.confidence,steps:goalPlan.steps.map(s=>s.type),constraints:goalPlan.constraints,dag:missionDag.summary,policy:missionDag.policy})]};
+     }
+     const index=Number(cycle.missionIndex||0);const planSteps=cycle.missionDag?.nodes||[];
+     if(index>=planSteps.length)return{status:'completed',result:{goalPlan:cycle.goalPlan,missionDag:cycle.missionDag,childCycles:cycle.childCycles||[]}};
+@@ -239,7 +240,7 @@
+       }
+     }
+     return{status:cycle.status};
+-  },async onEnd(cycle){if(cycle.status==='cancelled'&&cycle.pendingChildId){try{const child=getEngine().store.get(cycle.pendingChildId);if(child?.status==='waiting-confirmation')await getEngine().confirm(child.id,'reject');}catch{}}return{summary:cycle.status==='completed'?`Mission با ${(cycle.childCycles||[]).length} Skill Cycle کامل شد.`:cycle.status==='cancelled'?'Mission در مرحله تأیید متوقف شد.':'Mission کامل نشد.',quality:cycle.status==='completed'?'verified':cycle.status==='cancelled'?'cancelled':'failed',nextCycleSuggestions:[]};},async undo(cycle){
++  },async onEnd(cycle){if(cycle.status==='cancelled'&&cycle.pendingChildId){try{const child=getEngine().store.get(cycle.pendingChildId);if(child?.status==='waiting-confirmation')await getEngine().confirm(child.id,'reject');}catch{}}try{onOutcome?.(cycle.goalPlan,cycle.status);}catch{}return{summary:cycle.status==='completed'?`Mission با ${(cycle.childCycles||[]).length} Skill Cycle کامل شد.`:cycle.status==='cancelled'?'Mission در مرحله تأیید متوقف شد.':'Mission کامل نشد.',quality:cycle.status==='completed'?'verified':cycle.status==='cancelled'?'cancelled':'failed',nextCycleSuggestions:[]};},async undo(cycle){
+     const engine=getEngine();const results=[];for(const child of [...(cycle.childCycles||[])].reverse()){const live=engine.store.get(child.cycleId);if(live?.status!=='completed')continue;const handler=engine.handler(live.type);if(typeof handler?.undo!=='function')continue;const r=await engine.rollback(live.id);results.push({ok:r.ok,childCycleId:live.id,type:live.type,skillId:child.skillId,details:r.results});}
+     return results.length?results:[{ok:false,error:'NO_UNDOABLE_CHILD_CYCLES'}];
+   }};
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/package.json ./package.json
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/package.json	2026-08-13 10:04:43.000000000 +0000
++++ ./package.json	2026-08-13 10:32:02.684745320 +0000
+@@ -1,16 +1,16 @@
+ {
+   "name": "windows-workspace-agent",
+-  "version": "0.8.4",
++  "version": "0.9.0",
+   "private": true,
+-  "description": "Cycle-driven Windows workspace agent with crash-resilient SQLite indexing, bounded watcher backpressure, worker-thread hashing, volume identity tracking, shutdown-state detection, multi-root isolation, resource-pressure guards and Windows certification/release verification.",
++  "description": "Cycle-driven Windows workspace agent with crash-resilient indexing, Windows safety/certification foundations, and a loopback-only schema-constrained Local AI planner with privacy, budget and circuit guards.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -41,7 +41,10 @@
+     "test:cert-core": "node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs",
+     "test:packaged-app": "node tests/packaged-app-smoke-v084.cjs",
+     "test:windows-multiroot-uat": "node tests/windows-multiroot-v084.uat.cjs",
+-    "certify:windows": "powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1"
++    "certify:windows": "powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1",
++    "test:ai": "node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs",
++    "test:local-ai-server": "powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1",
++    "test:local-ai-uat": "node tests/local-ai-server-v090.uat.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/scripts/local-ai-smoke.ps1 ./scripts/local-ai-smoke.ps1
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/scripts/local-ai-smoke.ps1	1970-01-01 00:00:00.000000000 +0000
++++ ./scripts/local-ai-smoke.ps1	2026-08-13 10:27:39.838254377 +0000
+@@ -0,0 +1,33 @@
++param(
++  [string]$BaseUrl = 'http://127.0.0.1:8080/v1',
++  [string]$Model = ''
++)
++$ErrorActionPreference='Stop'
++$u=[Uri]$BaseUrl
++if($u.Host -notin @('127.0.0.1','localhost','::1')){ throw 'Only loopback Local AI endpoints are allowed.' }
++$models=Invoke-RestMethod -Method Get -Uri ($BaseUrl.TrimEnd('/') + '/models') -TimeoutSec 5
++Write-Host 'Local AI /models: PASS'
++$ids=@($models.data | ForEach-Object { $_.id })
++$ids | ForEach-Object { Write-Host " - $_" }
++if(-not $Model){ if($ids.Count -gt 0){ $Model=$ids[0] } else { Write-Host 'No model id returned; chat test skipped.'; exit 0 } }
++$schema=@{
++  type='object'; additionalProperties=$false; required=@('ok','message');
++  properties=@{ ok=@{type='boolean'}; message=@{type='string';maxLength=80} }
++}
++$body=@{
++  model=$Model
++  messages=@(
++    @{role='system';content='Return only JSON matching the requested schema.'},
++    @{role='user';content='Respond that the local planner transport is ready.'}
++  )
++  temperature=0
++  max_tokens=80
++  stream=$false
++  response_format=@{type='json_schema';schema=$schema}
++  reasoning_effort='none'
++  chat_template_kwargs=@{enable_thinking=$false}
++} | ConvertTo-Json -Depth 12
++$r=Invoke-RestMethod -Method Post -Uri ($BaseUrl.TrimEnd('/') + '/chat/completions') -ContentType 'application/json' -Body $body -TimeoutSec 60
++if(-not $r.choices[0].message.content){ throw 'Chat completion returned no content.' }
++Write-Host "Local AI schema chat: PASS ($Model)"
++Write-Host $r.choices[0].message.content
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/src/App.jsx ./src/App.jsx
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/src/App.jsx	2026-08-13 10:00:44.000000000 +0000
++++ ./src/App.jsx	2026-08-13 10:31:29.856857013 +0000
+@@ -3,9 +3,9 @@
+ const api=window.workspaceAgent;
+ const fmt=n=>new Intl.NumberFormat('fa-IR').format(n||0);
+ const bytes=n=>{if(!n)return'۰ B';const u=['B','KB','MB','GB','TB'];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${new Intl.NumberFormat('fa-IR',{maximumFractionDigits:1}).format(v)} ${u[i]}`};
+-const tabs={home:'مرکز فرمان',system:'Windows System',uia:'Windows UI Map',mission:'Agent فارسی',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
++const tabs={home:'مرکز فرمان',system:'Windows System',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+- const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null);
++ const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState('');
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -14,25 +14,32 @@
+  const refreshJournal=async()=>{setJournalRows(await api.journalList({limit:250}));setJournalStatus(await api.journalVerify())};
+  const refreshWatches=async()=>{setWatches(await api.watchList());setWatchEvents(await api.watchEvents(250));setWatchStatus(await api.watchStatus());setResilience(await api.resilienceStatus())};
+  const refreshCert=async()=>setCertStatus(await api.certStatus());
++ const refreshAI=async()=>{const [status,settings]=await Promise.all([api.aiStatus(),api.aiSettings()]);setAiStatus(status);setAiSettings(settings)};
+  const refreshReviews=async r=>{const target=r||root;if(!target){setReviewItems([]);return}setReviewItems(await api.reviewList(target));};
+  const refreshIndex=async r=>{const target=r||root;if(!target){setIndexStatus(null);setIndexErrors([]);setIndexHealth(null);return}setIndexStatus(await api.indexStatus(target));setIndexErrors(await api.indexErrors(target,100));setIndexHealth(await api.indexHealth(false));};
+- useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
++ useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();refreshAI();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
+  async function pick(){const p=await api.selectFolder();if(p){setRoot(p);setCycle(null);setHealth(null);setDup(null);setSearchResult(null);setIntel(null);setSimilarImages(null);setSimilarTexts(null);setSelectedReview([]);await refreshSnaps(p);await refreshReviews(p);await refreshIndex(p)}}
+  async function run(type,input={}){const actualRoot=input.root||root;if(!actualRoot&&!['windows-system','windows-ui-map'].includes(type))return;setBusy(true);try{const c=await api.startCycle(type,{root:actualRoot,...input});setCycle(c);if(type==='workspace-health'&&c.result)setHealth(c.result);if((type==='duplicates'||type==='indexed-duplicates')&&c.result)setDup(c.result);if((type==='file-search'||type==='indexed-file-search')&&c.result)setSearchResult(c.result);if(type==='persistent-index-scan'||type==='persistent-index-maintenance')await refreshIndex(actualRoot);if(type==='windows-system'&&c.result)setSystem(c.result);if(type==='windows-ui-map'&&c.result)setUiaMap(c.result);if(type==='workspace-intelligence'&&c.result)setIntel(c.result);if(type==='similar-images'&&c.result)setSimilarImages(c.result);if(type==='similar-texts'&&c.result)setSimilarTexts(c.result);if(type==='managed-zone-audit'&&c.result)setZoneReport(c.result);if(type==='drive-audit'&&c.result)setDriveReport(c.result);if(type==='pdf-intelligence'&&c.result)setPdfReport(c.result);if(type==='review-queue-build'||type==='recommendation-apply')await refreshReviews(actualRoot);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
+  async function startUiaAction(target,action,value=''){setUiaError('');setBusy(true);try{const selector={processId:target.processId,windowName:uiaMap?.focusedWindow?.name||'',windowClassName:uiaMap?.focusedWindow?.className||'',automationId:target.automationId||'',name:target.name||'',className:target.className||'',controlType:target.controlType||'',frameworkId:target.frameworkId||''};const c=await api.startWindowsUiAction({action,selector,value,sensitive:false});if(c?.id){setCycle(c);await refresh();await refreshJournal();return c}setUiaError(c?.message||c?.code||'ساخت Action Preview ناموفق بود.');return c}catch(error){setUiaError(error?.message||'خطای UIA Action')}finally{setBusy(false)}}
+  async function confirm(id,d){setBusy(true);try{const c=await api.confirmCycle(id,d);setCycle(c);if(c.type==='recommendation-apply')await refreshReviews(c.input?.root);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
+  async function undo(id){setBusy(true);try{const r=await api.undoCycle(id);if(r.cycle){setCycle(r.cycle);if(r.cycle.type==='recommendation-apply')await refreshReviews(r.cycle.input?.root)}await refresh()}finally{setBusy(false)}}
+  async function plan(){setGoal(await api.planGoal(command))}async function mission(){setGoal(null);return run('mission',{command})}
++ async function saveAI(){if(!aiSettings)return;setAiError('');const r=await api.aiSettingsUpdate(aiSettings);if(r?.ok){setAiSettings(r.settings);await refreshAI()}else setAiError(r?.message||r?.code||'ذخیره تنظیمات Local AI ناموفق بود.')}
++ async function testAI(){setAiError('');const r=await api.aiHealth();setAiHealth(r);if(!r?.ok)setAiError(r?.message||r?.code||'Local AI در دسترس نیست.')}
++ async function makeAIPlan(){setAiError('');setAiPlanResult(null);if(!root||!aiCommand)return;setBusy(true);try{const r=await api.aiPlan(aiCommand,root);setAiPlanResult(r);if(!r?.ok)setAiError(r?.message||r?.code||'ساخت Local AI Plan ناموفق بود.')}finally{setBusy(false)}}
++ async function executeAIPlan(){if(!aiPlanResult?.token||!root)return;setAiError('');setBusy(true);try{const c=await api.aiStartMission(aiPlanResult.token,root);if(c?.id){setCycle(c);setAiPlanResult(null);await refresh();await refreshJournal()}else setAiError(c?.message||c?.code||'اجرای AI Mission شروع نشد.')}finally{setBusy(false)}}
++ async function runAIVision(){setAiError('');setBusy(true);try{const r=await api.aiVisionFile();if(r?.cancelled)return;setAiVision(r);if(!r?.ok)setAiError(r?.message||r?.code||'تحلیل Vision ناموفق بود.')}finally{setBusy(false)}}
+  async function dismissReview(item,status='dismissed'){await api.reviewUpdate(item.id,{status});await refreshReviews();setSelectedReview(x=>x.filter(id=>id!==item.id))}
+  async function auditZone(z){setActiveZone(z);setZoneReport(null);await run('managed-zone-audit',{root:z.root,zoneId:z.id})}
+  const pending=useMemo(()=>reviewItems.filter(x=>x.status==='pending'),[reviewItems]);
+- const rootTabs=['home','mission','health','intelligence','review','zones','drive','index','search','cleanup','files','duplicates','snapshots','automation','watch','pdf'];
+- return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.8.4</span></header>
++ const rootTabs=['home','mission','ai','health','intelligence','review','zones','drive','index','search','cleanup','files','duplicates','snapshots','automation','watch','pdf'];
++ return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.0</span></header>
+  {rootTabs.includes(tab)&&<section className="picker"><div><b>Workspace</b><span>{root||'پوشه‌ای انتخاب نشده'}</span></div><button onClick={pick}>انتخاب پوشه</button></section>}
+- {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
++ {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/><Task title="Local AI" sub="Qwen / llama.cpp · Plan-only" on={()=>setTab('ai')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
+  {tab==='system'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('windows-system')} disabled={busy}>اجرای Windows System Doctor</button><span>Read-only؛ Startup Advisor فقط اولویت Review می‌دهد و Registry/Process را تغییر نمی‌دهد.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{system&&<SystemReport data={system}/>}</>}
+  {tab==='uia'&&<><div className="toolbar"><button className="primary large" onClick={()=>{setUiaError('');run('windows-ui-map')}} disabled={busy}>خواندن UI پنجره فعال</button><span>Grounding خواندنی + Action کنترل‌شده با Preview/Confirm/Pin/Verify؛ بدون coordinate click، SendKeys عمومی یا Password write.</span></div>{uiaError&&<div className="panel action-error"><b>Action متوقف شد</b><p>{uiaError}</p></div>}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{uiaMap&&<UiaReport data={uiaMap} onAction={startUiaAction} busy={busy}/>}</>}
+  {tab==='mission'&&<><div className="panel"><h3>فرمان فارسی</h3><textarea className="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="مثلاً: این پوشه رو هوشمند بررسی کن، پیشنهادها رو برای Review آماده کن و چیزی رو خودکار تغییر نده"/><div className="actions"><button onClick={plan} disabled={!command}>فقط ساخت Plan</button><button className="primary" onClick={mission} disabled={!root||!command||busy}>اجرای Mission</button></div>{goal&&<div className="preview-box"><b>{goal.summary}</b><p>Confidence: {Math.round(goal.confidence*100)}%</p>{goal.notes?.map((n,i)=><small key={i}>{n}</small>)}{goal.steps.map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'نیازمند تأیید':'Read-only/Local'}</small></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
++ {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>فقط endpoint محلی loopback؛ مدل هیچ Tool اجرایی دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>Status</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Provider</span><b>{aiStatus.provider}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback only · no raw prompts</b></div></>}</div><div className="panel"><h3>Provider Settings</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id served by llama.cpp"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health Test</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+  {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
+  {tab==='intelligence'&&<><div className="grid4"><Task title="Workspace Intelligence" sub="Project / Destination / Rename" on={()=>run('workspace-intelligence')}/><Task title="Similar Photos" sub="dHash perceptual · Read-only" on={()=>run('similar-images')}/><Task title="Similar Texts" sub="SimHash content · Read-only" on={()=>run('similar-texts')}/><Task title="Build Review Queue" sub="Confidence ≥ 72% · Local only" on={async()=>{await run('review-queue-build');setTab('review')}}/><Task title="PDF Intelligence" sub="Metadata / Base text · No OCR" on={()=>run('pdf-intelligence')}/></div><div className="panel"><h3>Policy</h3><p>Intelligence فقط پیشنهاد می‌سازد. اعمال پیشنهاد فقط از Review Queue و پس از انتخاب، Preview و تأیید کاربر امکان‌پذیر است.</p></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{intel&&<IntelligenceReport data={intel}/>} {similarImages&&<SimilarityReport title="عکس‌های مشابه" data={similarImages} kind="image"/>} {similarTexts&&<SimilarityReport title="متن‌های مشابه" data={similarTexts} kind="text"/>}</>}
+  {tab==='review'&&<><div className="toolbar"><button className="primary" onClick={()=>run('review-queue-build')} disabled={!root||busy}>بازسازی Review Queue</button><button onClick={()=>setSelectedReview(pending.filter(x=>x.confidence>=.9).map(x=>x.id))} disabled={!pending.length}>انتخاب High Confidence</button><button onClick={()=>setSelectedReview(pending.map(x=>x.id))} disabled={!pending.length}>انتخاب همه Pending</button><button className="primary" onClick={()=>run('recommendation-apply',{itemIds:selectedReview})} disabled={!selectedReview.length||busy}>Preview اجرای {fmt(selectedReview.length)} پیشنهاد</button><button onClick={async()=>{await api.reviewClear(root);await refreshReviews()}} disabled={!root}>پاک‌سازی Dismissed/Reverted از صف</button></div><div className="panel"><div className="panel-title"><div><h3>Recommendation Review Queue</h3><p>Move و Rename یک فایل در زمان Preview با هم ترکیب می‌شوند. Collision Guard و Staging فعال است.</p></div><div className="mini-stats"><b>{fmt(pending.length)}</b><span>Pending</span><b>{fmt(reviewItems.filter(x=>x.status==='applied').length)}</b><span>Applied</span></div></div>{reviewItems.map(x=><div className={`review-row ${x.status}`} key={x.id}><label><input type="checkbox" disabled={x.status!=='pending'} checked={selectedReview.includes(x.id)} onChange={e=>setSelectedReview(s=>e.target.checked?[...new Set([...s,x.id])]:s.filter(id=>id!==x.id))}/><span><b>{x.actionType==='move'?'Move':'Rename'} · {x.status}</b><button className="linkish" onClick={()=>api.showItem(x.source)}>{x.source}</button><small>→ {x.actionType==='move'?x.suggestedFolder:x.suggestedName}</small></span></label><Confidence value={x.confidence}/><p>{(x.evidence||[]).join(' · ')}</p><div className="actions">{x.status==='pending'&&<button onClick={()=>dismissReview(x)}>Dismiss</button>}{x.status==='dismissed'&&<button onClick={()=>dismissReview(x,'pending')}>برگرداندن به Pending</button>}</div></div>)}{!reviewItems.length&&<p>صف خالی است. ابتدا Workspace Intelligence را اجرا و سپس Review Queue را بسازید.</p>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+@@ -48,7 +55,7 @@
+  {tab==='recovery'&&<><div className="panel"><div className="panel-title"><div><h3>Crash Recovery Center</h3><p>Transactionهای Write نیمه‌تمام بعد از Restart از روی Source / Staging / Destination طبقه‌بندی می‌شوند. هیچ Recovery خودکار Write نمی‌کند.</p></div><div className="mini-stats"><b>{fmt(recoveries.length)}</b><span>Recoverable</span><b>{journalStatus?.ok?'OK':'Check'}</b><span>Journal Chain</span></div></div><div className="toolbar"><button onClick={async()=>{await refreshRecovery();await refreshJournal()}}>Refresh</button></div>{recoveries.map(tx=><div className="rule" key={tx.id}><div><b>{tx.kind} · {tx.id}</b><small>{tx.status} · {tx.operations.length} عملیات · committed {fmt(tx.recovery.committed)} · staged {fmt(tx.recovery.staged)} · pending {fmt(tx.recovery.pending)}</small><small>{tx.recovery.manualReview?'نیازمند بررسی دستی':`پیشنهاد: ${tx.recovery.recommendation}`}</small></div><div className="actions"><button disabled={!tx.recovery.resumeAllowed} onClick={async()=>{await api.recoveryAct(tx.id,'resume');await refreshRecovery();await refreshJournal()}}>Resume</button><button className="danger" disabled={!tx.recovery.rollbackAllowed} onClick={async()=>{await api.recoveryAct(tx.id,'rollback');await refreshRecovery();await refreshJournal()}}>Rollback</button><button onClick={async()=>{await api.recoveryAct(tx.id,'abandon');await refreshRecovery();await refreshJournal()}}>فقط Archive</button></div></div>)}{!recoveries.length&&<p>Transaction نیمه‌تمامی برای Recovery وجود ندارد.</p>}</div><div className="panel"><h3>Event Journal</h3><p>Hash chain: {journalStatus?.ok?'سالم':'نیازمند بررسی'} · {fmt(journalStatus?.count)} رویداد در فایل فعال</p>{journalRows.slice(0,120).map(e=><div className="file-row" key={`${e.seq}-${e.hash}`}><b>#{fmt(e.seq)} {e.type}</b><span>{e.at} {e.cycleId?`· ${e.cycleId}`:''}</span></div>)}</div></>}
+  {tab==='watch'&&<><div className="panel"><h3>File Watcher — Bounded / Coalesced / Volume-aware</h3><p>Eventهای یک Path با هم coalesce می‌شوند، reconcile سریال است و Backpressure سقف‌دار دارد. هنگام Suspend یا قطع Volume، Watcher fail-safe متوقف می‌شود و Root برای Full Reindex علامت می‌خورد.</p><div className="toolbar"><button className="primary" disabled={!root} onClick={async()=>{await api.watchAdd(root);await refreshWatches()}}>Watch همین Workspace</button><button onClick={refreshWatches}>Refresh Events</button><button onClick={async()=>{setResilience(await api.resilienceProbe());await refreshWatches()}}>Probe Storage</button></div>{watchStatus&&<div className="mini-stats"><b>{fmt(watchStatus.pending)}</b><span>Pending</span><b>{fmt(watchStatus.coalesced)}</b><span>Coalesced</span><b>{fmt(watchStatus.droppedDelivery+watchStatus.droppedPending)}</b><span>Backpressure drops</span><b>{watchStatus.suspended?'Paused':'Active'}</b><span>Power state</span></div>}{resilience&&<div className="panel note"><b>Root / Volume Resilience</b>{(resilience.roots||[]).map((r,i)=><div className="file-row" key={`${r.root}-${i}`}><b>{r.status}</b><span>{r.root}{r.driveLetter?` · ${r.driveLetter}:`:''}{r.driveType?` · ${r.driveType}`:''}{r.identityChanged?' · VOLUME ID CHANGED':''}{r.rebindCandidate?.root?` · candidate: ${r.rebindCandidate.root}`:''}</span></div>)}{!(resilience.roots||[]).length&&<p>هنوز Root مانیتورشده‌ای وجود ندارد.</p>}</div>}{watchStatus?.needsFullRescan&&<div className="panel note"><b>Index freshness warning</b><p>برای {fmt(watchStatus.dirtyRoots?.length)} Root بخشی از Watch events از دست رفته/ناموفق بوده است. یک Full Persistent Reindex اجرا کن تا Dirty flag بعد از Commit پاک شود.</p></div>}{watches.map(w=><div className="rule" key={w.id}><div><b>{w.title}</b><small>{w.root}</small></div><div className="actions"><button className="danger" onClick={async()=>{await api.watchRemove(w.id);await refreshWatches()}}>Stop Watch</button></div></div>)}</div><div className="panel"><h3>آخرین File Events</h3>{watchEvents.map(e=><div className="file-row" key={e.id}><b>{e.eventType}</b><span>{e.path}</span></div>)}{!watchEvents.length&&<p>هنوز Event ثبت نشده است.</p>}</div></>}
+  {tab==='pdf'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('pdf-intelligence')} disabled={!root||busy}>تحلیل PDFهای Workspace</button><span>Read-only · بدون OCR · Encodingهای پیچیده ممکن است متن کامل ندهند.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{pdfReport&&<div className="panel"><h3>PDF Intelligence</h3><div className="stats"><div><b>{fmt(pdfReport.pdfsFound)}</b><span>PDF found</span></div><div><b>{fmt(pdfReport.processed)}</b><span>Processed</span></div><div><b>{fmt(pdfReport.errorsTotal)}</b><span>Errors</span></div></div>{pdfReport.rows.map(x=><div className="recommend" key={x.path}><div><button className="linkish" onClick={()=>api.showItem(x.path)}>{x.metadata?.title||x.path}</button><small>{fmt(x.pages)} صفحه · {bytes(x.size)} · {x.encrypted?'Encrypted':'Readable base'}</small></div><p>{x.textPreview||'متن پایه استخراج نشد.'}</p><small>{(x.limitations||[]).join(' · ')}</small></div>)}</div>}</>}
+- {tab==='cert'&&<div className="health-grid"><div className="panel wide"><div className="panel-title"><div><h3>Runtime Certification Status</h3><p>این صفحه وضعیت Runtime را نشان می‌دهد؛ Windows Certification رسمی فقط از Harness و UAT واقعی صادر می‌شود.</p></div><button onClick={refreshCert}>Refresh</button></div>{certStatus&&<><div className="mini-stats"><b>{certStatus.lifecycle?.cleanExit===false?'ACTIVE':'-'}</b><span>Session</span><b>{certStatus.resourcePressure?.state||'-'}</b><span>Pressure</span><b>{certStatus.indexHealth?.ok?'OK':'CHECK'}</b><span>SQLite</span><b>{certStatus.journal?.ok?'OK':'CHECK'}</b><span>Journal</span></div><div className="meter"><span>Platform</span><b>{certStatus.platform} / {certStatus.arch}</b></div><div className="meter"><span>Node / Electron</span><b>{certStatus.node} / {certStatus.electron||'-'}</b></div><div className="meter"><span>Session ID</span><b>{certStatus.lifecycle?.sessionId||'-'}</b></div><div className="meter"><span>Last heartbeat</span><b>{certStatus.lifecycle?.lastHeartbeatAt||'-'}</b></div><div className="meter"><span>Free memory</span><b>{certStatus.resourcePressure?`${Math.round((certStatus.resourcePressure.freeMemoryRatio||0)*100)}%`:'-'}</b></div><div className="meter"><span>Event-loop p95</span><b>{certStatus.resourcePressure?`${Math.round(certStatus.resourcePressure.eventLoopP95Ms||0)} ms`:'-'}</b></div><div className="meter"><span>Root states</span><b>{fmt(certStatus.rootResilience?.roots?.length||0)}</b></div></>}</div><div className="panel"><h3>Certification Boundary</h3><p>PASS این صفحه فقط Runtime health است؛ Installer/Portable، Authenticode، NTFS/removable drive، shutdown/power-loss و packaged-worker باید با <code>npm run certify:windows</code> روی Windows واقعی تأیید شوند.</p></div></div>}
++ {tab==='cert'&&<div className="health-grid"><div className="panel wide"><div className="panel-title"><div><h3>Runtime Certification Status</h3><p>این صفحه وضعیت Runtime را نشان می‌دهد؛ Windows Certification رسمی فقط از Harness و UAT واقعی صادر می‌شود.</p></div><button onClick={refreshCert}>Refresh</button></div>{certStatus&&<><div className="mini-stats"><b>{certStatus.lifecycle?.cleanExit===false?'ACTIVE':'-'}</b><span>Session</span><b>{certStatus.resourcePressure?.state||'-'}</b><span>Pressure</span><b>{certStatus.indexHealth?.ok?'OK':'CHECK'}</b><span>SQLite</span><b>{certStatus.journal?.ok?'OK':'CHECK'}</b><span>Journal</span></div><div className="meter"><span>Platform</span><b>{certStatus.platform} / {certStatus.arch}</b></div><div className="meter"><span>Node / Electron</span><b>{certStatus.node} / {certStatus.electron||'-'}</b></div><div className="meter"><span>Session ID</span><b>{certStatus.lifecycle?.sessionId||'-'}</b></div><div className="meter"><span>Last heartbeat</span><b>{certStatus.lifecycle?.lastHeartbeatAt||'-'}</b></div><div className="meter"><span>Free memory</span><b>{certStatus.resourcePressure?`${Math.round((certStatus.resourcePressure.freeMemoryRatio||0)*100)}%`:'-'}</b></div><div className="meter"><span>Event-loop p95</span><b>{certStatus.resourcePressure?`${Math.round(certStatus.resourcePressure.eventLoopP95Ms||0)} ms`:'-'}</b></div><div className="meter"><span>Root states</span><b>{fmt(certStatus.rootResilience?.roots?.length||0)}</b></div><div className="meter"><span>Local AI</span><b>{certStatus.localAI?.enabled?`ON · ${certStatus.localAI.model||'no model'}`:'Disabled'}</b></div><div className="meter"><span>AI Circuit</span><b>{certStatus.localAI?.guard?.circuitOpen?'OPEN':'Closed'}</b></div></>}</div><div className="panel"><h3>Certification Boundary</h3><p>PASS این صفحه فقط Runtime health است؛ Installer/Portable، Authenticode، NTFS/removable drive، shutdown/power-loss و packaged-worker باید با <code>npm run certify:windows</code> روی Windows واقعی تأیید شوند.</p></div></div>}
+  {tab==='settings'&&<div className="panel"><h3>Backup / Settings Portability</h3><p>Export شامل Automation Ruleها، Managed Zoneها و Watch Rootهاست؛ فایل‌های Workspace و Secretها داخل Bundle قرار نمی‌گیرند.</p><div className="actions"><button className="primary" onClick={async()=>{const r=await api.configExport();if(r?.ok)setConfigPreview({mode:'export',...r})}}>Export Settings</button><button onClick={async()=>{const r=await api.configImportPreview();if(r?.ok)setConfigPreview({mode:'import',...r})}}>Import Preview</button>{configPreview?.mode==='import'&&<button className="primary" onClick={async()=>{const r=await api.configImportApply(configPreview.token);setConfigPreview({mode:'applied',...r});await refreshRules();await refreshZones();await refreshWatches()}}>Apply Import</button>}</div>{configPreview&&<pre className="preview-box">{JSON.stringify(configPreview,null,2)}</pre>}</div>}
+  {tab==='cycles'&&<div className="panel"><h3>آخرین چرخه‌ها</h3>{cycles.map(c=><button className="history" key={c.id} onClick={()=>setCycle(c)}><span><b>{c.type}</b><small>{c.id}</small></span><em>{c.status}</em></button>)}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></div>}
+  </main></div>;
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/ai-mission-v090.test.cjs ./tests/ai-mission-v090.test.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/ai-mission-v090.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/ai-mission-v090.test.cjs	2026-08-13 10:25:25.694254377 +0000
+@@ -0,0 +1,11 @@
++const assert=require('assert');const fs=require('fs');const fsp=fs.promises;const os=require('os');const path=require('path');
++const {CycleStore}=require('../electron/services/cycle-store.cjs');const {CycleEngine}=require('../electron/services/cycle-engine.cjs');const {TransactionStore}=require('../electron/services/transaction-store.cjs');
++const {healthCycle,organizeCycle}=require('../electron/services/file-cycles.cjs');const {missionCycle}=require('../electron/services/workspace-cycles.cjs');
++(async()=>{
++ const workspace=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-ai-mission-ws-'));const state=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-ai-mission-state-'));await fsp.writeFile(path.join(workspace,'note.txt'),'hello');
++ const store=new CycleStore(state),tx=new TransactionStore(state),engine=new CycleEngine({store,maxIterations:40});let outcome=null;
++ engine.register('workspace-health',healthCycle());engine.register('organize',organizeCycle({transactionStore:tx}));engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(plan,status)=>{outcome={plan,status}}}));
++ const goalPlan={schemaVersion:'workspace-ai-goal-plan-v1',text:'[LOCAL_AI_REDACTED_COMMAND]',confidence:.95,constraints:{noArbitraryShell:true,writeRequiresConfirmation:true,interactiveSkillsBlocked:true},notes:[],blocked:[],summary:'AI validated plan',steps:[{id:'ai-step-1',skillId:'skill.workspace.health',type:'workspace-health',label:'Workspace Health',input:{},reason:'read first',requiresConfirmation:false},{id:'ai-step-2',skillId:'skill.file.organize',type:'organize',label:'Safe Organize',input:{mode:'type'},reason:'controlled write',requiresConfirmation:true}]};
++ let m=engine.create('mission',{root:workspace,command:'[LOCAL_AI_PLAN]',goalPlan,planSource:'local-ai-token'});m=await engine.run(m.id);assert.equal(m.status,'waiting-confirmation');assert.equal(m.missionDag.summary.write,1);assert.equal(m.goalPlan.text,'[LOCAL_AI_REDACTED_COMMAND]');m=await engine.confirm(m.id,'approve');assert.equal(m.status,'completed');assert.equal(outcome.status,'completed');assert.equal(outcome.plan.schemaVersion,'workspace-ai-goal-plan-v1');assert(fs.existsSync(path.join(workspace,'Documents','note.txt'))||fs.existsSync(path.join(workspace,'Text','note.txt'))||!fs.existsSync(path.join(workspace,'note.txt')));
++ await fsp.rm(workspace,{recursive:true,force:true});await fsp.rm(state,{recursive:true,force:true});console.log('ai-mission-v090.test.cjs PASS',{children:m.childCycles.length,status:m.status});
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/local-ai-foundation-v090.test.cjs ./tests/local-ai-foundation-v090.test.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/local-ai-foundation-v090.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/local-ai-foundation-v090.test.cjs	2026-08-13 10:29:48.351335863 +0000
+@@ -0,0 +1,61 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const http=require('http');
++const {LocalAIService}=require('../electron/services/local-ai-service.cjs');
++const {LocalOpenAIProvider}=require('../electron/services/local-openai-provider.cjs');
++const {validateBaseUrl}=require('../electron/services/local-ai-config-store.cjs');
++const {redactText}=require('../electron/services/ai-redaction.cjs');
++const {retrieveSkills}=require('../electron/services/skill-retriever.cjs');
++
++(async()=>{
++  assert.throws(()=>validateBaseUrl('https://example.com/v1'),e=>e.code==='AI_NON_LOOPBACK_BLOCKED');
++  assert.throws(()=>validateBaseUrl('http://127.0.0.1:8080/not-openai'),e=>e.code==='AI_BASE_PATH_BLOCKED');
++  assert.equal(redactText('token=abcdef1234567890'),'token=[REDACTED]');
++  assert(!retrieveSkills('دکمه ویندوز را کلیک کن',{limit:30}).some(x=>x.interactiveOnly));
++
++  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-ai-v090-'));
++  const workspace=path.join(tmp,'workspace');fs.mkdirSync(workspace);
++  let chatCalls=0,visionCalls=0;
++  const server=http.createServer(async(req,res)=>{
++    if(req.url==='/v1/huge'){res.statusCode=200;res.setHeader('content-length','2048');return res.end('{}');}
++    if(req.url==='/v1/models'){
++      res.setHeader('content-type','application/json');return res.end(JSON.stringify({object:'list',data:[{id:'qwen-local-test'}]}));
++    }
++    if(req.url==='/v1/chat/completions'&&req.method==='POST'){
++      let body='';for await(const chunk of req)body+=chunk;const json=JSON.parse(body||'{}');
++      const isVision=Array.isArray(json?.messages?.[1]?.content);
++      res.setHeader('content-type','application/json');
++      if(isVision){visionCalls++;return res.end(JSON.stringify({model:'qwen-local-test',choices:[{message:{content:JSON.stringify({summary:'A local test image',warnings:[],elements:[{label:'Window',role:'container',confidence:.91}]})}}],usage:{prompt_tokens:10,completion_tokens:10}}));}
++      chatCalls++;
++      const content={summary:'ابتدا فایل‌های تکراری را بررسی کن و سپس مرتب‌سازی را پیشنهاد بده.',confidence:.93,assumptions:['هیچ حذف دائمی انجام نشود.'],nodes:[{skillId:'skill.file.duplicates',reason:'ابتدا Duplicate قطعی را فقط بخوان.',input:{}},{skillId:'skill.file.organize',reason:'بعد از بررسی، مرتب‌سازی کنترل‌شده.',input:{mode:'type',root:'C:/must-be-stripped',shell:'bad',evil:'drop-me'}}]};
++      return res.end(JSON.stringify({model:'qwen-local-test',choices:[{message:{content:JSON.stringify(content)}}],usage:{prompt_tokens:100,completion_tokens:80}}));
++    }
++    res.statusCode=404;res.end('{}');
++  });
++  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
++  const port=server.address().port;
++  const journal={rows:[],append(type,row){this.rows.push({type,row});}};
++  const svc=new LocalAIService(tmp,{journal});
++  const settings=svc.updateSettings({enabled:true,baseUrl:`http://127.0.0.1:${port}/v1`,model:'qwen-local-test',allowVision:true,maxPlanNodes:6});
++  assert.equal(settings.networkPolicy,'loopback-only');
++  assert.equal(settings.storeRawPrompts,false);
++  assert.throws(()=>svc.updateSettings({apiKey:'secret'}),e=>e.code==='AI_SECRET_STORAGE_BLOCKED');
++  const health=await svc.health();assert.equal(health.ok,true);
++  await assert.rejects(()=>svc.plan('test without workspace',{root:''}),e=>e.code==='AI_WORKSPACE_REQUIRED');
++  const directProvider=new LocalOpenAIProvider({getConfig:()=>svc.settings()});await assert.rejects(()=>directProvider.request('/huge',{maxResponseBytes:1024}),e=>e.code==='AI_RESPONSE_TOO_LARGE');assert(health.models.includes('qwen-local-test'));
++  const plan=await svc.plan('فایل های تکراری رو پیدا کن و بعد مرتب کن',{root:workspace});
++  assert.equal(plan.ok,true);assert.equal(plan.goalPlan.steps.length,2);assert.equal(plan.goalPlan.steps[0].skillId,'skill.file.duplicates');
++  const organize=plan.goalPlan.steps.find(x=>x.skillId==='skill.file.organize');assert(organize.requiresConfirmation);assert(!('root' in organize.input));assert(!('shell' in organize.input));assert(!('evil' in organize.input));
++  assert.equal(plan.missionDag.summary.write,1);assert(plan.token.startsWith('ai-plan-'));assert.equal(chatCalls,1);
++  const other=path.join(tmp,'other');fs.mkdirSync(other);assert.throws(()=>svc.consumePlan(plan.token,{root:other}),e=>e.code==='AI_PLAN_ROOT_CHANGED');
++  const rec=svc.consumePlan(plan.token,{root:workspace});assert.equal(rec.goalPlan.schemaVersion,'workspace-ai-goal-plan-v1');
++  assert.throws(()=>svc.consumePlan(plan.token,{root:workspace}),e=>e.code==='AI_PLAN_TOKEN_INVALID');
++
++  const image=path.join(tmp,'screen.png');fs.writeFileSync(image,Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0]));
++  const vision=await svc.analyzeImageFile(image);assert.equal(vision.ok,true);assert.equal(vision.elements[0].role,'container');assert.equal(visionCalls,1);
++  const status=svc.status();assert.equal(status.privacy.rawPromptsStored,false);assert.equal(status.privacy.externalNetworkAllowed,false);assert.equal(status.guard.circuitOpen,false);
++  server.close();fs.rmSync(tmp,{recursive:true,force:true});
++  console.log('local-ai-foundation-v090.test.cjs PASS',{chatCalls,visionCalls,skills:plan.goalPlan.steps.map(x=>x.skillId)});
++})().catch(error=>{console.error(error);process.exit(1)});
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/local-ai-guard-v090.test.cjs ./tests/local-ai-guard-v090.test.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/local-ai-guard-v090.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/local-ai-guard-v090.test.cjs	2026-08-13 10:24:07.550254377 +0000
+@@ -0,0 +1,8 @@
++const assert=require('assert');
++const {AICallGuard}=require('../electron/services/ai-call-guard.cjs');
++let cfg={enabled:true,callsPerMinute:2,maxPromptChars:100,breakerFailures:2,breakerCooldownMs:10000};
++const guard=new AICallGuard({getConfig:()=>cfg});
++const a=guard.begin({promptChars:10,kind:'plan'});assert.throws(()=>guard.begin({promptChars:10}),e=>e.code==='AI_BUSY');guard.failure(a,Object.assign(new Error('x'),{code:'X'}));
++const b=guard.begin({promptChars:10,kind:'plan'});guard.failure(b,Object.assign(new Error('x'),{code:'X'}));assert.equal(guard.snapshot().circuitOpen,true);assert.throws(()=>guard.begin({promptChars:10}),e=>e.code==='AI_CIRCUIT_OPEN');guard.resetCircuit();
++const sizeGuard=new AICallGuard({getConfig:()=>({...cfg,callsPerMinute:10})});assert.throws(()=>sizeGuard.begin({promptChars:101}),e=>e.code==='AI_PROMPT_TOO_LARGE');
++console.log('local-ai-guard-v090.test.cjs PASS',guard.snapshot());
+diff -ruN '--exclude=DIFF_v0.9.0.txt' /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/local-ai-server-v090.uat.cjs ./tests/local-ai-server-v090.uat.cjs
+--- /mnt/data/wa_v084_ref/windows-workspace-agent-v0.8.4-certification-foundation/tests/local-ai-server-v090.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/local-ai-server-v090.uat.cjs	2026-08-13 10:32:01.054254377 +0000
+@@ -0,0 +1,13 @@
++const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');
++const {LocalAIService}=require('../electron/services/local-ai-service.cjs');
++(async()=>{
++ const baseUrl=String(process.env.WA_LOCAL_AI_BASE_URL||'').trim();const model=String(process.env.WA_LOCAL_AI_MODEL||'').trim();
++ if(!baseUrl||!model){console.log('local-ai-server-v090.uat.cjs SKIP (set WA_LOCAL_AI_BASE_URL + WA_LOCAL_AI_MODEL)');return;}
++ const state=fs.mkdtempSync(path.join(os.tmpdir(),'wa-local-ai-uat-state-'));const workspace=fs.mkdtempSync(path.join(os.tmpdir(),'wa-local-ai-uat-ws-'));fs.writeFileSync(path.join(workspace,'uat-note.txt'),'workspace agent local ai uat','utf8');
++ const svc=new LocalAIService(state);svc.updateSettings({enabled:true,baseUrl,model,allowVision:Boolean(process.env.WA_LOCAL_AI_VISION_FILE)});
++ const health=await svc.health();assert.equal(health.ok,true,health.message||health.code);
++ const plan=await svc.plan('این Workspace را اول فقط بررسی کن و یک برنامه کوتاه و امن پیشنهاد بده. هیچ حذف دائمی نکن.',{root:workspace});assert.equal(plan.ok,true);assert(plan.goalPlan.steps.length>0);assert(plan.goalPlan.steps.every(x=>x.skillId&&x.type));assert(plan.goalPlan.steps.filter(x=>x.requiresConfirmation).every(x=>x.requiresConfirmation===true));
++ let vision=null;const vf=String(process.env.WA_LOCAL_AI_VISION_FILE||'').trim();if(vf){vision=await svc.analyzeImageFile(vf);assert.equal(vision.ok,true);}
++ console.log('local-ai-server-v090.uat.cjs PASS',{model:plan.model,latencyMs:plan.latencyMs,nodes:plan.goalPlan.steps.length,writes:plan.goalPlan.steps.filter(x=>x.requiresConfirmation).length,vision:Boolean(vision)});
++ fs.rmSync(state,{recursive:true,force:true});fs.rmSync(workspace,{recursive:true,force:true});
++})().catch(e=>{console.error(e);process.exit(1)});

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "workspace-agent-lockfile-provenance-v2",
+  "version": "1.0.0-rc1",
+  "lockfileVersion": 3,
+  "sha256": "3dba21bfbe37ee725e5fd7fd5c5e6ce3f409c15fc2d82deffbd02d2a9a34c436",
+  "packages": 366,
+  "resolved": 25,
+  "integrity": 25,
+  "dependencySourcePolicy": {
+    "schemaVersion": "workspace-agent-dependency-source-policy-v1",
+    "mode": "allowlist",
+    "allowedRegistryOrigins": [
+      "https://registry.npmjs.org"
+    ],
+    "allowedResolvedProtocols": [
+      "https:"
+    ],
+    "forbidLinks": true,
+    "forbidGit": true,
+    "forbidFile": true,
+    "requireIntegrityForRegistryArtifacts": true
+  },
+  "dependencySourcePolicySha256": "5d41d5196285767c700d0fe7b6be6b92198cb21beac434f736e7888993b73b19",
+  "resolvedOrigins": [
+    "https://registry.npmjs.org"
+  ],
+  "resolvedProtocols": [
+    "https:"
+  ],
+  "generatedAt": "2026-09-26T04:58:08.452Z",
+  "node": "v24.14.1",
+  "npmUserAgent": "npm/11.11.0 node/v24.14.1 win32 x64 workspaces/false",
+  "npmConfiguredRegistry": null
+}

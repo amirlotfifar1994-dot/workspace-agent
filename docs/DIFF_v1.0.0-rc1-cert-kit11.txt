@@ -1,0 +1,25 @@
+# DIFF cert-kit10 -> cert-kit11
+
+Files cert-kit10/README_FA.md and cert-kit11/README_FA.md differ
+Only in cert-kit11/docs: CHANGELOG_v1.0.0-rc1-cert-kit11-execution-kit_FA.md
+Only in cert-kit11/docs: DIFF_v1.0.0-rc1-cert-kit11.txt
+Only in cert-kit11/docs: FILE_INVENTORY_v1.0.0-rc1-cert-kit11.txt
+Files cert-kit10/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md and cert-kit11/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md differ
+Only in cert-kit11/docs: RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md
+Only in cert-kit11/docs: RELEASE_READINESS_v1.0.0-rc1-cert-kit11-execution-kit.json
+Files cert-kit10/docs/RELEASE_READINESS_v1.0.0-rc1.json and cert-kit11/docs/RELEASE_READINESS_v1.0.0-rc1.json differ
+Only in cert-kit11/docs: VALIDATION_v1.0.0-rc1-cert-kit11-execution-kit_FA.md
+Files cert-kit10/package.json and cert-kit11/package.json differ
+Only in cert-kit11/scripts: prefill-manual-evidence-rc1.cjs
+Only in cert-kit11/scripts: rc1-execution-handoff.cjs
+Files cert-kit10/scripts/rc1-finalize.cjs and cert-kit11/scripts/rc1-finalize.cjs differ
+Only in cert-kit11/scripts: rc1-stable-readiness.cjs
+Files cert-kit10/scripts/source-tree-fingerprint.cjs and cert-kit11/scripts/source-tree-fingerprint.cjs differ
+Files cert-kit10/scripts/verify-rc1-source.cjs and cert-kit11/scripts/verify-rc1-source.cjs differ
+Only in cert-kit11/scripts: windows-rc1-execution.ps1
+Only in cert-kit11/tests: rc1-execution-handoff.test.cjs
+Only in cert-kit11/tests: rc1-execution-kit-contract.test.cjs
+Only in cert-kit11/tests: rc1-manual-evidence-prefill.test.cjs
+Files cert-kit10/tests/rc1-release-matrix-contract.test.cjs and cert-kit11/tests/rc1-release-matrix-contract.test.cjs differ
+Files cert-kit10/tests/rc1-source-contract.test.cjs and cert-kit11/tests/rc1-source-contract.test.cjs differ
+Only in cert-kit11/tests: rc1-stable-readiness.test.cjs

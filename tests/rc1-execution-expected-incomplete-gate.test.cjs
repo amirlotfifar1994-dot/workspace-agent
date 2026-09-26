@@ -1,0 +1,11 @@
+const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+const ps=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');
+assert(ps.includes("$code -notin @(0,2)"),'Primary/Peer must allow orchestrator exit 2 to reach bounded phase-readiness evaluation');
+assert(ps.includes("Test-PhaseReadiness $result.FullName 'primary'"),'Primary expected-incomplete must be evaluated by phase readiness');
+assert(ps.includes("Test-PhaseReadiness $result.FullName 'peer'"),'Peer expected-incomplete must be evaluated by phase readiness');
+assert(ps.includes('PRIMARY_PHASE_READY'),'Primary must distinguish phase readiness from final envelope completeness');
+assert(ps.includes('PEER_PHASE_READY'),'Peer must distinguish phase readiness from final envelope completeness');
+assert(ps.includes('verify-release-manifest-rc1.cjs'),'Primary Handoff must reverify release manifest/artifacts after certification');
+assert(!ps.includes("if($code -eq 2){Write-State $exec 'PRIMARY_INCOMPLETE'"),'Primary must not blindly reject expected Final-only incompleteness');
+assert(!ps.includes("if($code -eq 2){Write-State $exec 'PEER_INCOMPLETE'"),'Peer must not blindly reject expected Final-only incompleteness');
+console.log('rc1-execution-expected-incomplete-gate PASS');

@@ -1,0 +1,7 @@
+const assert=require('assert');
+const fs=require('fs');
+const os=require('os');
+const path=require('path');
+const {PersistentFileIndex}=require('../electron/services/persistent-file-index.cjs');
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-v084-multi-index-')),a=path.join(tmp,'A'),b=path.join(tmp,'B'),data=path.join(tmp,'data');
+(async()=>{try{fs.mkdirSync(a);fs.mkdirSync(b);for(let i=0;i<120;i++){fs.writeFileSync(path.join(a,`a-${i}.txt`),`A-${i}`);fs.writeFileSync(path.join(b,`b-${i}.txt`),`B-${i}`)}const index=new PersistentFileIndex(data);const [sa,sb]=await Promise.all([index.scan(a,{maxWallTimeMs:30000}),index.scan(b,{maxWallTimeMs:30000})]);assert.equal(sa.status,'completed');assert.equal(sb.status,'completed');assert.equal(sa.files,120);assert.equal(sb.files,120);index.setRootRuntime(a,{available:false,status:'unavailable',identityKey:'path:A'});const pa=await index.scan(a,{resume:false,maxWallTimeMs:2000});assert.equal(pa.status,'paused');assert.match(String(pa.pauseReason),/ROOT_UNAVAILABLE/);const stableB=await index.status(b);assert.equal(stableB.status,'completed');assert.equal(stableB.files,120);const q=index.search({root:b,query:'b-11',limit:50});assert.ok(q.total>0);assert.equal(index.health({deep:true}).ok,true);index.close();console.log('PASS multi-index isolation v0.8.4');}finally{fs.rmSync(tmp,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exit(1)});

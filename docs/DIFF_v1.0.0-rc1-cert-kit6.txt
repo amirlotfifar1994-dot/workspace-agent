@@ -1,0 +1,1223 @@
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/README_FA.md /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/README_FA.md
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/README_FA.md	2026-08-15 15:30:07.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/README_FA.md	2026-08-15 17:07:52.436356910 +0000
+@@ -50,7 +50,7 @@
+ 
+ جزئیات در `docs/RC1_ACCEPTANCE_MODEL_FA.md` و `docs/RELEASE_READINESS_v1.0.0-rc1.json` است.
+ 
+-## RC1 Windows Certification Kit — cert-kit5
++## RC1 Windows Certification Kit — cert-kit6
+ 
+ Core همچنان Feature Freeze است، اما Certification tooling اکنون علاوه بر ماتریس Windows/Scale، قرارداد Artifact نهایی را هم سخت‌گیرانه می‌بندد. Final PASS به Windows 10 + Windows 11، Scale واقعی 100k + 1M، clean-room build، `package-lock`، هر دو خروجی NSIS و Portable، release manifest معتبر و Manual Evidence شامل upgrade واقعی از v0.9.8 نیاز دارد.
+ 
+@@ -62,7 +62,7 @@
+ npm run certify:windows:rc1
+ ```
+ 
+-در cert-kit5 نتیجه Orchestrator در این مرحله عمداً `INCOMPLETE` است، چون Final Envelope بدون Manual Evidence و Windows family دوم PASS نمی‌شود؛ اما `certification-report.json` محلی می‌تواند PASS باشد و NSIS/Portable تولید می‌شوند.
++در cert-kit6 نتیجه Orchestrator در این مرحله عمداً `INCOMPLETE` است، چون Final Envelope بدون Manual Evidence و Windows family دوم PASS نمی‌شود؛ اما `certification-report.json` محلی می‌تواند PASS باشد و NSIS/Portable تولید می‌شوند.
+ 
+ بعد با **همان NSIS تولیدشده** upgrade واقعی `0.9.8 → 1.0.0-rc1` را انجام دهید و `MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json` را تکمیل کنید. سپس Certification را روی خانواده دیگر Windows هم اجرا کنید.
+ 
+@@ -108,3 +108,18 @@
+ - دو تست regression جدید برای write-integrity و watcher/config resilience اضافه شده و تست wall-time قدیمی deterministic شده است.
+ 
+ این تغییرات Source-side هستند؛ Windows 10/11، دو NTFS، Scale 100k/1M، package-lock رسمی، NSIS/Portable و upgrade واقعی همچنان Gateهای اجباری بیرون از این محیط‌اند.
++
++## cert-kit6 — Long-Job Consistency + Index Truthfulness
++
++این revision همچنان `1.0.0-rc1` و Feature-Frozen است. تمرکز cert-kit6 روی فاصله‌های زمانی خطرناک بین Commit فایل، Checkpoint چرخه و به‌روزرسانی Persistent Index است:
++
++- Copy/Replace قبل از rename نهایی حالت پایدار `commit-ready` و SHA-256 commit-intent ثبت می‌کند؛ Crash بعد از rename فقط با Evidence همان Commit Resume می‌شود.
++- Rollback هر آیتم را جداگانه `rolled-back` یا `rollback-failed` می‌کند؛ Retry فقط آیتم‌های شکست‌خورده را تکرار می‌کند و Undoهای موفق دوباره اجرا نمی‌شوند.
++- Transaction Recovery علاوه بر size/type، Snapshot هویتی منبع شامل `dev/ino/mtime` را نگه می‌دارد تا فایل هم‌اندازه ولی بی‌ربط به‌عنوان نتیجه Move پذیرفته نشود.
++- Startup، Batchهای `running` را `interrupted` می‌کند و Rootهای درگیر در Cycle/Transaction ناتمام را در Index/Watcher به‌صورت stale/dirty علامت می‌زند؛ حتی اگر filesystem commit درست قبل از آخرین checkpoint رخ داده باشد.
++- Reconcile ناقص پوشه دیگر Success کامل گزارش نمی‌شود. Root `stale` می‌شود و File Explorer Search تا Full Scan به bounded-scan fallback می‌رود.
++- Indexed Search و Indexed Duplicate روی Index stale/paused اجرا نمی‌شوند و `INDEX_NOT_FRESH` می‌دهند تا نتیجه ناقص به‌عنوان حقیقت کامل ارائه نشود.
++- Undo و Recovery نیز بعد از تغییر filesystem مسیرهای درگیر را دوباره reconcile می‌کنند؛ failure/partial reconcile به Full Rescan gap تبدیل می‌شود.
++
++این hardening جای Windows Certification را نمی‌گیرد؛ `package-lock` رسمی، Windows 10 + 11، دو NTFS، Scale 100k/1M، NSIS/Portable و upgrade واقعی هنوز PENDING هستند.
++
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md	2026-08-15 17:07:52.436722142 +0000
+@@ -0,0 +1,21 @@
++# Changelog — v1.0.0-rc1 / cert-kit6 Long-Job Consistency
++
++این revision semver را تغییر نمی‌دهد و Feature Freeze را حفظ می‌کند.
++
++## اصلاحات اصلی
++
++- اضافه‌شدن `commit-ready` و SHA-256 commit-intent برای بستن Crash window بین rename فایل و ثبت Commit در SQLite.
++- Resume امن Copy/Replace فقط با Evidence ثبت‌شده؛ state مبهم fail-closed می‌شود.
++- Rollback per-item با stateهای `rolled-back` و `rollback-failed` و Retry idempotent فقط برای شکست‌ها.
++- Transaction source identity شامل type/size/mtime/dev/ino برای جلوگیری از تشخیص فایل هم‌اندازه بی‌ربط به‌عنوان Move قبلی.
++- Startup reconciliation برای Cycleهای interrupted، Batchهای running و Transactionهای recoverable؛ Root درگیر stale/dirty می‌شود.
++- Reconcile پوشه در صورت truncation/error دیگر `ok:true` نمی‌دهد و Full Rescan را اجباری می‌کند.
++- Watcher نتیجه partial reconcile را gap ثبت می‌کند.
++- File Explorer Search فقط از Persistent Index با status=`completed` استفاده می‌کند؛ در stale state fallback bounded scan دارد.
++- Indexed Search / Indexed Duplicates روی Index غیرتازه با `INDEX_NOT_FRESH` متوقف می‌شوند.
++- Undo/Recovery بعد از mutation، Index paths را reconcile می‌کنند.
++- `toolingRevision` از cert-kit5 به cert-kit6 ارتقا یافت؛ Reportهای revision قدیمی Peer معتبر این Source نیستند.
++
++## وضعیت Release
++
++Source gates پاس شده‌اند؛ Windows Certification واقعی، lockfile رسمی، Scale و binary artifacts هنوز باید در Release Lane اجرا شوند.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit6.txt /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit6.txt
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit6.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit6.txt	2026-08-15 17:08:22.330342193 +0000
+@@ -0,0 +1,357 @@
++./.node-version
++./.npmrc
++./.nvmrc
++./README_FA.md
++./docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md
++./docs/ARCHITECTURE_FA.md
++./docs/CERTIFICATION_MODEL_v0.8.4_FA.md
++./docs/CHANGELOG_v0.4_FA.md
++./docs/CHANGELOG_v0.5_FA.md
++./docs/CHANGELOG_v0.6_FA.md
++./docs/CHANGELOG_v0.7.1_FA.md
++./docs/CHANGELOG_v0.7.2_FA.md
++./docs/CHANGELOG_v0.7_FA.md
++./docs/CHANGELOG_v0.8.0_FA.md
++./docs/CHANGELOG_v0.8.1_FA.md
++./docs/CHANGELOG_v0.8.2_FA.md
++./docs/CHANGELOG_v0.8.3_FA.md
++./docs/CHANGELOG_v0.8.4_FA.md
++./docs/CHANGELOG_v0.9.0_FA.md
++./docs/CHANGELOG_v0.9.1_FA.md
++./docs/CHANGELOG_v0.9.2_FA.md
++./docs/CHANGELOG_v0.9.3_FA.md
++./docs/CHANGELOG_v0.9.4_FA.md
++./docs/CHANGELOG_v0.9.5_FA.md
++./docs/CHANGELOG_v0.9.6_FA.md
++./docs/CHANGELOG_v0.9.7_FA.md
++./docs/CHANGELOG_v0.9.8_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit2_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit5-write-integrity-hardening_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md
++./docs/CHANGELOG_v1.0.0-rc1_FA.md
++./docs/DIFF_v0.7.1.txt
++./docs/DIFF_v0.7.2.txt
++./docs/DIFF_v0.8.0.txt
++./docs/DIFF_v0.8.1.txt
++./docs/DIFF_v0.8.2.txt
++./docs/DIFF_v0.8.3.txt
++./docs/DIFF_v0.8.4.txt
++./docs/DIFF_v0.9.0.txt
++./docs/DIFF_v0.9.1.txt
++./docs/DIFF_v0.9.2.txt
++./docs/DIFF_v0.9.3.txt
++./docs/DIFF_v0.9.4.txt
++./docs/DIFF_v0.9.5.txt
++./docs/DIFF_v0.9.6.txt
++./docs/DIFF_v0.9.7.txt
++./docs/DIFF_v0.9.8.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit1.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit2.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit3.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit4.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit5.txt
++./docs/DIFF_v1.0.0-rc1.txt
++./docs/FILE_EXPLORER_PRODUCTION_HARDENING_v0.9.6_FA.md
++./docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md
++./docs/FILE_INVENTORY_v0.8.2.txt
++./docs/FILE_INVENTORY_v0.8.3.txt
++./docs/FILE_INVENTORY_v0.8.4.txt
++./docs/FILE_INVENTORY_v0.9.0.txt
++./docs/FILE_INVENTORY_v0.9.1.txt
++./docs/FILE_INVENTORY_v0.9.2.txt
++./docs/FILE_INVENTORY_v0.9.3.txt
++./docs/FILE_INVENTORY_v0.9.4.txt
++./docs/FILE_INVENTORY_v0.9.5.txt
++./docs/FILE_INVENTORY_v0.9.6.txt
++./docs/FILE_INVENTORY_v0.9.7.txt
++./docs/FILE_INVENTORY_v0.9.8.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit2.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit3.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit4.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit5.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit6.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1.txt
++./docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md
++./docs/LOCAL_AI_MODEL_v0.9_FA.md
++./docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md
++./docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json
++./docs/MANUAL_CERTIFICATION_EVIDENCE_v0.9.7.template.json
++./docs/PERSISTENT_INDEX_MODEL_FA.md
++./docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md
++./docs/PRODUCTION_HARDENING_v0.8.1_FA.md
++./docs/RC1_ACCEPTANCE_MODEL_FA.md
++./docs/RC1_CERTIFICATION_ENVELOPE_FA.md
++./docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
++./docs/RC_READINESS_MODEL_v0.9.8_FA.md
++./docs/RECOVERY_MODEL_FA.md
++./docs/RELEASE_READINESS_v0.8.2.json
++./docs/RELEASE_READINESS_v0.8.3.json
++./docs/RELEASE_READINESS_v0.8.4.json
++./docs/RELEASE_READINESS_v0.9.0.json
++./docs/RELEASE_READINESS_v0.9.1.json
++./docs/RELEASE_READINESS_v0.9.2.json
++./docs/RELEASE_READINESS_v0.9.3.json
++./docs/RELEASE_READINESS_v0.9.4.json
++./docs/RELEASE_READINESS_v0.9.5.json
++./docs/RELEASE_READINESS_v0.9.6.json
++./docs/RELEASE_READINESS_v0.9.7.json
++./docs/RELEASE_READINESS_v0.9.8.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit2.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit3-resilience-hardening.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit4-release-lane-closure.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit5-write-integrity-hardening.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit6-long-job-consistency.json
++./docs/RELEASE_READINESS_v1.0.0-rc1.json
++./docs/ROADMAP_FA.md
++./docs/SOURCE_REUSE_AUDIT_FA.md
++./docs/SYSTEM_RESILIENCE_MODEL_v0.8.3_FA.md
++./docs/UPSTREAM_INTEGRATION_FA.md
++./docs/UPSTREAM_PROVENANCE.md
++./docs/VALIDATION_v0.4_FA.md
++./docs/VALIDATION_v0.5_FA.md
++./docs/VALIDATION_v0.6_FA.md
++./docs/VALIDATION_v0.7.1_FA.md
++./docs/VALIDATION_v0.7.2_FA.md
++./docs/VALIDATION_v0.7_FA.md
++./docs/VALIDATION_v0.8.0_FA.md
++./docs/VALIDATION_v0.8.1_FA.md
++./docs/VALIDATION_v0.8.2_FA.md
++./docs/VALIDATION_v0.8.3_FA.md
++./docs/VALIDATION_v0.8.4_FA.md
++./docs/VALIDATION_v0.9.0_FA.md
++./docs/VALIDATION_v0.9.1_FA.md
++./docs/VALIDATION_v0.9.2_FA.md
++./docs/VALIDATION_v0.9.3_FA.md
++./docs/VALIDATION_v0.9.4_FA.md
++./docs/VALIDATION_v0.9.5_FA.md
++./docs/VALIDATION_v0.9.6_FA.md
++./docs/VALIDATION_v0.9.7_FA.md
++./docs/VALIDATION_v0.9.8_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit2_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit5-write-integrity-hardening_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md
++./docs/VALIDATION_v1.0.0-rc1_FA.md
++./docs/WINDOWS_CERTIFICATION_MODEL_v0.9.7_FA.md
++./docs/WINDOWS_FILE_EXPLORER_PRODUCTION_UAT_v0.9.6_FA.md
++./docs/WINDOWS_PATH_RELEASE_MODEL_v0.8.2_FA.md
++./docs/WINDOWS_RELEASE_CHECKLIST_FA.md
++./docs/WINDOWS_SYSTEM_UAT_v0.8.3_FA.md
++./docs/WINDOWS_UIA_ACTION_MODEL_FA.md
++./docs/deferred/corel-bridge.cjs.txt
++./electron/ipc.cjs
++./electron/main.cjs
++./electron/preload.cjs
++./electron/services/ai-call-guard.cjs
++./electron/services/ai-planner.cjs
++./electron/services/ai-redaction.cjs
++./electron/services/automation-conditions.cjs
++./electron/services/automation-service.cjs
++./electron/services/automation-store.cjs
++./electron/services/capability-registry.cjs
++./electron/services/certification-core.cjs
++./electron/services/configuration-service.cjs
++./electron/services/cycle-engine.cjs
++./electron/services/cycle-store.cjs
++./electron/services/diagnostic-redaction.cjs
++./electron/services/diagnostics-bundle-service.cjs
++./electron/services/drive-audit.cjs
++./electron/services/duplicate-finder.cjs
++./electron/services/event-journal.cjs
++./electron/services/explorer-batch-cycles.cjs
++./electron/services/explorer-batch-service.cjs
++./electron/services/explorer-batch-store.cjs
++./electron/services/explorer-storage-guard.cjs
++./electron/services/file-analyzer.cjs
++./electron/services/file-cycles.cjs
++./electron/services/file-explorer-cycles.cjs
++./electron/services/file-explorer-service.cjs
++./electron/services/file-indexer.cjs
++./electron/services/file-insights.cjs
++./electron/services/file-search.cjs
++./electron/services/file-watcher-service.cjs
++./electron/services/fingerprint-store.cjs
++./electron/services/goal-planner.cjs
++./electron/services/grounding-memory-store.cjs
++./electron/services/hardware-profile-service.cjs
++./electron/services/hash-worker-pool.cjs
++./electron/services/hash-worker.cjs
++./electron/services/image-similarity.cjs
++./electron/services/index-freshness-guard.cjs
++./electron/services/indexed-duplicate-finder.cjs
++./electron/services/lifecycle-state.cjs
++./electron/services/local-ai-config-store.cjs
++./electron/services/local-ai-runtime-manager.cjs
++./electron/services/local-ai-service.cjs
++./electron/services/local-openai-provider.cjs
++./electron/services/maintenance.cjs
++./electron/services/managed-zone-audit.cjs
++./electron/services/managed-zone-store.cjs
++./electron/services/mission-compiler.cjs
++./electron/services/office-text-extractor.cjs
++./electron/services/organizer.cjs
++./electron/services/path-policy.cjs
++./electron/services/pdf-text-extractor.cjs
++./electron/services/persistent-file-index.cjs
++./electron/services/persistent-index-cycles.cjs
++./electron/services/quarantine.cjs
++./electron/services/rc-self-check-service.cjs
++./electron/services/recommendation-applier.cjs
++./electron/services/recovery-service.cjs
++./electron/services/renamer.cjs
++./electron/services/resource-pressure-guard.cjs
++./electron/services/review-queue-store.cjs
++./electron/services/root-resilience-service.cjs
++./electron/services/similarity-core.cjs
++./electron/services/skill-memory-store.cjs
++./electron/services/skill-registry.cjs
++./electron/services/skill-retriever.cjs
++./electron/services/snapshot-store.cjs
++./electron/services/startup-advisor.cjs
++./electron/services/state-backup-service.cjs
++./electron/services/storage-trend-store.cjs
++./electron/services/system-resilience-controller.cjs
++./electron/services/text-similarity.cjs
++./electron/services/transaction-store.cjs
++./electron/services/ui-grounding-core.cjs
++./electron/services/ui-grounding-layout.cjs
++./electron/services/ui-grounding-service.cjs
++./electron/services/ui-grounding-session-store.cjs
++./electron/services/ui-outcome-verifier.cjs
++./electron/services/version-update-guard.cjs
++./electron/services/vision-crop-service.cjs
++./electron/services/windows-action-policy.cjs
++./electron/services/windows-action-session-store.cjs
++./electron/services/windows-inspector.cjs
++./electron/services/windows-path-utils.cjs
++./electron/services/windows-uia-actions.cjs
++./electron/services/windows-uia.cjs
++./electron/services/windows-volume-probe.cjs
++./electron/services/workspace-cycles.cjs
++./electron/services/workspace-intelligence.cjs
++./index.html
++./package.json
++./scripts/check-source-syntax.cjs
++./scripts/generate-lockfile.ps1
++./scripts/local-ai-smoke.ps1
++./scripts/lockfile-provenance.cjs
++./scripts/prepare-update-v098.cjs
++./scripts/rc1-certification-envelope.cjs
++./scripts/rc1-finalize.cjs
++./scripts/rc1-source-manifest.cjs
++./scripts/run-source-tests.cjs
++./scripts/source-tree-fingerprint.cjs
++./scripts/verify-manual-evidence-rc1.cjs
++./scripts/verify-manual-evidence-v097.cjs
++./scripts/verify-rc1-source.cjs
++./scripts/verify-release-inputs.cjs
++./scripts/verify-release-manifest-rc1.cjs
++./scripts/verify-source-hygiene.cjs
++./scripts/windows-certification-v097.ps1
++./scripts/windows-certification.ps1
++./scripts/windows-rc1-certify.ps1
++./scripts/windows-release.ps1
++./src/App.jsx
++./src/components/CycleTimeline.jsx
++./src/main.jsx
++./src/styles/app.css
++./tests/ai-mission-v090.test.cjs
++./tests/automation-v04.test.cjs
++./tests/certification-core-v097.test.cjs
++./tests/cycle-engine.test.cjs
++./tests/cycle-rollback-truthfulness-rc1.test.cjs
++./tests/cycle-root-guard-v083.test.cjs
++./tests/diagnostics-v098.test.cjs
++./tests/explorer-batch-recovery-v095.test.cjs
++./tests/explorer-batch-schema-v096.test.cjs
++./tests/file-cycles.integration.test.cjs
++./tests/file-explorer-batch-v095.test.cjs
++./tests/file-explorer-production-v096.test.cjs
++./tests/file-explorer-skill-pack-v094.test.cjs
++./tests/file-guardian.test.cjs
++./tests/fixtures/lifecycle-crash-child-v084.cjs
++./tests/fixtures/persistent-index-crash-child-v081.cjs
++./tests/index-freshness-guard-rc1.test.cjs
++./tests/lifecycle-resource-v084.test.cjs
++./tests/local-ai-capability-v091.test.cjs
++./tests/local-ai-foundation-v090.test.cjs
++./tests/local-ai-grounding-vision-v092.test.cjs
++./tests/local-ai-guard-v090.test.cjs
++./tests/local-ai-server-v090.uat.cjs
++./tests/long-job-recovery-index-rc1.test.cjs
++./tests/manual-evidence-rc1.test.cjs
++./tests/manual-evidence-v097.test.cjs
++./tests/mission.integration.test.cjs
++./tests/multi-index-isolation-v084.test.cjs
++./tests/multi-root-isolation-v084.test.cjs
++./tests/office-extractor-v05.test.cjs
++./tests/packaged-app-smoke-v084.cjs
++./tests/packaged-worker-smoke-v082.cjs
++./tests/persistent-index-crash-v081.test.cjs
++./tests/persistent-index-cycles-v080.test.cjs
++./tests/persistent-index-scale-v080.cjs
++./tests/persistent-index-v080.test.cjs
++./tests/persistent-index-windows.uat.cjs
++./tests/product-resilience-hardening-vrc1.test.cjs
++./tests/production-hardening-v07.test.cjs
++./tests/production-hardening-v081.test.cjs
++./tests/rc-self-check-v098.test.cjs
++./tests/rc1-certification-envelope.test.cjs
++./tests/rc1-certification-kit-contract.test.cjs
++./tests/rc1-finalizer-contract.test.cjs
++./tests/rc1-release-artifact-contract.test.cjs
++./tests/rc1-release-matrix-contract.test.cjs
++./tests/rc1-source-contract.test.cjs
++./tests/rc1-upgrade-gate.test.cjs
++./tests/real-local-ai-runtime-v091.test.cjs
++./tests/resource-cycle-integration-v084.test.cjs
++./tests/root-interruption-v083.test.cjs
++./tests/scale-benchmark-v07.cjs
++./tests/semantic-cycles-v05.test.cjs
++./tests/semantic-intelligence-v05.test.cjs
++./tests/source-tree-fingerprint-generated-vrc1.test.cjs
++./tests/source-tree-fingerprint-v097.test.cjs
++./tests/startup-write-freshness-rc1.test.cjs
++./tests/state-backup-v098.test.cjs
++./tests/system-resilience-v083.test.cjs
++./tests/ui-batch-auto-progress-rc1.test.cjs
++./tests/ui-grounded-action-v092.test.cjs
++./tests/ui-grounding-core-v092.test.cjs
++./tests/ui-grounding-layout-v093.test.cjs
++./tests/ui-grounding-recovery-v093.test.cjs
++./tests/ui-grounding-scale-v092.cjs
++./tests/ui-grounding-service-v092.test.cjs
++./tests/update-preflight-v098.test.cjs
++./tests/upstream-foundation-v071.test.cjs
++./tests/version-update-guard-v098.test.cjs
++./tests/vision-crop-v093.test.cjs
++./tests/watcher-config-resilience-rc1.test.cjs
++./tests/windows-agent-v03.test.cjs
++./tests/windows-agent-v06.test.cjs
++./tests/windows-certification-v097.uat.cjs
++./tests/windows-file-explorer-v094.uat.cjs
++./tests/windows-file-explorer-v095.uat.cjs
++./tests/windows-file-explorer-v096.uat.cjs
++./tests/windows-intelligent-grounding-v092.uat.cjs
++./tests/windows-local-ai-runtime-v091.uat.cjs
++./tests/windows-multiroot-v084.uat.cjs
++./tests/windows-path-hardening-v082.test.cjs
++./tests/windows-production-grounding-v093.uat.cjs
++./tests/windows-production-v081.uat.cjs
++./tests/windows-removable-drive-v083.uat.cjs
++./tests/windows-scale-resilience-v083.uat.cjs
++./tests/windows-scale-v097.uat.cjs
++./tests/windows-system-resilience-v083.uat.cjs
++./tests/windows-uia-action-v072.test.cjs
++./tests/windows-uia-action.uat.cjs
++./tests/windows-verification-v082.uat.cjs
++./tests/windows-volume-probe-v083.test.cjs
++./tests/write-integrity-hardening-rc1.test.cjs
++./vite.config.js
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RC1_ACCEPTANCE_MODEL_FA.md /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RC1_ACCEPTANCE_MODEL_FA.md
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-15 15:30:07.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-15 17:07:52.435821325 +0000
+@@ -1,4 +1,4 @@
+-# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit5
++# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit6
+ 
+ ## قرارداد ثابت RC
+ 
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md	2026-08-15 15:30:07.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md	2026-08-15 17:07:52.435971398 +0000
+@@ -1,4 +1,4 @@
+-# RC1 Certification Envelope v2 — cert-kit5
++# RC1 Certification Envelope v2 — cert-kit6
+ 
+ Envelope برای جلوگیری از PASS کاذب، شواهد Release را cross-check می‌کند.
+ 
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-15 15:30:07.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-15 17:07:52.436213387 +0000
+@@ -1,10 +1,10 @@
+-# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit5
++# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit6
+ 
+ این کیت قابلیت جدیدی به Core اضافه نمی‌کند. هدف، تبدیل Source Candidate فریز‌شده به Evidence قابل ممیزی و Artifact قابل انتشار است.
+ 
+-## تفاوت مهم cert-kit5
++## تفاوت مهم cert-kit6
+ 
+-هر Report باید `toolingRevision=cert-kit5` و fingerprint همین Source را داشته باشد. Reportهای cert-kit4 یا قدیمی‌تر Peer معتبر این revision نیستند.
++هر Report باید `toolingRevision=cert-kit6` و fingerprint همین Source را داشته باشد. Reportهای cert-kit5 یا قدیمی‌تر Peer معتبر این revision نیستند.
+ 
+ Final PASS فقط وقتی ممکن است که:
+ 
+@@ -84,6 +84,6 @@
+ Harness خودش Format/Initialize/Clear Disk، eject اجباری USB، پرکردن عمدی کامل دیسک، تغییر ACL سیستم یا shutdown/restart را انجام نمی‌دهد. سناریوهای فیزیکی در محیط کنترل‌شده توسط اپراتور انجام و Evidence ثبت می‌شوند.
+ 
+ 
+-## Source Integrity Gate cert-kit5
++## Source Integrity Gate cert-kit6
+ 
+ پیش از ورود به Windows lane، regression محلی باید hardeningهای File Explorer و Watcher را نیز PASS کند. این Gate از Resume بدون Evidence، Undo روی هدف تغییرکرده، Replace rollback بدون Backup و silent eviction تنظیمات جلوگیری می‌کند؛ اما جای UAT ویندوزی را نمی‌گیرد.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit6-long-job-consistency.json /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit6-long-job-consistency.json
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit6-long-job-consistency.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit6-long-job-consistency.json	2026-08-15 17:07:52.436690685 +0000
+@@ -0,0 +1,54 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-v4",
++  "version": "1.0.0-rc1",
++  "channel": "rc",
++  "toolingRevision": "cert-kit6",
++  "featureFreeze": true,
++  "baselineVersion": "0.9.8",
++  "dataEpoch": 1,
++  "sourceContract": "PASS",
++  "regression": "PASS_68_OF_68",
++  "syntax": "PASS_195_FILES",
++  "jsx": "PASS",
++  "sourceHygiene": "PASS",
++  "dependencyPins": "PASS",
++  "writeIntegrityHardening": "SOURCE_TESTED",
++  "longJobCommitWindowRecovery": "SOURCE_TESTED",
++  "rollbackRetryIdempotence": "SOURCE_TESTED",
++  "recoveryIdentityBinding": "SOURCE_TESTED",
++  "startupWriteFreshness": "SOURCE_TESTED",
++  "persistentIndexFreshnessTruthfulness": "SOURCE_TESTED",
++  "staleIndexedSkillsBlocked": "SOURCE_TESTED",
++  "watcherPartialReconcileGap": "SOURCE_TESTED",
++  "releaseManifestContract": "SOURCE_TESTED",
++  "nsisPortableExactArtifactContract": "SOURCE_TESTED",
++  "releaseEvidenceSnapshots": "SOURCE_TESTED",
++  "manualEvidenceV2": "SOURCE_TESTED",
++  "upgradeInstallerHashBinding": "SOURCE_TESTED",
++  "packageLock": "PENDING_REGISTRY_ENVIRONMENT",
++  "npmCi": "PENDING_REGISTRY_ENVIRONMENT",
++  "windows10Certification": "PENDING_WINDOWS",
++  "windows11Certification": "PENDING_WINDOWS",
++  "twoVolumeNtfs": "PENDING_WINDOWS",
++  "scale100k": "PENDING_WINDOWS",
++  "scale1m": "PENDING_WINDOWS",
++  "winUnpackedSmoke": "PENDING_WINDOWS_BUILD",
++  "nsis": "PENDING_WINDOWS_BUILD",
++  "portable": "PENDING_WINDOWS_BUILD",
++  "realUpgradeFrom0_9_8": "PENDING_MANUAL_WINDOWS_EVIDENCE",
++  "authenticode": "PENDING_CERTIFICATE_POLICY",
++  "finalDualWindowsEnvelope": "PENDING_TWO_OS_REPORTS",
++  "currentValidationRuntime": {
++    "platform": "non-Windows",
++    "node": "22.16.0",
++    "npm": "10.9.2"
++  },
++  "officialReleaseRuntime": {
++    "node": "24.14.1",
++    "npm": "11.11.0"
++  },
++  "releaseInputGate": "LOCKFILE_REQUIRED",
++  "strictWindowsUat": "PENDING_WINDOWS",
++  "stagedFinalizer": "SOURCE_TESTED",
++  "artifactOwnerReportBinding": "SOURCE_TESTED"
++}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RELEASE_READINESS_v1.0.0-rc1.json
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-15 15:31:09.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-15 17:07:52.436574212 +0000
+@@ -1,18 +1,25 @@
+ {
+-  "schemaVersion": "workspace-agent-release-readiness-v3",
++  "schemaVersion": "workspace-agent-release-readiness-v4",
+   "version": "1.0.0-rc1",
+   "channel": "rc",
+-  "toolingRevision": "cert-kit5",
++  "toolingRevision": "cert-kit6",
+   "featureFreeze": true,
+   "baselineVersion": "0.9.8",
+   "dataEpoch": 1,
+   "sourceContract": "PASS",
+-  "regression": "PASS_65_OF_65",
+-  "syntax": "PASS_191_FILES",
++  "regression": "PASS_68_OF_68",
++  "syntax": "PASS_195_FILES",
+   "jsx": "PASS",
+   "sourceHygiene": "PASS",
+   "dependencyPins": "PASS",
+-  "resilienceHardening": "SOURCE_TESTED",
++  "writeIntegrityHardening": "SOURCE_TESTED",
++  "longJobCommitWindowRecovery": "SOURCE_TESTED",
++  "rollbackRetryIdempotence": "SOURCE_TESTED",
++  "recoveryIdentityBinding": "SOURCE_TESTED",
++  "startupWriteFreshness": "SOURCE_TESTED",
++  "persistentIndexFreshnessTruthfulness": "SOURCE_TESTED",
++  "staleIndexedSkillsBlocked": "SOURCE_TESTED",
++  "watcherPartialReconcileGap": "SOURCE_TESTED",
+   "releaseManifestContract": "SOURCE_TESTED",
+   "nsisPortableExactArtifactContract": "SOURCE_TESTED",
+   "releaseEvidenceSnapshots": "SOURCE_TESTED",
+@@ -43,8 +50,5 @@
+   "releaseInputGate": "LOCKFILE_REQUIRED",
+   "strictWindowsUat": "PENDING_WINDOWS",
+   "stagedFinalizer": "SOURCE_TESTED",
+-  "artifactOwnerReportBinding": "SOURCE_TESTED",
+-  "writeIntegrityHardening": "SOURCE_TESTED",
+-  "watcherConfigResilience": "SOURCE_TESTED",
+-  "configurationNoSilentEviction": "SOURCE_TESTED"
++  "artifactOwnerReportBinding": "SOURCE_TESTED"
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/ROADMAP_FA.md /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/ROADMAP_FA.md
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/ROADMAP_FA.md	2026-08-15 15:30:07.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/ROADMAP_FA.md	2026-08-15 17:07:52.436460554 +0000
+@@ -4,7 +4,7 @@
+ 
+ تا Stable فقط bug fix، security/resilience hardening، migration compatibility، Windows certification، reproducible build و installer/signing fix مجاز است.
+ 
+-## وضعیت بعد از cert-kit5
++## وضعیت بعد از cert-kit6
+ 
+ Source-side اکنون این موارد را enforce می‌کند:
+ 
+@@ -21,13 +21,14 @@
+ - bind شدن Artifact-owner Certification Report به SHA256 خود Release Manifest؛
+ - hardeningهای cert-kit3 برای cycle/recovery/batch.
+ - hardeningهای cert-kit5 برای write-integrity: Resume evidence، source revalidation، destination race guards، Undo prechecks و watcher/config truthfulness.
++- hardeningهای cert-kit6 برای commit-window recovery، rollback retry idempotence، startup write-gap detection و index freshness truthfulness.
+ 
+ ## Gateهای باقی‌مانده تا v1.0.0 Stable
+ 
+ 1. تولید `package-lock.json` روی Windows Release Lane با Node `24.14.1` و npm `11.11.0`؛
+ 2. `npm ci` واقعی؛
+-3. Run کامل cert-kit5 روی Windows 10؛
+-4. Run کامل cert-kit5 روی Windows 11 با Peer Report خانواده دیگر؛
++3. Run کامل cert-kit6 روی Windows 10؛
++4. Run کامل cert-kit6 روی Windows 11 با Peer Report خانواده دیگر؛
+ 5. PASS واقعی Scale 100k و 1M؛
+ 6. تولید و Smoke واقعی NSIS + Portable؛
+ 7. upgrade واقعی `0.9.8 → 1.0.0-rc1` با installer SHA همان Release و Self-Check قبل/بعد؛
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/VALIDATION_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/docs/VALIDATION_v1.0.0-rc1-cert-kit6-long-job-consistency_FA.md	2026-08-15 17:07:52.436744755 +0000
+@@ -0,0 +1,28 @@
++# Validation — v1.0.0-rc1 / cert-kit6
++
++محیط Validation فعلی non-Windows است؛ بنابراین هیچ PASS برای Windows UAT یا binary build ادعا نمی‌شود.
++
++## نتایج Source
++
++- `npm run check`: **PASS**
++- Dependency pins: **PASS**
++- RC1 source contract (`toolingRevision=cert-kit6`): **PASS**
++- Source hygiene: **PASS**
++- JS/CJS/MJS syntax discovery: **195/195 PASS**
++- JSX gate: **PASS**
++- Regression discovery: **68/68 PASS**
++
++## Regression جدید
++
++- Crash commit-window برای replace-copy و Resume با commit evidence.
++- Rollback partial + retry idempotent.
++- Recovery identity mismatch برای replacement هم‌اندازه.
++- Directory reconcile truncation → root stale + Full Rescan.
++- Persistent-index search روی completed و bounded fallback روی stale.
++- Indexed Search/Duplicates روی stale → `INDEX_NOT_FRESH`.
++- Watcher partial reconcile → dirty root.
++- Startup interrupted batch/transaction → stale/dirty roots.
++
++## مواردی که عمداً PENDING هستند
++
++`package-lock.json` رسمی، `npm ci` در Runtime pin‌شده، Windows 10/11، دو Volume NTFS، Scale 100k/1M، NSIS/Portable، upgrade واقعی از 0.9.8 و در صورت policy، Authenticode.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/main.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/main.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/main.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/main.cjs	2026-08-15 17:02:46.429432133 +0000
+@@ -35,6 +35,7 @@
+ const { ExplorerBatchStore } = require('./services/explorer-batch-store.cjs');
+ const { batchCycle } = require('./services/explorer-batch-cycles.cjs');
+ const { registerIpc } = require('./ipc.cjs');
++const { reconcilePathsForRoots, reconcileRecoveryTransaction, reconcileStartupWriteFreshness } = require('./services/index-freshness-guard.cjs');
+ 
+ let mainWindow;let automationService;let watcherService;let persistentFileIndex;let explorerBatchStore;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;let uiGroundingService;let updateGuard;let rcSelfCheckService;let stateBackupService;let diagnosticsBundleService;
+ 
+@@ -48,10 +49,10 @@
+   const dev=process.env.VITE_DEV_SERVER_URL; if(dev) mainWindow.loadURL(dev); else mainWindow.loadFile(path.join(__dirname,'..','dist','index.html'));
+ }
+ app.whenReady().then(async()=>{
+-  const userData=app.getPath('userData');const journal=new EventJournal(userData);updateGuard=new VersionUpdateGuard(userData,{currentVersion:app.getVersion(),journal});lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal});stateBackupService=new StateBackupService(userData,{appVersion:app.getVersion(),configurationService,localAIService,persistentFileIndex,journal});rcSelfCheckService=new RCSelfCheckService({userData,appVersion:app.getVersion(),journal,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});diagnosticsBundleService=new DiagnosticsBundleService({appVersion:app.getVersion(),journal,selfCheckService:rcSelfCheckService,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});const startupSelfCheck=rcSelfCheckService.run({deepIndex:Boolean(lifecycleStartup.previousUnclean)});updateGuard.recordSelfCheck(startupSelfCheck); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); try{explorerBatchStore=new ExplorerBatchStore(userData,{journal});}catch(error){explorerBatchStore=null;journal.append('EXPLORER_BATCH_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message}});} const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk==='write'){const vg=updateGuard.assertWriteAllowed();if(!vg.ok)return vg;}if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+-  const reconcileExplorerWrite=async completed=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const paths=[completed?.source,completed?.destination].filter(Boolean);const results=[];for(const p of [...new Set(paths)]){try{results.push(await persistentFileIndex.reconcilePath(completed.root,p));}catch(error){results.push({ok:false,path:p,code:error.code||'INDEX_RECONCILE_FAILED'});}}return{ok:results.every(x=>x?.ok!==false),results};};
++  const userData=app.getPath('userData');const journal=new EventJournal(userData);updateGuard=new VersionUpdateGuard(userData,{currentVersion:app.getVersion(),journal});lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind==='recommendation-apply'){for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}try{await reconcileRecoveryTransaction({tx,action,index:persistentFileIndex,watcher:watcherService,journal});}catch(error){journal.append('RECOVERY_INDEX_RECONCILE_WARNING',{cycleId:tx.cycleId,transactionId:tx.id,payload:{action,error:error.code||error.message}});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal});stateBackupService=new StateBackupService(userData,{appVersion:app.getVersion(),configurationService,localAIService,persistentFileIndex,journal});rcSelfCheckService=new RCSelfCheckService({userData,appVersion:app.getVersion(),journal,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});diagnosticsBundleService=new DiagnosticsBundleService({appVersion:app.getVersion(),journal,selfCheckService:rcSelfCheckService,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); try{explorerBatchStore=new ExplorerBatchStore(userData,{journal});}catch(error){explorerBatchStore=null;journal.append('EXPLORER_BATCH_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message}});}await reconcileStartupWriteFreshness({cycleStore:store,batchStore:explorerBatchStore,recoveryService,index:persistentFileIndex,watcher:watcherService,journal});const startupSelfCheck=rcSelfCheckService.run({deepIndex:Boolean(lifecycleStartup.previousUnclean)});updateGuard.recordSelfCheck(startupSelfCheck); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk==='write'){const vg=updateGuard.assertWriteAllowed();if(!vg.ok)return vg;}if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
++  const reconcileExplorerWrite=async completed=>reconcilePathsForRoots({index:persistentFileIndex,watcher:watcherService,journal,roots:[completed?.root].filter(Boolean),paths:[completed?.source,completed?.destination].filter(Boolean),reason:'EXPLORER_WRITE_INDEX_RECONCILE_INCOMPLETE'});
+   const explorerBatchRootGuard=async({sourceRoot,destinationRoot,sourceIdentity='',destinationIdentity=''})=>{const [sg,dg]=await Promise.all([rootResilienceService.validateRoot(sourceRoot),rootResilienceService.validateRoot(destinationRoot)]);if(!sg.ok)return{...sg,code:sg.code||'EXPLORER_BATCH_SOURCE_ROOT_BLOCKED',which:'source'};if(!dg.ok)return{...dg,code:dg.code||'EXPLORER_BATCH_DESTINATION_ROOT_BLOCKED',which:'destination'};const si=String(sg.state?.identityKey||''),di=String(dg.state?.identityKey||'');if(sourceIdentity&&si&&sourceIdentity!==si)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume منبع بعد از Preview تغییر کرده است.',which:'source',expected:sourceIdentity,current:si};if(destinationIdentity&&di&&destinationIdentity!==di)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume مقصد بعد از Preview تغییر کرده است.',which:'destination',expected:destinationIdentity,current:di};return{ok:true,sourceIdentity:si,destinationIdentity:di};};
+-  engine.register('explorer-properties',explorerPropertiesCycle());engine.register('explorer-search',explorerSearchCycle({index:persistentFileIndex}));engine.register('explorer-navigate',explorerNavigateCycle({shellAdapter:shell}));engine.register('explorer-select',explorerSelectCycle({shellAdapter:shell}));engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-move',explorerWriteCycle({action:'move',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-rename',explorerWriteCycle({action:'rename',transactionStore,onVerified:reconcileExplorerWrite}));const reconcileExplorerPaths=async({sourceRoot,destinationRoot,paths=[]})=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const results=[];const roots=[...new Set([sourceRoot,destinationRoot].filter(Boolean))];for(const p of [...new Set(paths.filter(Boolean))]){let matched=false;for(const r of roots){const rel=path.relative(path.resolve(r),path.resolve(p));if(rel===''||(!rel.startsWith('..')&&!path.isAbsolute(rel))){matched=true;try{results.push(await persistentFileIndex.reconcilePath(r,p));}catch(error){results.push({ok:false,path:p,root:r,code:error.code||'INDEX_RECONCILE_FAILED'});}break;}}if(!matched)results.push({ok:false,path:p,code:'INDEX_RECONCILE_PATH_OUTSIDE_BATCH_ROOTS'});}return{ok:results.every(x=>x?.ok!==false||x?.code==='INDEX_ROOT_NOT_REGISTERED'),results};};if(explorerBatchStore){engine.register('explorer-batch-copy',batchCycle({operation:'copy',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard}));engine.register('explorer-batch-move',batchCycle({operation:'move',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard}));}engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
++  engine.register('explorer-properties',explorerPropertiesCycle());engine.register('explorer-search',explorerSearchCycle({index:persistentFileIndex}));engine.register('explorer-navigate',explorerNavigateCycle({shellAdapter:shell}));engine.register('explorer-select',explorerSelectCycle({shellAdapter:shell}));engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-move',explorerWriteCycle({action:'move',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-rename',explorerWriteCycle({action:'rename',transactionStore,onVerified:reconcileExplorerWrite}));const reconcileExplorerPaths=async({sourceRoot,destinationRoot,paths=[]})=>reconcilePathsForRoots({index:persistentFileIndex,watcher:watcherService,journal,roots:[sourceRoot,destinationRoot].filter(Boolean),paths,reason:'EXPLORER_BATCH_INDEX_RECONCILE_INCOMPLETE'});if(explorerBatchStore){engine.register('explorer-batch-copy',batchCycle({operation:'copy',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard}));engine.register('explorer-batch-move',batchCycle({operation:'move',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard}));}engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/explorer-batch-cycles.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/explorer-batch-cycles.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/explorer-batch-cycles.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/explorer-batch-cycles.cjs	2026-08-15 16:59:59.924811357 +0000
+@@ -20,7 +20,7 @@
+       return{status:chunk.status==='paused'?'paused':chunk.status,batchProgress:p,batchBlocker:blocker,reconcile,result:{operation,batchJobId:cycle.batchJobId,progress:p,blocker,reconcile},undoStack:p?.doneItems?[{kind:'explorer-batch',jobId:cycle.batchJobId}]:[],steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write',executeStatus,'اجرای Batch',blocker?`${blocker.category}: ${blocker.code}`:`${p.doneItems+p.skippedItems}/${p.totalItems} · skipped ${p.skippedItems}`):s.id==='verify'?step('verify','verify',verifyStatus,'Verify + Index reconcile',chunk.status==='completed'?'Batch کامل و checkpointها نهایی شدند':blocker?`Paused safely: ${blocker.code}`:`progress ${p.doneItems+p.skippedItems}/${p.totalItems}`):s),evidence:[...cycle.evidence,evidence(chunk.status==='completed'?'EXPLORER_BATCH_COMPLETED':blocker?'EXPLORER_BATCH_BLOCKED':chunk.status==='paused'?'EXPLORER_BATCH_CHECKPOINT':chunk.status==='cancelled'?'EXPLORER_BATCH_CANCELLED':'EXPLORER_BATCH_FAILED',{operation,status:chunk.status,blockerCode:blocker?.code||null,blockerCategory:blocker?.category||null,totalItems:p.totalItems,doneItems:p.doneItems,skippedItems:p.skippedItems,failedItems:p.failedItems,doneBytes:p.doneBytes,totalBytes:p.totalBytes,indexReconcileOk:reconcile?.ok??null})]};
+     },
+     async cancel(cycle){if(cycle.batchJobId)store.requestCancel(cycle.batchJobId);const p=cycle.batchJobId?store.status(cycle.batchJobId):null;if(cycle.batchJobId)store.mark(cycle.batchJobId,{status:'cancelled',finished_at:new Date().toISOString()});return{batchProgress:p,result:{operation,batchJobId:cycle.batchJobId,progress:p,cancelled:true}};},
+-    async undo(cycle){if(!cycle.batchJobId)return[{ok:false,error:'EXPLORER_BATCH_JOB_MISSING'}];return undoBatch(store,cycle.batchJobId);},
++    async undo(cycle){if(!cycle.batchJobId)return[{ok:false,error:'EXPLORER_BATCH_JOB_MISSING'}];const results=await undoBatch(store,cycle.batchJobId);const paths=[...new Set(results.flatMap(x=>Array.isArray(x?.paths)?x.paths:[]).filter(Boolean))];if(paths.length&&onPathsVerified){try{await onPathsVerified({sourceRoot:cycle.input.root,destinationRoot:cycle.input.destinationRoot||cycle.input.root,paths,reason:'batch-undo'});}catch{}}return results;},
+     async onEnd(cycle){const p=cycle.batchProgress||cycle.result?.progress;return{summary:cycle.status==='completed'?`Batch ${operation} کامل شد: ${p?.doneItems||0} انجام، ${p?.skippedItems||0} رد شد.`:cycle.status==='cancelled'?`Batch ${operation} در مرز امن متوقف شد؛ عملیات انجام‌شده قابل Rollback است.`:cycle.status==='paused'?`Batch ${operation} در checkpoint امن Pause شد${cycle.batchBlocker?` (${cycle.batchBlocker.code})`:''}.`:`Batch ${operation} کامل نشد.`,quality:cycle.status==='completed'?'verified':cycle.status==='cancelled'?'cancelled':cycle.status==='paused'?'checkpointed':'failed',nextCycleSuggestions:['explorer-properties']};}
+   };
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/explorer-batch-service.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/explorer-batch-service.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/explorer-batch-service.cjs	2026-08-15 15:24:48.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/explorer-batch-service.cjs	2026-08-15 16:58:34.157485841 +0000
+@@ -60,22 +60,34 @@
+ function artifactsFor(job){const root=job.destination_root||job.root;const base=assertInsideRoot(path.join(root,'.workspace-agent-batch',safeId(job.id)),root);return{root:base,stageDir:path.join(base,'stage'),backupDir:path.join(base,'backup')};}
+ async function storageGuard(job,item){const needs=['file-copy','file-xmove'].includes(item.kind)?Number(item.size||0):0;return assertFreeSpace(job.destination_root||job.root,needs,{reserveBytes:Number(job.reserve_bytes||DEFAULT_RESERVE_BYTES)});}
+ async function processCopy(item,job,store,artifacts,{commitOnly=false,allowDuplicateSkip=true}={}){
+-  const srcSt=await lstatMaybe(item.source);if(!srcSt?.isFile())throw err('EXPLORER_BATCH_SOURCE_CHANGED','منبع فایل دیگر وجود ندارد یا نوعش عوض شده.',{source:item.source});if(!sameSnapshot(srcSt,item.meta?.sourceSnapshot||{type:'file',size:item.size,mtimeMs:item.mtime_ms}))throw err('EXPLORER_BATCH_SOURCE_CHANGED','منبع از زمان Preview تغییر کرده است.',{source:item.source});
+-  let dstSt=await lstatMaybe(item.destination);const priorBackup=item.backup_path?await lstatMaybe(item.backup_path):null;const hadBackup=Boolean(priorBackup);
+-  if(item.state==='committed'&&dstSt?.isFile()){const hs=await sha256File(item.source),hd=await sha256File(item.destination);if(hs!==hd)throw err('EXPLORER_BATCH_COPY_HASH_MISMATCH','Commit قبلی Batch با منبع برابر نیست.');const undo=hadBackup?{kind:'restore-replaced-copy',destination:item.destination,backup:item.backup_path,sha256:hd,size:Number(srcSt.size)}:{kind:'remove-copied-file',path:item.destination,sha256:hd,size:Number(srcSt.size)};store.updateItem(job.id,item.seq,{state:'done',sourceHash:hs,destinationHash:hd,undo});return{state:'done',paths:[item.destination]};}
+-  if(allowDuplicateSkip&&dstSt?.isFile()&&job.duplicate_aware&&Number(dstSt.size)===Number(srcSt.size)&&!hadBackup&&await fileIdentical(item.source,item.destination)){store.updateItem(job.id,item.seq,{state:'skipped',reason:'identical-existing',sourceHash:await sha256File(item.source),destinationHash:await sha256File(item.destination)});return{state:'skipped',paths:[]};}
++  const expectedSnapshot=item.meta?.sourceSnapshot||{type:'file',size:item.size,mtimeMs:item.mtime_ms};
++  const srcSt=await lstatMaybe(item.source);if(!srcSt?.isFile())throw err('EXPLORER_BATCH_SOURCE_CHANGED','منبع فایل دیگر وجود ندارد یا نوعش عوض شده.',{source:item.source});if(!sameSnapshot(srcSt,expectedSnapshot))throw err('EXPLORER_BATCH_SOURCE_CHANGED','منبع از زمان Preview تغییر کرده است.',{source:item.source});
++  let dstSt=await lstatMaybe(item.destination);const priorBackup=item.backup_path?await lstatMaybe(item.backup_path):null;const hadBackup=Boolean(priorBackup);const expectedBackup=Boolean(item.backup_path);const recordedHash=String(item.destination_hash||item.source_hash||'');
++  if(expectedBackup&&!hadBackup&&['backed-up','commit-ready','committed'].includes(item.state))throw err('EXPLORER_BATCH_BACKUP_MISSING','Backup ثبت‌شده Batch دیگر وجود ندارد؛ Resume خودکار متوقف شد.',{backup:item.backup_path,destination:item.destination});
++  if(['commit-ready','committed'].includes(item.state)&&dstSt?.isFile()){
++    if(item.state==='commit-ready'&&item.stage_path&&await lstatMaybe(item.stage_path))throw err('EXPLORER_BATCH_COMMIT_STATE_AMBIGUOUS','هم Stage و هم Destination برای Commit آماده وجود دارند؛ بررسی دستی لازم است.',{stage:item.stage_path,destination:item.destination});
++    if(item.state==='commit-ready'&&!recordedHash)throw err('EXPLORER_BATCH_RESUME_EVIDENCE_MISSING','Commit-ready بدون Hash پایدار قابل Resume خودکار نیست.',{destination:item.destination});
++    const [hs,hd]=await Promise.all([sha256File(item.source),sha256File(item.destination)]);if(hs!==hd||recordedHash&&(hd!==recordedHash||hs!==recordedHash))throw err('EXPLORER_BATCH_COPY_HASH_MISMATCH','Commit قبلی Batch با منبع/Hash ثبت‌شده برابر نیست.',{destination:item.destination});
++    const undo=hadBackup?{kind:'restore-replaced-copy',destination:item.destination,backup:item.backup_path,sha256:hd,size:Number(srcSt.size)}:{kind:'remove-copied-file',path:item.destination,sha256:hd,size:Number(srcSt.size)};
++    store.updateItem(job.id,item.seq,{state:commitOnly?'committed':'done',sourceHash:hs,destinationHash:hd,stagePath:null,backupPath:hadBackup?item.backup_path:null,undo:commitOnly?null:undo,reason:item.state==='commit-ready'?'crash-commit-verified':item.reason});return{state:commitOnly?'committed':'done',paths:[item.destination]};
++  }
++  if(['staged','backed-up'].includes(item.state)&&dstSt&&!recordedHash)throw err('EXPLORER_BATCH_RESUME_EVIDENCE_MISSING','Destination در Resume وجود دارد اما نسخه قدیمی Job Hash commit-intent ندارد؛ برای جلوگیری از تشخیص اشتباه Commit، ادامه خودکار متوقف شد.',{state:item.state,destination:item.destination});
++  if(allowDuplicateSkip&&item.state==='pending'&&dstSt?.isFile()&&job.duplicate_aware&&Number(dstSt.size)===Number(srcSt.size)&&!hadBackup&&await fileIdentical(item.source,item.destination)){const h=await sha256File(item.source);store.updateItem(job.id,item.seq,{state:'skipped',reason:'identical-existing',sourceHash:h,destinationHash:h});return{state:'skipped',paths:[]};}
+   if(dstSt&&job.conflict_policy==='skip'){store.updateItem(job.id,item.seq,{state:'skipped',reason:'conflict-skip'});return{state:'skipped',paths:[]};}
+   if(dstSt&&job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد بعد از Preview اشغال شده است.',{destination:item.destination});if(dstSt&&!dstSt.isFile())throw err('EXPLORER_BATCH_REPLACE_TYPE_BLOCKED','Replace فقط روی فایل موجود مجاز است.');
+   await storageGuard(job,item);await fsp.mkdir(path.dirname(item.destination),{recursive:true});await fsp.mkdir(artifacts.stageDir,{recursive:true});await fsp.mkdir(artifacts.backupDir,{recursive:true});
+   const stage=item.stage_path||path.join(artifacts.stageDir,`${item.seq}.part`),backup=item.backup_path||path.join(artifacts.backupDir,`${item.seq}-${path.basename(item.destination)}`);
+   store.updateItem(job.id,item.seq,{state:item.state==='backed-up'?'backed-up':'processing',stagePath:stage,backupPath:(dstSt||hadBackup)?backup:null});
+-  if(!await lstatMaybe(stage)&&item.state!=='committed'){await fsp.copyFile(item.source,stage,fs.constants.COPYFILE_EXCL);await syncFile(stage);}if(item.state!=='backed-up')store.updateItem(job.id,item.seq,{state:'staged',stagePath:stage,backupPath:(dstSt||hadBackup)?backup:null});
+-  const srcAfter=await fsp.lstat(item.source);if(!sameSnapshot(srcAfter,item.meta?.sourceSnapshot||{type:'file',size:item.size,mtimeMs:item.mtime_ms}))throw err('EXPLORER_BATCH_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد.');
+-  dstSt=await lstatMaybe(item.destination);if(dstSt&&!hadBackup){if(job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد قبل از Commit اشغال شد.');if(await lstatMaybe(backup))throw err('EXPLORER_BATCH_BACKUP_COLLISION','Backup path اشغال است.');await fsp.rename(item.destination,backup);store.updateItem(job.id,item.seq,{state:'backed-up',stagePath:stage,backupPath:backup});}
++  const stageExisting=await lstatMaybe(stage);if(stageExisting&&!stageExisting.isFile())throw err('EXPLORER_BATCH_STAGE_TYPE_CHANGED','Staging path دیگر فایل معمولی نیست.',{stage});if(!stageExisting){await fsp.copyFile(item.source,stage,fs.constants.COPYFILE_EXCL);await syncFile(stage);}if(item.state!=='backed-up')store.updateItem(job.id,item.seq,{state:'staged',stagePath:stage,backupPath:(dstSt||hadBackup)?backup:null});
++  const srcAfter=await fsp.lstat(item.source);if(!sameSnapshot(srcAfter,expectedSnapshot))throw err('EXPLORER_BATCH_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد.');
++  const [hs,hstage]=await Promise.all([sha256File(item.source),sha256File(stage)]);if(hs!==hstage)throw err('EXPLORER_BATCH_STAGE_HASH_MISMATCH','Hash فایل Stage با منبع برابر نیست.');
++  dstSt=await lstatMaybe(item.destination);if(dstSt&&!hadBackup){if(job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد قبل از Commit اشغال شد.');if(await lstatMaybe(backup))throw err('EXPLORER_BATCH_BACKUP_COLLISION','Backup path اشغال است.');await fsp.rename(item.destination,backup);store.updateItem(job.id,item.seq,{state:'backed-up',sourceHash:hs,destinationHash:hstage,stagePath:stage,backupPath:backup});}
++  const replaceUsed=hadBackup||Boolean(dstSt);if(replaceUsed&&!(await lstatMaybe(backup)))throw err('EXPLORER_BATCH_BACKUP_MISSING','Backup قبل از Commit ناپدید شد؛ Commit متوقف شد.',{backup});
++  store.updateItem(job.id,item.seq,{state:'commit-ready',sourceHash:hs,destinationHash:hstage,stagePath:stage,backupPath:replaceUsed?backup:null});
+   const commitDst=await lstatMaybe(item.destination);if(commitDst)throw err('EXPLORER_BATCH_DESTINATION_RACE','مقصد در آخرین لحظه قبل از Commit اشغال شد؛ برای جلوگیری از overwrite عملیات متوقف شد.',{destination:item.destination});
+-  const stageSt=await lstatMaybe(stage);if(!stageSt?.isFile())throw err('EXPLORER_BATCH_STAGE_MISSING','Staging file قبل از Commit در دسترس نیست.',{stage});await fsp.rename(stage,item.destination);store.updateItem(job.id,item.seq,{state:'committed',stagePath:null,backupPath:(hadBackup||dstSt)?backup:null});
+-  const [hs,hd]=await Promise.all([sha256File(item.source),sha256File(item.destination)]);if(hs!==hd)throw err('EXPLORER_BATCH_COPY_HASH_MISMATCH','SHA-256 مقصد Copy با منبع برابر نیست.');
+-  const replaceUsed=hadBackup||Boolean(dstSt);const undo=replaceUsed?{kind:'restore-replaced-copy',destination:item.destination,backup,sha256:hd,size:Number(srcSt.size)}:{kind:'remove-copied-file',path:item.destination,sha256:hd,size:Number(srcSt.size)};
++  const stageSt=await lstatMaybe(stage);if(!stageSt?.isFile())throw err('EXPLORER_BATCH_STAGE_MISSING','Staging file قبل از Commit در دسترس نیست.',{stage});await fsp.rename(stage,item.destination);store.updateItem(job.id,item.seq,{state:'committed',sourceHash:hs,destinationHash:hstage,stagePath:null,backupPath:replaceUsed?backup:null});
++  const hd=await sha256File(item.destination);if(hd!==hs)throw err('EXPLORER_BATCH_COPY_HASH_MISMATCH','SHA-256 مقصد Copy با Hash commit-intent برابر نیست.');
++  const undo=replaceUsed?{kind:'restore-replaced-copy',destination:item.destination,backup,sha256:hd,size:Number(srcSt.size)}:{kind:'remove-copied-file',path:item.destination,sha256:hd,size:Number(srcSt.size)};
+   if(commitOnly){store.updateItem(job.id,item.seq,{state:'committed',sourceHash:hs,destinationHash:hd,stagePath:null,backupPath:replaceUsed?backup:null,undo:null});return{state:'committed',paths:[item.destination]};}
+   store.updateItem(job.id,item.seq,{state:'done',sourceHash:hs,destinationHash:hd,stagePath:null,backupPath:replaceUsed?backup:null,undo});return{state:'done',paths:[item.destination]};
+ }
+@@ -112,15 +124,15 @@
+   const progress=store.status(jobId);if(progress.status==='cancelled')return{status:'cancelled',progress,paths:[...new Set(paths)]};const remaining=Number(progress.totalItems)-Number(progress.doneItems)-Number(progress.skippedItems)-Number(progress.failedItems);if(remaining<=0){store.mark(jobId,{status:progress.failedItems?'failed':'completed',finished_at:now()});return{status:progress.failedItems?'failed':'completed',progress:store.status(jobId),paths:[...new Set(paths)]};}store.mark(jobId,{status:'paused'});return{status:'paused',progress:store.status(jobId),paths:[...new Set(paths)]};
+ }
+ async function copyBackAtomic(source,destination,sha256,size){await assertFreeSpace(path.dirname(destination),Number(size||0),{reserveBytes:64*1024*1024});const stage=`${destination}.workspace-agent-restore-${crypto.randomBytes(6).toString('hex')}.part`;try{await fsp.copyFile(source,stage,fs.constants.COPYFILE_EXCL);await syncFile(stage);const h=await sha256File(stage);if(h!==sha256)throw err('UNDO_CROSS_MOVE_HASH_MISMATCH','Hash فایل بازگردانی‌شده برابر نیست.');if(await lstatMaybe(destination))throw err('UNDO_DESTINATION_EXISTS','مقصد Restore قبل از Commit اشغال شد.');await fsp.rename(stage,destination);}catch(error){try{await fsp.rm(stage,{force:true});}catch{}throw error;}}
+-async function undoOne(item){const u=item.undo;if(!u)return{ok:true,seq:item.seq,skipped:true};try{
+-  if(u.kind==='remove-empty-directory'){const st=await lstatMaybe(u.path);if(!st)return{ok:true,seq:item.seq,alreadyGone:true};if(!st.isDirectory())return{ok:false,seq:item.seq,error:'UNDO_TARGET_TYPE_CHANGED'};if((await fsp.readdir(u.path)).length)return{ok:false,seq:item.seq,error:'UNDO_FOLDER_NOT_EMPTY'};await fsp.rmdir(u.path);return{ok:true,seq:item.seq};}
+-  if(u.kind==='recreate-source-directory'){const st=await lstatMaybe(u.path);if(st)return st.isDirectory()?{ok:true,seq:item.seq,alreadyExists:true}:{ok:false,seq:item.seq,error:'UNDO_SOURCE_DIRECTORY_OCCUPIED'};await fsp.mkdir(u.path,{recursive:false});return{ok:true,seq:item.seq};}
+-  if(u.kind==='remove-copied-file'){const st=await lstatMaybe(u.path);if(!st)return{ok:true,seq:item.seq,alreadyGone:true};if(!st.isFile()||Number(st.size)!==Number(u.size))return{ok:false,seq:item.seq,error:'UNDO_COPY_TARGET_CHANGED'};if(await sha256File(u.path)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_COPY_HASH_CHANGED'};await fsp.rm(u.path);return{ok:true,seq:item.seq};}
+-  if(u.kind==='move-back'){const st=await lstatMaybe(u.source);if(!st)return{ok:false,seq:item.seq,error:'UNDO_SOURCE_MISSING'};if(await lstatMaybe(u.destination))return{ok:false,seq:item.seq,error:'UNDO_DESTINATION_EXISTS'};if(u.after&&!sameSnapshot(st,u.after))return{ok:false,seq:item.seq,error:'UNDO_MOVE_TARGET_CHANGED'};await fsp.rename(u.source,u.destination);return{ok:true,seq:item.seq};}
+-  if(u.kind==='cross-move-back'){const dst=await lstatMaybe(u.destination);if(!dst?.isFile())return{ok:false,seq:item.seq,error:'UNDO_CROSS_MOVE_DESTINATION_MISSING'};if(await lstatMaybe(u.source))return{ok:false,seq:item.seq,error:'UNDO_CROSS_MOVE_SOURCE_OCCUPIED'};if(Number(dst.size)!==Number(u.size)||await sha256File(u.destination)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_CROSS_MOVE_DESTINATION_CHANGED'};if(u.backup&&!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING'};await fsp.mkdir(path.dirname(u.source),{recursive:true});await copyBackAtomic(u.destination,u.source,u.sha256,u.size);if(!u.backup){await fsp.rm(u.destination);return{ok:true,seq:item.seq};}const temp=`${u.destination}.workspace-agent-undo-${crypto.randomBytes(6).toString('hex')}.part`;try{await fsp.rename(u.destination,temp);await fsp.rename(u.backup,u.destination);await fsp.rm(temp,{force:true});return{ok:true,seq:item.seq};}catch(error){try{if(!(await lstatMaybe(u.destination))&&await lstatMaybe(temp))await fsp.rename(temp,u.destination);}catch{}try{const restored=await lstatMaybe(u.source);if(restored?.isFile()&&Number(restored.size)===Number(u.size)&&await sha256File(u.source)===u.sha256)await fsp.rm(u.source);}catch{}return{ok:false,seq:item.seq,error:error.code||'UNDO_REPLACED_CROSS_MOVE_FAILED'};}}
+-  if(u.kind==='restore-replaced-copy'){const st=await lstatMaybe(u.destination);if(!st?.isFile())return{ok:false,seq:item.seq,error:'UNDO_REPLACED_COPY_DESTINATION_MISSING'};if(await sha256File(u.destination)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_REPLACED_COPY_CHANGED'};if(!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING'};const temp=`${u.destination}.workspace-agent-undo-${crypto.randomBytes(6).toString('hex')}.part`;try{await fsp.rename(u.destination,temp);await fsp.rename(u.backup,u.destination);await fsp.rm(temp,{force:true});return{ok:true,seq:item.seq};}catch(error){try{if(!(await lstatMaybe(u.destination))&&await lstatMaybe(temp))await fsp.rename(temp,u.destination);}catch{}return{ok:false,seq:item.seq,error:error.code||'UNDO_REPLACED_COPY_FAILED'};}}
+-  if(u.kind==='restore-replaced-move'){if(await lstatMaybe(u.source))return{ok:false,seq:item.seq,error:'UNDO_SOURCE_OCCUPIED'};const dst=await lstatMaybe(u.destination);if(!dst)return{ok:false,seq:item.seq,error:'UNDO_DESTINATION_MISSING'};if(u.after&&!sameSnapshot(dst,u.after))return{ok:false,seq:item.seq,error:'UNDO_REPLACED_MOVE_CHANGED'};if(!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING'};try{await fsp.rename(u.destination,u.source);await fsp.rename(u.backup,u.destination);return{ok:true,seq:item.seq};}catch(error){try{if(!(await lstatMaybe(u.destination))&&await lstatMaybe(u.source))await fsp.rename(u.source,u.destination);}catch{}return{ok:false,seq:item.seq,error:error.code||'UNDO_REPLACED_MOVE_FAILED'};}}
+-  return{ok:false,seq:item.seq,error:'UNDO_KIND_UNKNOWN'};
+- }catch(error){return{ok:false,seq:item.seq,error:error.code||error.message};}}
+-async function undoBatch(store,jobId){const rows=store.undoItems(jobId),results=[];for(const item of rows)results.push(await undoOne(item));const ok=results.every(x=>x.ok!==false);store.mark(jobId,{status:ok?'rolled-back':'rollback-failed',finished_at:now(),summary_json:{undoResults:results.length,ok}});return results;}
++async function undoOne(item){const u=item.undo;if(!u)return{ok:true,seq:item.seq,skipped:true,paths:[]};try{
++  if(u.kind==='remove-empty-directory'){const st=await lstatMaybe(u.path);if(!st)return{ok:true,seq:item.seq,alreadyGone:true,paths:[u.path]};if(!st.isDirectory())return{ok:false,seq:item.seq,error:'UNDO_TARGET_TYPE_CHANGED',paths:[u.path]};if((await fsp.readdir(u.path)).length)return{ok:false,seq:item.seq,error:'UNDO_FOLDER_NOT_EMPTY',paths:[u.path]};await fsp.rmdir(u.path);return{ok:true,seq:item.seq,paths:[u.path]};}
++  if(u.kind==='recreate-source-directory'){const st=await lstatMaybe(u.path);if(st)return st.isDirectory()?{ok:true,seq:item.seq,alreadyExists:true,paths:[u.path]}:{ok:false,seq:item.seq,error:'UNDO_SOURCE_DIRECTORY_OCCUPIED',paths:[u.path]};await fsp.mkdir(u.path,{recursive:false});return{ok:true,seq:item.seq,paths:[u.path]};}
++  if(u.kind==='remove-copied-file'){const st=await lstatMaybe(u.path);if(!st)return{ok:true,seq:item.seq,alreadyGone:true,paths:[u.path]};if(!st.isFile()||Number(st.size)!==Number(u.size))return{ok:false,seq:item.seq,error:'UNDO_COPY_TARGET_CHANGED',paths:[u.path]};if(await sha256File(u.path)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_COPY_HASH_CHANGED',paths:[u.path]};await fsp.rm(u.path);return{ok:true,seq:item.seq,paths:[u.path]};}
++  if(u.kind==='move-back'){const paths=[u.source,u.destination];const st=await lstatMaybe(u.source);if(!st)return{ok:false,seq:item.seq,error:'UNDO_SOURCE_MISSING',paths};if(await lstatMaybe(u.destination))return{ok:false,seq:item.seq,error:'UNDO_DESTINATION_EXISTS',paths};if(u.after&&!sameSnapshot(st,u.after))return{ok:false,seq:item.seq,error:'UNDO_MOVE_TARGET_CHANGED',paths};await fsp.rename(u.source,u.destination);return{ok:true,seq:item.seq,paths};}
++  if(u.kind==='cross-move-back'){const paths=[u.source,u.destination];const dst=await lstatMaybe(u.destination);if(!dst?.isFile())return{ok:false,seq:item.seq,error:'UNDO_CROSS_MOVE_DESTINATION_MISSING',paths};if(await lstatMaybe(u.source))return{ok:false,seq:item.seq,error:'UNDO_CROSS_MOVE_SOURCE_OCCUPIED',paths};if(Number(dst.size)!==Number(u.size)||await sha256File(u.destination)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_CROSS_MOVE_DESTINATION_CHANGED',paths};if(u.backup&&!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING',paths};await fsp.mkdir(path.dirname(u.source),{recursive:true});await copyBackAtomic(u.destination,u.source,u.sha256,u.size);if(!u.backup){await fsp.rm(u.destination);return{ok:true,seq:item.seq,paths};}const temp=`${u.destination}.workspace-agent-undo-${crypto.randomBytes(6).toString('hex')}.part`;try{await fsp.rename(u.destination,temp);await fsp.rename(u.backup,u.destination);await fsp.rm(temp,{force:true});return{ok:true,seq:item.seq,paths};}catch(error){try{if(!(await lstatMaybe(u.destination))&&await lstatMaybe(temp))await fsp.rename(temp,u.destination);}catch{}try{const restored=await lstatMaybe(u.source);if(restored?.isFile()&&Number(restored.size)===Number(u.size)&&await sha256File(u.source)===u.sha256)await fsp.rm(u.source);}catch{}return{ok:false,seq:item.seq,error:error.code||'UNDO_REPLACED_CROSS_MOVE_FAILED',paths};}}
++  if(u.kind==='restore-replaced-copy'){const paths=[u.destination];const st=await lstatMaybe(u.destination);if(!st?.isFile())return{ok:false,seq:item.seq,error:'UNDO_REPLACED_COPY_DESTINATION_MISSING',paths};if(await sha256File(u.destination)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_REPLACED_COPY_CHANGED',paths};if(!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING',paths};const temp=`${u.destination}.workspace-agent-undo-${crypto.randomBytes(6).toString('hex')}.part`;try{await fsp.rename(u.destination,temp);await fsp.rename(u.backup,u.destination);await fsp.rm(temp,{force:true});return{ok:true,seq:item.seq,paths};}catch(error){try{if(!(await lstatMaybe(u.destination))&&await lstatMaybe(temp))await fsp.rename(temp,u.destination);}catch{}return{ok:false,seq:item.seq,error:error.code||'UNDO_REPLACED_COPY_FAILED',paths};}}
++  if(u.kind==='restore-replaced-move'){const paths=[u.source,u.destination];if(await lstatMaybe(u.source))return{ok:false,seq:item.seq,error:'UNDO_SOURCE_OCCUPIED',paths};const dst=await lstatMaybe(u.destination);if(!dst)return{ok:false,seq:item.seq,error:'UNDO_DESTINATION_MISSING',paths};if(u.after&&!sameSnapshot(dst,u.after))return{ok:false,seq:item.seq,error:'UNDO_REPLACED_MOVE_CHANGED',paths};if(!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING',paths};try{await fsp.rename(u.destination,u.source);await fsp.rename(u.backup,u.destination);return{ok:true,seq:item.seq,paths};}catch(error){try{if(!(await lstatMaybe(u.destination))&&await lstatMaybe(u.source))await fsp.rename(u.source,u.destination);}catch{}return{ok:false,seq:item.seq,error:error.code||'UNDO_REPLACED_MOVE_FAILED',paths};}}
++  return{ok:false,seq:item.seq,error:'UNDO_KIND_UNKNOWN',paths:[]};
++ }catch(error){return{ok:false,seq:item.seq,error:error.code||error.message,paths:[u.source,u.destination,u.path].filter(Boolean)};}}
++async function undoBatch(store,jobId){const rows=store.undoItems(jobId),results=[];for(const item of rows){const r=await undoOne(item);results.push(r);store.updateItem(jobId,item.seq,{state:r.ok===false?'rollback-failed':'rolled-back',reason:r.ok===false?(r.error||'ROLLBACK_FAILED'):'rolled-back'});}const ok=results.every(x=>x.ok!==false);store.mark(jobId,{status:ok?'rolled-back':'rollback-failed',finished_at:now(),summary_json:{undoResults:results.length,ok,failed:results.filter(x=>x.ok===false).length}});return results;}
+ module.exports={SCHEMA_VERSION,buildBatchManifest,processBatchChunk,undoBatch,fileIdentical,uniquePath,defaultVolumeIdentity,validateJobRoots};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/explorer-batch-store.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/explorer-batch-store.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/explorer-batch-store.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/explorer-batch-store.cjs	2026-08-15 17:02:30.036299664 +0000
+@@ -32,11 +32,11 @@
+     this.st={
+       jobGet:this.db.prepare('SELECT * FROM jobs WHERE id=?'),
+       itemGet:this.db.prepare('SELECT * FROM items WHERE job_id=? AND seq=?'),
+-      nextItems:this.db.prepare("SELECT * FROM items WHERE job_id=? AND state IN ('pending','processing','staged','backed-up','committed') ORDER BY seq LIMIT ?"),
++      nextItems:this.db.prepare("SELECT * FROM items WHERE job_id=? AND state IN ('pending','processing','staged','backed-up','commit-ready','committed') ORDER BY seq LIMIT ?"),
+       addItem:this.db.prepare('INSERT INTO items(job_id,seq,kind,source,destination,size,mtime_ms,state,meta_json,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)'),
+       updateItem:this.db.prepare('UPDATE items SET state=?,reason=?,source_hash=?,destination_hash=?,stage_path=?,backup_path=?,undo_json=?,meta_json=?,updated_at=? WHERE job_id=? AND seq=?'),
+       counts:this.db.prepare("SELECT COUNT(*) total,SUM(CASE WHEN state='done' THEN 1 ELSE 0 END) done,SUM(CASE WHEN state='skipped' THEN 1 ELSE 0 END) skipped,SUM(CASE WHEN state='failed' THEN 1 ELSE 0 END) failed,SUM(CASE WHEN state='done' THEN size ELSE 0 END) done_bytes FROM items WHERE job_id=?"),
+-      undoItems:this.db.prepare("SELECT * FROM items WHERE job_id=? AND undo_json IS NOT NULL AND state IN ('done','skipped') ORDER BY seq DESC"),
++      undoItems:this.db.prepare("SELECT * FROM items WHERE job_id=? AND undo_json IS NOT NULL AND state IN ('done','skipped','rollback-failed') ORDER BY seq DESC"),
+     };
+   }
+   _row(row){if(!row)return null;return{...row,duplicate_aware:Boolean(row.duplicate_aware),cancel_requested:Boolean(row.cancel_requested),summary:j(row.summary_json,null)};}
+@@ -50,11 +50,15 @@
+     this.journal?.append('EXPLORER_BATCH_PREPARED',{cycleId,payload:{jobId:id,operation,items:items.length,conflictPolicy,duplicateAware}});return this.get(id);
+   }
+   get(id){return this._row(this.st.jobGet.get(id));}
++
++  list({limit=1000}={}){return this.db.prepare('SELECT * FROM jobs ORDER BY updated_at DESC LIMIT ?').all(Math.max(1,Math.min(10000,Number(limit)||1000))).map(x=>this._row(x));}
++  jobsForCycles(cycleIds=[]){const ids=[...new Set((cycleIds||[]).map(String).filter(Boolean))];if(!ids.length)return[];const marks=ids.map(()=>'?').join(',');return this.db.prepare(`SELECT * FROM jobs WHERE cycle_id IN (${marks}) ORDER BY updated_at DESC`).all(...ids).map(x=>this._row(x));}
++  reconcileInterruptedJobs({cycleIds=[]}={}){const ids=new Set((cycleIds||[]).map(String).filter(Boolean));let changed=0;const touched=[];for(const job of this.list({limit:10000})){const linked=ids.has(String(job.cycle_id||''));if(!linked&&job.status!=='running')continue;if(job.status==='running'){this.mark(job.id,{status:'interrupted',summary_json:{code:'PROCESS_RESTART_INTERRUPTED',message:'Batch execution was interrupted by app/process restart.'}});changed+=1;}touched.push(this.get(job.id)||job);}return{changed,jobs:touched};}
+   item(id,seq){return this._item(this.st.itemGet.get(id,seq));}
+   next(id,limit=20){return this.st.nextItems.all(id,Math.max(1,Math.min(200,Number(limit)||20))).map(x=>this._item(x));}
+   updateItem(id,seq,patch={}){const cur=this.item(id,seq);if(!cur)return null;const next={...cur,...patch};this.st.updateItem.run(String(next.state||'pending'),next.reason||null,next.source_hash||next.sourceHash||null,next.destination_hash||next.destinationHash||null,next.stage_path||next.stagePath||null,next.backup_path||next.backupPath||null,next.undo?JSON.stringify(next.undo):next.undo_json||null,JSON.stringify(next.meta||{}),now(),id,seq);this.refresh(id);return this.item(id,seq);}
+   mark(id,patch={}){const job=this.get(id);if(!job)return null;const fields=[],vals=[];const allowed=['status','cursor','cancel_requested','finished_at','summary_json'];for(const [k,v] of Object.entries(patch)){if(!allowed.includes(k))continue;fields.push(`${k}=?`);vals.push(k==='summary_json'&&typeof v!=='string'?JSON.stringify(v):v);}if(fields.length){fields.push('updated_at=?');vals.push(now(),id);this.db.prepare(`UPDATE jobs SET ${fields.join(',')} WHERE id=?`).run(...vals);}return this.refresh(id);}
+-  refresh(id){const c=this.st.counts.get(id)||{};const row=this.get(id);if(!row)return null;const cursorRow=this.db.prepare("SELECT MIN(seq) n FROM items WHERE job_id=? AND state NOT IN ('done','skipped','failed')").get(id);const cursor=cursorRow?.n==null?Number(row.total_items||0):Number(cursorRow.n);this.db.prepare('UPDATE jobs SET cursor=?,done_items=?,skipped_items=?,failed_items=?,done_bytes=?,updated_at=? WHERE id=?').run(cursor,Number(c.done||0),Number(c.skipped||0),Number(c.failed||0),Number(c.done_bytes||0),now(),id);return this.get(id);}
++  refresh(id){const c=this.st.counts.get(id)||{};const row=this.get(id);if(!row)return null;const cursorRow=this.db.prepare("SELECT MIN(seq) n FROM items WHERE job_id=? AND state NOT IN ('done','skipped','failed','rolled-back')").get(id);const cursor=cursorRow?.n==null?Number(row.total_items||0):Number(cursorRow.n);this.db.prepare('UPDATE jobs SET cursor=?,done_items=?,skipped_items=?,failed_items=?,done_bytes=?,updated_at=? WHERE id=?').run(cursor,Number(c.done||0),Number(c.skipped||0),Number(c.failed||0),Number(c.done_bytes||0),now(),id);return this.get(id);}
+   requestCancel(id){const job=this.get(id);if(!job)return null;this.db.prepare('UPDATE jobs SET cancel_requested=1,updated_at=? WHERE id=?').run(now(),id);this.journal?.append('EXPLORER_BATCH_CANCEL_REQUESTED',{cycleId:job.cycle_id,payload:{jobId:id}});return this.get(id);}
+   clearCancel(id){this.db.prepare('UPDATE jobs SET cancel_requested=0,updated_at=? WHERE id=?').run(now(),id);return this.get(id);}
+   undoItems(id){return this.st.undoItems.all(id).map(x=>this._item(x));}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/file-explorer-cycles.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/file-explorer-cycles.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/file-explorer-cycles.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/file-explorer-cycles.cjs	2026-08-15 17:00:11.918785002 +0000
+@@ -8,5 +8,5 @@
+ function explorerSelectCycle({shellAdapter=null,platform=process.platform}={}){return{async next(cycle){if(cycle.steps.length)return{status:'completed'};const item=await describePath(cycle.input.root,cycle.input.relativePath||'');if(platform!=='win32')return{status:'completed',result:{supported:false,platform,item:item.path},steps:[step('platform','read','completed','Windows Explorer','Runtime غیر-Windows؛ Select اجرا نشد')],evidence:[...cycle.evidence,evidence('EXPLORER_SELECT_UNSUPPORTED',{platform})]};shellAdapter.showItemInFolder(item.path);return{status:'completed',result:{supported:true,item:item.path,type:item.type},steps:[step('resolve','read','completed','Resolve item',item.relativePath),step('select','agent-local','completed','Show item in File Explorer','Shell showItemInFolder'),step('verify','verify','completed','Dispatch verification','Shell dispatch انجام شد')],evidence:[...cycle.evidence,evidence('EXPLORER_SELECT_DISPATCHED',{type:item.type,itemLabel:path.basename(item.path)})]};},async onEnd(cycle){return{summary:cycle.result?.supported?'آیتم در File Explorer نمایش/انتخاب شد.':'Select فقط روی Windows runtime فعال است.',quality:'verified',nextCycleSuggestions:[]};}};}
+ function explorerWriteCycle({action,transactionStore=null,onVerified=null}={}){return{async next(cycle){if(!cycle.steps.length){const plan=await buildWritePlan({action,root:cycle.input.root,sourceRelative:cycle.input.sourceRelative||'',destinationRelative:cycle.input.destinationRelative||'',newName:cycle.input.newName||''});const label=action==='new-folder'?'New Folder':action[0].toUpperCase()+action.slice(1);return{explorerPlan:plan,status:'waiting-confirmation',steps:[step('resolve','read','completed','Resolve + path policy',plan.source?`${path.basename(plan.source)} → ${path.basename(plan.destination)}`:path.basename(plan.destination)),step('plan','simulation','completed',`${label} Preview`,`${plan.planHash.slice(0,16)} · no symlink/junction traversal`),step('confirm','approval','waiting-confirmation',`تأیید ${label}`,'قبل از Execute دوباره Source/Target بررسی می‌شود'),step('execute','write','pending',`اجرای ${label}`),step('verify','verify','pending','Verify-after-write')],evidence:[...cycle.evidence,evidence('EXPLORER_WRITE_PREVIEW',{action,planHash:plan.planHash,sourceType:plan.sourceSnapshot?.type||null,sourceLabel:plan.source?path.basename(plan.source):null,destinationLabel:path.basename(plan.destination)})]};}
+   if(cycle.steps.find(s=>s.id==='confirm')?.status==='approved'&&cycle.steps.find(s=>s.id==='execute')?.status==='pending'){const completed=await executeWritePlan(cycle.explorerPlan,{cycleId:cycle.id,transactionStore});const verification=await verifyCompleted(completed);let reconcile=null;if(verification.ok&&onVerified){try{reconcile=await onVerified(completed);}catch(error){reconcile={ok:false,code:error.code||'EXPLORER_INDEX_RECONCILE_FAILED',message:error.message};}}return{status:verification.ok?'completed':'failed',completedOperation:completed,undoStack:completed.undo?[completed.undo]:[],verification,reconcile,result:{action,source:completed.source||null,destination:completed.destination,verification,reconcile},steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write',verification.ok?'completed':'failed',`اجرای ${action}`,verification.ok?'Write commit شد':'Write commit نیازمند بررسی است'):s.id==='verify'?step('verify','verify',verification.ok?'completed':'failed','Verify-after-write',`${verification.mode} · ${verification.mismatches.length} mismatch`):s),evidence:[...cycle.evidence,evidence(verification.ok?'EXPLORER_WRITE_VERIFIED':'EXPLORER_WRITE_VERIFY_FAILED',{action,ok:verification.ok,mode:verification.mode,mismatches:verification.mismatches.length,indexReconcileOk:reconcile?.ok??null})]};}
+-  return{status:cycle.status};},async onEnd(cycle){return{summary:cycle.status==='completed'?`File Explorer ${action} اجرا و Verify شد.`:cycle.status==='cancelled'?`File Explorer ${action} لغو شد؛ تغییری انجام نشد.`:`File Explorer ${action} کامل نشد.`,quality:cycle.status==='completed'?'verified':cycle.status==='cancelled'?'cancelled':'failed',nextCycleSuggestions:['explorer-properties']};},async undo(cycle){return undoCompleted(cycle.completedOperation);}};}
++  return{status:cycle.status};},async onEnd(cycle){return{summary:cycle.status==='completed'?`File Explorer ${action} اجرا و Verify شد.`:cycle.status==='cancelled'?`File Explorer ${action} لغو شد؛ تغییری انجام نشد.`:`File Explorer ${action} کامل نشد.`,quality:cycle.status==='completed'?'verified':cycle.status==='cancelled'?'cancelled':'failed',nextCycleSuggestions:['explorer-properties']};},async undo(cycle){const results=await undoCompleted(cycle.completedOperation);if(results.every(x=>x?.ok!==false)&&onVerified&&cycle.completedOperation){try{await onVerified(cycle.completedOperation,{reason:'undo'});}catch{}}return results;}};}
+ module.exports={explorerPropertiesCycle,explorerSearchCycle,explorerNavigateCycle,explorerSelectCycle,explorerWriteCycle};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/file-explorer-service.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/file-explorer-service.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/file-explorer-service.cjs	2026-08-15 15:25:06.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/file-explorer-service.cjs	2026-08-15 17:04:54.731008865 +0000
+@@ -52,7 +52,7 @@
+ }
+ async function explorerSearch(root,{query='',limit=100,index=null,maxFiles=100000}={}){
+   const rr=rootForRead(root);const q=String(query||'').trim();if(!q)throw err('EXPLORER_SEARCH_QUERY_REQUIRED','عبارت جست‌وجو لازم است.');
+-  if(index){try{const status=index.status(rr);if(status&&status.status==='completed'){const out=index.search({root:rr,query:q,limit:Math.max(1,Math.min(500,Number(limit)||100))});return{...out,source:'persistent-index'};}}catch{}
++  if(index){try{const status=await index.status(rr);if(status&&status.status==='completed'){const out=index.search({root:rr,query:q,limit:Math.max(1,Math.min(500,Number(limit)||100))});return{...out,source:'persistent-index'};}}catch{}
+   }
+   const scan=await scanTree(rr,{maxFiles:Math.max(1000,Math.min(250000,Number(maxFiles)||100000))});const out=searchFiles(scan.files,{query:q,maxResults:Math.max(1,Math.min(500,Number(limit)||100))});return{schemaVersion:'workspace-file-explorer-search-v1',root:rr,source:'bounded-scan',scan:{files:scan.files.length,dirs:scan.dirs,truncated:scan.truncated,errors:scan.errors.length},...out};
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/file-watcher-service.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/file-watcher-service.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/file-watcher-service.cjs	2026-08-15 15:25:22.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/file-watcher-service.cjs	2026-08-15 17:02:30.036130053 +0000
+@@ -9,12 +9,13 @@
+   this.dir=path.join(baseDir,'watcher');this.configFile=path.join(this.dir,'roots.json');this.eventsFile=path.join(this.dir,'events.json');this.dirtyFile=path.join(this.dir,'dirty-roots.json');this.journal=journal;
+   this.maxEvents=clamp(maxEvents,100,20000,2000);this.debounceMs=clamp(debounceMs,25,60000,700);this.maxPending=clamp(maxPending,100,50000,5000);this.maxBatchSize=clamp(maxBatchSize,10,2000,250);this.maxDeliveryBatches=clamp(maxDeliveryBatches,1,100,8);this.maxWatchRoots=clamp(maxWatchRoots,1,100,20);
+   this.onBatch=typeof onBatch==='function'?onBatch:null;this.handles=new Map();this.pending=new Map();this.deliveryQueue=[];this.flushTimer=null;this.draining=false;this.suspended=false;this.suspendReason='';this.blockedRoots=new Map();
+-  this.metrics={received:0,coalesced:0,droppedPending:0,droppedDelivery:0,flushed:0,batches:0,delivered:0,deliveryFailures:0,lastFlushAt:null,lastDeliveryAt:null};fs.mkdirSync(this.dir,{recursive:true});
++  this.metrics={received:0,coalesced:0,droppedPending:0,droppedDelivery:0,flushed:0,batches:0,delivered:0,deliveryFailures:0,reconcileWarnings:0,lastFlushAt:null,lastDeliveryAt:null};fs.mkdirSync(this.dir,{recursive:true});
+  }
+  configs(){try{const v=JSON.parse(fs.readFileSync(this.configFile,'utf8'));return Array.isArray(v)?v:[];}catch{return[];}}
+  events(limit=300){try{const v=JSON.parse(fs.readFileSync(this.eventsFile,'utf8'));return(Array.isArray(v)?v:[]).slice(-Math.max(1,Math.min(2000,limit))).reverse();}catch{return[];}}
+  dirtyRoots(){try{const v=JSON.parse(fs.readFileSync(this.dirtyFile,'utf8'));return Array.isArray(v)?v:[];}catch{return[];}}
+- _markDirty(root,reason){const rr=normalizeDisplayPath(String(root||''));let rows=this.dirtyRoots();const old=rows.find(x=>keyPath(x.root)===keyPath(rr));const row={root:rr,reason:String(reason||'WATCHER_GAP'),firstAt:old?.firstAt||new Date().toISOString(),lastAt:new Date().toISOString(),count:Number(old?.count||0)+1};rows=[row,...rows.filter(x=>keyPath(x.root)!==keyPath(rr))].slice(0,100);atomic(this.dirtyFile,rows);}
++ _markDirty(root,reason){const rr=normalizeDisplayPath(String(root||''));let rows=this.dirtyRoots();const old=rows.find(x=>keyPath(x.root)===keyPath(rr));const row={root:rr,reason:String(reason||'WATCHER_GAP'),firstAt:old?.firstAt||new Date().toISOString(),lastAt:new Date().toISOString(),count:Number(old?.count||0)+1};rows=[row,...rows.filter(x=>keyPath(x.root)!==keyPath(rr))].slice(0,100);atomic(this.dirtyFile,rows);return row;}
++ markDirty(root,reason='WATCHER_GAP'){return this._markDirty(root,reason);}
+  clearDirty(root){const rr=normalizeDisplayPath(String(root||''));const rows=this.dirtyRoots(),next=rows.filter(x=>keyPath(x.root)!==keyPath(rr));if(next.length!==rows.length)atomic(this.dirtyFile,next);return next.length!==rows.length;}
+  status(){const dirtyRoots=this.dirtyRoots();return{schemaVersion:'watcher-status-v4',watched:this.handles.size,pending:this.pending.size,deliveryQueued:this.deliveryQueue.reduce((n,b)=>n+b.length,0),draining:this.draining,suspended:this.suspended,suspendReason:this.suspendReason,blockedRoots:[...this.blockedRoots.values()].map(x=>({...x})),dirtyRoots,needsFullRescan:dirtyRoots.length>0,limits:{maxPending:this.maxPending,maxBatchSize:this.maxBatchSize,maxDeliveryBatches:this.maxDeliveryBatches,maxWatchRoots:this.maxWatchRoots},...this.metrics};}
+  add(root,{title=''}={}){const rr=normalizeDisplayPath(root);if(!fs.existsSync(toFsPath(rr))||!fs.statSync(toFsPath(rr)).isDirectory())throw Object.assign(new Error('Watch root معتبر نیست.'),{code:'WATCH_ROOT_INVALID'});let rows=this.configs();const existing=rows.find(x=>keyPath(x.root)===keyPath(rr));if(existing)return existing;if(rows.length>=this.maxWatchRoots)throw Object.assign(new Error(`حداکثر ${this.maxWatchRoots} Watch root قابل ثبت است؛ هیچ Watch قدیمی به‌صورت خودکار حذف نشد.`),{code:'WATCH_ROOT_LIMIT_REACHED',details:{maxWatchRoots:this.maxWatchRoots}});const row={id:`watch-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,root:rr,title:String(title||path.basename(rr)||rr).slice(0,100),enabled:true,createdAt:new Date().toISOString()};rows=[row,...rows];atomic(this.configFile,rows);this.startOne(row);this.journal?.append('WATCH_ADDED',{payload:{id:row.id,root:row.root}});return row;}
+@@ -47,7 +48,7 @@
+   if(this.pending.size)this._schedule(25);
+  }
+  async _drain(){
+-  if(this.draining)return;this.draining=true;try{while(this.deliveryQueue.length){const batch=this.deliveryQueue.shift();try{await this.onBatch(batch);this.metrics.delivered+=batch.length;this.metrics.lastDeliveryAt=new Date().toISOString();}catch(error){this.metrics.deliveryFailures+=1;for(const event of batch)this._markDirty(event.root,'RECONCILE_FAILED');this.journal?.append('INDEX_WATCH_RECONCILE_FAILED',{payload:{events:batch.length,error:error.code||error.message}});}}}finally{this.draining=false;}
++  if(this.draining)return;this.draining=true;try{while(this.deliveryQueue.length){const batch=this.deliveryQueue.shift();try{const result=await this.onBatch(batch);this.metrics.delivered+=batch.length;this.metrics.lastDeliveryAt=new Date().toISOString();if(result?.ok===false||result?.requiresFullRescan){this.metrics.reconcileWarnings+=1;const roots=Array.isArray(result?.staleRoots)&&result.staleRoots.length?result.staleRoots:[...new Set(batch.map(x=>x.root))];for(const root of roots)this._markDirty(root,'RECONCILE_PARTIAL_OR_FAILED');this.journal?.append('INDEX_WATCH_RECONCILE_INCOMPLETE',{payload:{events:batch.length,roots:roots.length,failed:Number(result?.summary?.failed||0),requiresFullRescan:Boolean(result?.requiresFullRescan)}});}}catch(error){this.metrics.deliveryFailures+=1;for(const event of batch)this._markDirty(event.root,'RECONCILE_FAILED');this.journal?.append('INDEX_WATCH_RECONCILE_FAILED',{payload:{events:batch.length,error:error.code||error.message}});}}}finally{this.draining=false;}
+  }
+  async drain({timeoutMs=10000}={}){const start=Date.now();while(this.pending.size||this.deliveryQueue.length||this.draining){if(this.pending.size)this.flush();if(Date.now()-start>timeoutMs)return{ok:false,code:'WATCH_DRAIN_TIMEOUT',...this.status()};await new Promise(r=>setTimeout(r,10));}return{ok:true,...this.status()};}
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/index-freshness-guard.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/index-freshness-guard.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/index-freshness-guard.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/index-freshness-guard.cjs	2026-08-15 17:04:32.918297726 +0000
+@@ -0,0 +1,47 @@
++const path=require('path');
++const {normalizeDisplayPath,keyPath}=require('./windows-path-utils.cjs');
++
++function uniq(values=[]){const out=[];const seen=new Set();for(const value of values||[]){if(!value)continue;const v=normalizeDisplayPath(String(value));const k=keyPath(v);if(seen.has(k))continue;seen.add(k);out.push(v);}return out;}
++function isInside(root,target){try{const rel=path.relative(path.resolve(root),path.resolve(target));return rel===''||(!rel.startsWith('..')&&!path.isAbsolute(rel));}catch{return false;}}
++function markWatcherDirty(watcher,root,reason){try{if(typeof watcher?.markDirty==='function')return watcher.markDirty(root,reason);if(typeof watcher?._markDirty==='function')return watcher._markDirty(root,reason);}catch{}return null;}
++function markRootsUncertain({index=null,watcher=null,journal=null,roots=[],reason='WRITE_STATE_UNCERTAIN',details=null}={}){
++  const normalized=uniq(roots);const results=[];
++  for(const root of normalized){let indexResult=null;try{indexResult=index?.markStale?.(root,reason,details)||null;}catch(error){indexResult={ok:false,code:error.code||'INDEX_MARK_STALE_FAILED',message:error.message};}
++    const watcherResult=markWatcherDirty(watcher,root,reason);results.push({root,index:indexResult,watcherDirty:Boolean(watcherResult)});
++  }
++  if(normalized.length)journal?.append?.('INDEX_FRESHNESS_GAP_RECORDED',{payload:{reason,roots:normalized.length,details:details||null}});
++  return{ok:true,reason,roots:normalized,results};
++}
++async function reconcilePathsForRoots({index=null,watcher=null,journal=null,roots=[],paths=[],reason='INDEX_RECONCILE_INCOMPLETE'}={}){
++  if(!index)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE',results:[]};
++  const normalizedRoots=uniq(roots),normalizedPaths=uniq(paths);const results=[];const staleRoots=new Set();
++  for(const target of normalizedPaths){const root=normalizedRoots.find(r=>isInside(r,target));if(!root){results.push({ok:false,path:target,code:'INDEX_RECONCILE_PATH_OUTSIDE_ROOTS'});continue;}
++    try{const result=await index.reconcilePath(root,target);const row={root,path:target,...result};results.push(row);if(result?.requiresFullRescan||(result?.ok===false&&result?.code!=='INDEX_ROOT_NOT_REGISTERED'))staleRoots.add(root);}catch(error){results.push({ok:false,root,path:target,code:error.code||'INDEX_RECONCILE_FAILED',message:error.message,requiresFullRescan:true});staleRoots.add(root);}
++  }
++  for(const root of normalizedRoots){try{const status=await index.status?.(root);if(status?.status==='stale')staleRoots.add(root);}catch{}}
++  if(staleRoots.size)markRootsUncertain({index,watcher,journal,roots:[...staleRoots],reason,details:{paths:normalizedPaths.length}});
++  const hardFailures=results.filter(x=>x?.ok===false&&x?.code!=='INDEX_ROOT_NOT_REGISTERED');const requiresFullRescan=staleRoots.size>0;
++  return{ok:hardFailures.length===0&&!requiresFullRescan,requiresFullRescan,staleRoots:[...staleRoots],results};
++}
++async function reconcileRecoveryTransaction({tx,action,index=null,watcher=null,journal=null}={}){
++  if(!tx)return{ok:false,code:'RECOVERY_TRANSACTION_REQUIRED'};
++  const roots=uniq([tx.root]);const paths=uniq((tx.operations||[]).flatMap(op=>[op.source,op.stage,op.destination]));
++  const matched=paths.filter(p=>roots.some(r=>isInside(r,p)));
++  const result=await reconcilePathsForRoots({index,watcher,journal,roots,paths:matched,reason:'RECOVERY_INDEX_RECONCILE_INCOMPLETE'});
++  journal?.append?.('RECOVERY_INDEX_RECONCILED',{cycleId:tx.cycleId,transactionId:tx.id,payload:{action,ok:result.ok,paths:matched.length,requiresFullRescan:Boolean(result.requiresFullRescan)}});
++  return result;
++}
++async function reconcileStartupWriteFreshness({cycleStore=null,batchStore=null,recoveryService=null,index=null,watcher=null,journal=null,maxCycles=5000}={}){
++  const cycles=cycleStore?.list?.(Math.max(1,Number(maxCycles)||5000))||[];const interruptedIds=cycles.filter(c=>c?.status==='interrupted').map(c=>String(c.id));
++  let batch={changed:0,jobs:[]};try{batch=batchStore?.reconcileInterruptedJobs?.({cycleIds:interruptedIds})||batch;}catch(error){journal?.append?.('STARTUP_BATCH_RECONCILE_FAILED',{payload:{error:error.code||error.message}});}
++  let recovery=[];try{recovery=recoveryService?.inspect?.()||[];}catch(error){journal?.append?.('STARTUP_RECOVERY_INSPECT_FAILED',{payload:{error:error.code||error.message}});}
++  const roots=uniq([
++    ...(batch.jobs||[]).flatMap(job=>[job.source_root||job.root,job.destination_root||job.root]),
++    ...recovery.flatMap(tx=>[tx.root])
++  ]);
++  const marked=roots.length?markRootsUncertain({index,watcher,journal,roots,reason:'STARTUP_WRITE_INTERRUPTION_GAP',details:{interruptedCycles:interruptedIds.length,batchJobs:(batch.jobs||[]).length,recoveryTransactions:recovery.length}}):{ok:true,roots:[],results:[]};
++  const result={schemaVersion:'startup-write-freshness-v1',ok:true,interruptedCycles:interruptedIds.length,batchJobs:(batch.jobs||[]).length,batchJobsChanged:Number(batch.changed||0),recoveryTransactions:recovery.length,rootsMarked:marked.roots.length,roots:marked.roots};
++  if(result.interruptedCycles||result.batchJobs||result.recoveryTransactions)journal?.append?.('STARTUP_WRITE_FRESHNESS_RECONCILED',{payload:result});
++  return result;
++}
++module.exports={markRootsUncertain,reconcilePathsForRoots,reconcileRecoveryTransaction,reconcileStartupWriteFreshness,isInside};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/persistent-file-index.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/persistent-file-index.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/persistent-file-index.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/persistent-file-index.cjs	2026-08-15 16:59:26.590458738 +0000
+@@ -96,6 +96,7 @@
+   _runtimeRow(rootKey){const r=this.st.runtimeGet.get(rootKey);if(!r)return null;let candidate=null;try{candidate=r.rebind_candidate?JSON.parse(r.rebind_candidate):null}catch{}return{available:Boolean(r.available),status:r.status||'unknown',identityKey:r.identity_key||'',volumeUniqueId:r.volume_unique_id||'',driveLetter:r.drive_letter||'',fileSystem:r.file_system||'',driveType:r.drive_type||'',healthStatus:r.health_status||'',lastProbeAt:r.last_probe_at||null,lastSeenAt:r.last_seen_at||null,unavailableSince:r.unavailable_since||null,identityChanged:Boolean(r.identity_changed),rebindCandidate:candidate,lastCode:r.last_code||''};}
+   setRootRuntime(root,state={}){const rr=normalizeDisplayPath(String(root||'')),rk=keyPath(rr),at=now();this.st.runtimeSet.run(rk,state.available===false?0:1,String(state.status||'unknown'),String(state.identityKey||''),String(state.volumeUniqueId||''),String(state.driveLetter||''),String(state.fileSystem||''),String(state.driveType||''),String(state.healthStatus||''),state.lastProbeAt||at,state.lastSeenAt||null,state.unavailableSince||null,state.identityChanged?1:0,state.rebindCandidate?JSON.stringify(state.rebindCandidate):null,String(state.lastCode||''),at);return this._runtimeRow(rk);}
+   rootRuntime(root){return this._runtimeRow(keyPath(normalizeDisplayPath(String(root||''))));}
++  markStale(root,reason='RECONCILE_INCOMPLETE',details=null){const rr=normalizeDisplayPath(String(root||'')),rk=keyPath(rr);const row=this.st.rootGet.get(rk);if(!row)return{ok:false,code:'INDEX_ROOT_NOT_REGISTERED',root:rr};const code=String(reason||'RECONCILE_INCOMPLETE');this.db.prepare(`UPDATE roots SET status='stale',updated_at=?,pause_reason=?,last_error=? WHERE root_key=?`).run(now(),code,code,rk);this.journal?.append('INDEX_ROOT_STALE',{payload:{root:rr,reason:code,details:details||null}});return{ok:true,root:rr,status:'stale',reason:code};}
+   async status(root=''){
+     if(!root)return this.listRoots();
+     const rr=normalizeDisplayPath(String(root));const rk=keyPath(rr);const row=this.st.rootGet.get(rk);const runtime=this._runtimeRow(rk);
+@@ -212,11 +213,12 @@
+     const stack=[full];let files=0,dirs=0,errors=0,truncated=false;
+     while(stack.length&&files<maxSubtreeFiles&&dirs<maxSubtreeDirs){const current=stack.pop();dirs+=1;let dir;try{dir=await fsp.opendir(toFsPath(current));}catch{errors+=1;continue;}let batch=[];try{for await(const entry of dir){if(files>=maxSubtreeFiles){truncated=true;break;}if(entry.name.startsWith('.'))continue;const p=path.join(current,entry.name);if(entry.isSymbolicLink())continue;if(entry.isDirectory()){if(!DEFAULT_SKIP_NAMES.has(entry.name.toLowerCase()))stack.push(p);continue;}if(!entry.isFile())continue;try{const st=await fsp.stat(toFsPath(p));batch.push({path:p,name:entry.name,ext:path.extname(entry.name).toLowerCase(),size:Number(st.size||0),mtimeMs:Number(st.mtimeMs||0),ctimeMs:Number(st.ctimeMs||0)});files+=1;if(batch.length>=500){this._upsertFileBatch(rootKey,rr,generation,batch);batch=[];}}catch{errors+=1;}}}catch{errors+=1;}finally{try{await dir.close();}catch{}}if(batch.length)this._upsertFileBatch(rootKey,rr,generation,batch);}
+     if(stack.length||files>=maxSubtreeFiles||dirs>=maxSubtreeDirs)truncated=true;
+-    return{ok:true,kind:'directory-reconciled',changes:files,dirs,errors,truncated};
++    const requiresFullRescan=Boolean(truncated||errors>0);if(requiresFullRescan)this.markStale(rr,truncated?'SUBTREE_RECONCILE_TRUNCATED':'SUBTREE_RECONCILE_ERRORS',{target:full,files,dirs,errors,truncated,maxSubtreeFiles,maxSubtreeDirs});
++    return{ok:!requiresFullRescan,kind:'directory-reconciled',changes:files,dirs,errors,truncated,partial:requiresFullRescan,requiresFullRescan};
+   }
+   async reconcileBatch(events=[]){
+-    const results=[];let skipped=0;for(const e of events.slice(0,500)){if(!this.st.rootGet.get(keyPath(e.root))){skipped+=1;continue;}try{results.push({eventId:e.id,...await this.reconcilePath(e.root,e.path)})}catch(error){results.push({eventId:e.id,ok:false,code:error.code||'INDEX_RECONCILE_FAILED',message:error.message})}}
+-    const summary={events:results.length,skipped,ok:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,changes:results.reduce((n,x)=>n+Number(x.changes||0),0)};if(results.length)this.journal?.append('INDEX_WATCH_RECONCILED',{payload:summary});return{summary,results};
++    const results=[];let skipped=0;const staleRoots=new Set();for(const e of events.slice(0,500)){const rr=normalizeDisplayPath(String(e.root||''));if(!this.st.rootGet.get(keyPath(rr))){skipped+=1;continue;}try{const r=await this.reconcilePath(rr,e.path);results.push({eventId:e.id,root:rr,...r});if(r?.ok===false||r?.requiresFullRescan)staleRoots.add(rr);}catch(error){results.push({eventId:e.id,root:rr,ok:false,code:error.code||'INDEX_RECONCILE_FAILED',message:error.message,requiresFullRescan:true});staleRoots.add(rr);this.markStale(rr,error.code||'INDEX_RECONCILE_FAILED',{path:e.path,message:error.message});}}
++    const failed=results.filter(x=>x.ok===false).length,requiresFullRescan=staleRoots.size>0;const summary={events:results.length,skipped,ok:results.filter(x=>x.ok).length,failed,changes:results.reduce((n,x)=>n+Number(x.changes||0),0),requiresFullRescan,staleRoots:[...staleRoots]};if(results.length)this.journal?.append('INDEX_WATCH_RECONCILED',{payload:summary});return{ok:!requiresFullRescan,requiresFullRescan,staleRoots:[...staleRoots],summary,results};
+   }
+   search({root='',query='',extensions=[],categories=[],minBytes=0,maxBytes=0,modifiedWithinDays=0,olderThanDays=0,limit=200,offset=0,nowMs=Date.now()}={}){
+     const where=[],args=[];let rootKey='';if(root){rootKey=keyPath(root);where.push('root_key=?');args.push(rootKey);}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/persistent-index-cycles.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/persistent-index-cycles.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/persistent-index-cycles.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/persistent-index-cycles.cjs	2026-08-15 17:05:17.215983308 +0000
+@@ -3,6 +3,7 @@
+ function step(id,kind,status,label,detail=''){return{id,kind,status,label,detail,at:at()};}
+ function evidence(code,data={}){return{at:at(),code,...data};}
+ function requireIndex(index){if(!index)throw Object.assign(new Error('Persistent Index در Runtime فعلی در دسترس نیست.'),{code:'INDEX_SQLITE_UNAVAILABLE'});return index;}
++async function requireFreshIndex(index,root){requireIndex(index);const status=await index.status(root);if(status.status==='not-indexed')throw Object.assign(new Error('ابتدا Persistent Index را برای این Workspace بسازید.'),{code:'INDEX_REQUIRED'});if(status.status!=='completed')throw Object.assign(new Error('Persistent Index این Workspace تازه و کامل نیست؛ ابتدا Full Scan/Resume را کامل کنید.'),{code:'INDEX_NOT_FRESH',details:{status:status.status,queue:status.queue||0,lastError:status.lastError||null}});return status;}
+ function persistentIndexScanCycle({index,resourceGuard=null}){
+   return{async next(cycle){requireIndex(index);
+     const first=cycle.iteration===1;const resume=first?cycle.input.resume!==false:true;
+@@ -18,9 +19,9 @@
+   return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};const result=index.maintain({deep:Boolean(cycle.input.deep),checkpoint:cycle.input.checkpoint!==false,optimize:cycle.input.optimize!==false,pruneErrors:cycle.input.pruneErrors!==false});return{status:'completed',result,steps:[step('integrity','verify',result.ok?'completed':'failed','SQLite Integrity Check',result.ok?'quick_check = ok':(result.after?.check||[]).join(' · ')),step('maintenance','agent-local','completed','Checkpoint + Optimize',`Hash orphan ${result.orphanHashesRemoved} · Error prune ${result.oldErrorsRemoved}`)],evidence:[...cycle.evidence,evidence('PERSISTENT_INDEX_MAINTENANCE',{ok:result.ok,dbBytes:result.after?.dbBytes||0,walBytes:result.after?.walBytes||0,freeBytes:result.after?.freeBytes||0,orphanHashesRemoved:result.orphanHashesRemoved,oldErrorsRemoved:result.oldErrorsRemoved})]};},async onEnd(cycle){return{summary:cycle.result?.ok?'Persistent Index سالم است و maintenance agent-local انجام شد.':'SQLite integrity check نیاز به بررسی دارد.',quality:cycle.result?.ok?'verified':'warning',nextCycleSuggestions:[]};}};
+ }
+ function indexedFileSearchCycle({index}){
+-  return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};const result=index.search({root:cycle.input.root,...(cycle.input.filters||{}),limit:cycle.input.limit||500,offset:cycle.input.offset||0});return{status:'completed',result,steps:[step('query','read','completed','SQLite Indexed Search',`${result.total} نتیجه`),step('verify','verify','completed','Low-RAM Query','نتایج مستقیماً از Index صفحه‌بندی شدند؛ Tree scan اجرا نشد.')],evidence:[...cycle.evidence,evidence('INDEXED_SEARCH_COMPLETE',{root:result.root,query:result.query,total:result.total,returned:result.rows.length,offset:result.offset})]};},async onEnd(cycle){return{summary:`${cycle.result?.total||0} نتیجه از Persistent Index پیدا شد؛ بدون اسکن مجدد Tree.`,quality:'verified',nextCycleSuggestions:[]};}};
++  return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};await requireFreshIndex(index,cycle.input.root);const result=index.search({root:cycle.input.root,...(cycle.input.filters||{}),limit:cycle.input.limit||500,offset:cycle.input.offset||0});return{status:'completed',result,steps:[step('query','read','completed','SQLite Indexed Search',`${result.total} نتیجه`),step('verify','verify','completed','Low-RAM Query','نتایج مستقیماً از Index صفحه‌بندی شدند؛ Tree scan اجرا نشد.')],evidence:[...cycle.evidence,evidence('INDEXED_SEARCH_COMPLETE',{root:result.root,query:result.query,total:result.total,returned:result.rows.length,offset:result.offset})]};},async onEnd(cycle){return{summary:`${cycle.result?.total||0} نتیجه از Persistent Index پیدا شد؛ بدون اسکن مجدد Tree.`,quality:'verified',nextCycleSuggestions:[]};}};
+ }
+ function indexedDuplicatesCycle({index,resourceGuard=null}){
+-  return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};const status=await index.status(cycle.input.root);if(status.status==='not-indexed')throw Object.assign(new Error('ابتدا Persistent Index را برای این Workspace بسازید.'),{code:'INDEX_REQUIRED'});const requestedConcurrency=Number(cycle.input.concurrency||3),effectiveConcurrency=resourceGuard?.recommendConcurrency?.(requestedConcurrency)||requestedConcurrency;const result=await findExactDuplicatesFromIndex(index,cycle.input.root,{concurrency:effectiveConcurrency,maxGroups:Number(cycle.input.maxGroups||5000),maxCandidateSizeGroups:Number(cycle.input.maxCandidateSizeGroups||10000),maxCandidateFiles:Number(cycle.input.maxCandidateFiles||100000),minBytes:Number(cycle.input.minBytes||1)});result.resourcePressure=resourceGuard?.snapshot?.()||null;result.requestedConcurrency=requestedConcurrency;result.effectiveConcurrency=effectiveConcurrency;return{status:'completed',result,steps:[step('candidates','read','completed','Duplicate Candidate Query',`${result.candidateSizeGroups} Size group · ${result.candidateFiles} candidate`),step('hash','analysis','completed','Stable SHA-256 + Hash Cache',`${result.hashedFiles} Hash جدید · ${result.cacheHits} Cache hit`),step('verify','verify','completed','Exact Duplicate Verification',`${result.groupsTotal} گروه قطعی · ${result.errorsTotal} خطا`)],evidence:[...cycle.evidence,evidence('INDEXED_DUPLICATES_COMPLETE',{groups:result.groupsTotal,duplicateFiles:result.duplicateFiles,reclaimableBytes:result.reclaimableBytes,candidateFiles:result.candidateFiles,hashedFiles:result.hashedFiles,cacheHits:result.cacheHits,truncated:result.candidateTraversalTruncated})]};},async onEnd(cycle){return{summary:`${cycle.result?.groupsTotal||0} گروه Duplicate قطعی با candidateهای SQLite و SHA-256 تأیید شد.`,quality:'verified',nextCycleSuggestions:cycle.result?.groupsTotal?['duplicate-review']:[]};}};
++  return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};await requireFreshIndex(index,cycle.input.root);const requestedConcurrency=Number(cycle.input.concurrency||3),effectiveConcurrency=resourceGuard?.recommendConcurrency?.(requestedConcurrency)||requestedConcurrency;const result=await findExactDuplicatesFromIndex(index,cycle.input.root,{concurrency:effectiveConcurrency,maxGroups:Number(cycle.input.maxGroups||5000),maxCandidateSizeGroups:Number(cycle.input.maxCandidateSizeGroups||10000),maxCandidateFiles:Number(cycle.input.maxCandidateFiles||100000),minBytes:Number(cycle.input.minBytes||1)});result.resourcePressure=resourceGuard?.snapshot?.()||null;result.requestedConcurrency=requestedConcurrency;result.effectiveConcurrency=effectiveConcurrency;return{status:'completed',result,steps:[step('candidates','read','completed','Duplicate Candidate Query',`${result.candidateSizeGroups} Size group · ${result.candidateFiles} candidate`),step('hash','analysis','completed','Stable SHA-256 + Hash Cache',`${result.hashedFiles} Hash جدید · ${result.cacheHits} Cache hit`),step('verify','verify','completed','Exact Duplicate Verification',`${result.groupsTotal} گروه قطعی · ${result.errorsTotal} خطا`)],evidence:[...cycle.evidence,evidence('INDEXED_DUPLICATES_COMPLETE',{groups:result.groupsTotal,duplicateFiles:result.duplicateFiles,reclaimableBytes:result.reclaimableBytes,candidateFiles:result.candidateFiles,hashedFiles:result.hashedFiles,cacheHits:result.cacheHits,truncated:result.candidateTraversalTruncated})]};},async onEnd(cycle){return{summary:`${cycle.result?.groupsTotal||0} گروه Duplicate قطعی با candidateهای SQLite و SHA-256 تأیید شد.`,quality:'verified',nextCycleSuggestions:cycle.result?.groupsTotal?['duplicate-review']:[]};}};
+ }
+ module.exports={persistentIndexScanCycle,persistentIndexMaintenanceCycle,indexedFileSearchCycle,indexedDuplicatesCycle};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/rc-self-check-service.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/rc-self-check-service.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/rc-self-check-service.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/rc-self-check-service.cjs	2026-08-15 16:59:51.035255706 +0000
+@@ -8,7 +8,7 @@
+  run({deepIndex=false}={}){const rows=[];
+    const writable=this._userDataWritable();rows.push(writable.ok?check('user-data','pass','USERDATA_WRITABLE','Runtime state directory writable.'):check('user-data','block',writable.code,'Runtime state directory is not writable.'));
+    const j=this.journal?.verify?.()||{ok:false,code:'JOURNAL_UNAVAILABLE'};rows.push(j.ok?check('journal','pass','JOURNAL_OK','Event journal hash chain is valid.',{count:Number(j.count||0)}):check('journal','block','JOURNAL_INTEGRITY_FAILED','Event journal integrity failed.',{invalidSeq:j.invalidSeq||null,error:j.error||null}));
+-   let ih={ok:false,code:'INDEX_UNAVAILABLE'};try{ih=this.persistentFileIndex?.health?.({deep:Boolean(deepIndex)})||ih;}catch(error){ih={ok:false,code:error.code||'INDEX_HEALTH_FAILED'};}rows.push(ih.ok?check('index','pass','INDEX_OK','Persistent index health check passed.',{activeScans:Number(ih.activeScans||0),roots:ih.roots||{}}):this.persistentFileIndex?check('index','block','INDEX_HEALTH_FAILED','Persistent index health check failed.',{check:ih.check||null,code:ih.code||null}):check('index','warn','INDEX_UNAVAILABLE','Persistent index is unavailable; legacy capabilities can still run.'));
++   let ih={ok:false,code:'INDEX_UNAVAILABLE'};try{ih=this.persistentFileIndex?.health?.({deep:Boolean(deepIndex)})||ih;}catch(error){ih={ok:false,code:error.code||'INDEX_HEALTH_FAILED'};}const staleRoots=Number(ih?.roots?.stale||0);rows.push(ih.ok?(staleRoots?check('index','warn','INDEX_STALE_ROOTS','Persistent index database is healthy but one or more roots require a fresh full scan.',{activeScans:Number(ih.activeScans||0),staleRoots,roots:ih.roots||{}}):check('index','pass','INDEX_OK','Persistent index health check passed.',{activeScans:Number(ih.activeScans||0),roots:ih.roots||{}})):this.persistentFileIndex?check('index','block','INDEX_HEALTH_FAILED','Persistent index health check failed.',{check:ih.check||null,code:ih.code||null}):check('index','warn','INDEX_UNAVAILABLE','Persistent index is unavailable; legacy capabilities can still run.'));
+    const rec=this.recoveryService?.inspect?.()||[];rows.push(rec.length?check('recovery','warn','RECOVERY_PENDING','Recoverable/interrupted transactions need review.',{count:rec.length,manualReview:rec.filter(x=>x.recovery?.manualReview).length}):check('recovery','pass','RECOVERY_CLEAR','No recoverable transaction is pending.'));
+    const ws=this.watcherService?.status?.()||{};const dirty=Array.isArray(ws.dirtyRoots)?ws.dirtyRoots.length:0,blocked=Array.isArray(ws.blockedRoots)?ws.blockedRoots.length:0;rows.push(dirty||blocked?check('watcher','warn','WATCHER_ATTENTION','Watcher has dirty or blocked roots.',{dirty,blocked,pending:Number(ws.pending||0)}):check('watcher','pass','WATCHER_OK','Watcher state has no dirty/blocked root.',{watched:Number(ws.watched||0),pending:Number(ws.pending||0)}));
+    const rs=this.rootResilienceService?.status?.()||{roots:[]};const roots=Array.isArray(rs.roots)?rs.roots:[];const identity=roots.filter(x=>x.identityChanged).length,unavailable=roots.filter(x=>String(x.status||'').includes('unavailable')).length;rows.push(identity?check('volumes','block','VOLUME_IDENTITY_CHANGED','At least one watched root has a changed volume identity.',{identityChanged:identity,unavailable,total:roots.length}):unavailable?check('volumes','warn','VOLUME_UNAVAILABLE','At least one watched root is unavailable.',{unavailable,total:roots.length}):check('volumes','pass','VOLUMES_OK','Known root identities are not in a changed state.',{total:roots.length}));
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/recovery-service.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/recovery-service.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/recovery-service.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/recovery-service.cjs	2026-08-15 16:59:12.614472856 +0000
+@@ -3,12 +3,14 @@
+ const path=require('path');
+ const {hashFile}=require('./duplicate-finder.cjs');
+ function exists(p){try{return Boolean(p)&&fs.existsSync(p);}catch{return false;}}
+-function pathState(p,op){if(!exists(p))return{exists:false,valid:false};try{const st=fs.statSync(p);const kind=String(op?.meta?.kind||'');const dir=kind==='quarantine-dir'||kind.endsWith('-dir');const typeOk=dir?st.isDirectory():st.isFile();const sizeOk=dir||Number(st.size)===Number(op.size);return{exists:true,valid:typeOk&&sizeOk,typeOk,sizeOk,size:st.size};}catch{return{exists:true,valid:false};}}
++function statType(st){if(!st)return'missing';if(st.isFile())return'file';if(st.isDirectory())return'directory';if(st.isSymbolicLink())return'link';return'other';}
++function snapshotMatch(st,snap,{allowMtimeDriftMs=2}={}){if(!snap)return true;if(!st||statType(st)!==String(snap.type||''))return false;if(snap.type==='file'&&Number(st.size)!==Number(snap.size))return false;if(Math.abs(Number(st.mtimeMs||0)-Number(snap.mtimeMs||0))>allowMtimeDriftMs)return false;if(Number(snap.dev||0)&&Number(st.dev||0)&&Number(snap.dev)!==Number(st.dev))return false;if(Number(snap.ino||0)&&Number(st.ino||0)&&Number(snap.ino)!==Number(st.ino))return false;return true;}
++function pathState(p,op,{matchSnapshot=true}={}){if(!exists(p))return{exists:false,valid:false};try{const st=fs.lstatSync(p);const kind=String(op?.meta?.kind||'');const dir=kind==='quarantine-dir'||kind.endsWith('-dir');const typeOk=dir?st.isDirectory():st.isFile();const sizeOk=dir||Number(st.size)===Number(op.size);const snapshotOk=!matchSnapshot||snapshotMatch(st,op?.meta?.sourceSnapshot||null);return{exists:true,valid:typeOk&&sizeOk&&snapshotOk,typeOk,sizeOk,snapshotOk,size:st.size};}catch{return{exists:true,valid:false};}}
+ function isCopyOp(op){return String(op?.meta?.kind||'')==='explorer-copy-file';}
+ async function verifyCopyMatch(source,target){const ss=await fsp.stat(source),ts=await fsp.stat(target);if(!ss.isFile()||!ts.isFile()||Number(ss.size)!==Number(ts.size))return{ok:false,code:'RECOVERY_COPY_SIZE_MISMATCH'};const [a,b]=await Promise.all([hashFile(source),hashFile(target)]);return a===b?{ok:true,sha256:a}:{ok:false,code:'RECOVERY_COPY_CONTENT_MISMATCH',sourceHash:a,targetHash:b};}
+ async function syncFile(file){const fh=await fsp.open(file,'r');try{await fh.sync();}finally{await fh.close();}}
+-function classifyOp(op){const ss=pathState(op.source,op),gs=op.stage?pathState(op.stage,op):{exists:false,valid:false},ds=pathState(op.destination,op);const s=ss.exists,g=gs.exists,d=ds.exists;
+-  if(isCopyOp(op)){if(s&&!g&&!d&&ss.valid)return{state:'copy-source',safeResume:true,safeRollback:true};if(s&&g&&!d&&ss.valid&&gs.valid)return{state:'copy-staged',safeResume:true,safeRollback:true};if(s&&!g&&d&&ss.valid&&ds.valid)return{state:'copy-destination',safeResume:true,safeRollback:true};if(!s)return{state:'copy-source-missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
++function classifyOp(op){const copy=isCopyOp(op);const ss=pathState(op.source,op,{matchSnapshot:true}),gs=op.stage?pathState(op.stage,op,{matchSnapshot:!copy}):{exists:false,valid:false},ds=pathState(op.destination,op,{matchSnapshot:!copy});const s=ss.exists,g=gs.exists,d=ds.exists;
++  if(copy){if(s&&!g&&!d&&ss.valid)return{state:'copy-source',safeResume:true,safeRollback:true};if(s&&g&&!d&&ss.valid&&gs.valid)return{state:'copy-staged',safeResume:true,safeRollback:true};if(s&&!g&&d&&ss.valid&&ds.valid)return{state:'copy-destination',safeResume:true,safeRollback:true};if(!s)return{state:'copy-source-missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
+   if(s&&!g&&!d&&ss.valid)return{state:'source',safeResume:true,safeRollback:true};if(op.stage&&!s&&g&&!d&&gs.valid)return{state:'staged',safeResume:true,safeRollback:true};if(!s&&!g&&d&&ds.valid)return{state:'destination',safeResume:true,safeRollback:true};if(!s&&!g&&!d)return{state:'missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
+ class RecoveryService{
+  constructor({transactionStore,cycleStore=null,journal=null,onRecovered=null}={}){this.store=transactionStore;this.cycleStore=cycleStore;this.journal=journal;this.onRecovered=onRecovered;}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/transaction-store.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/transaction-store.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/electron/services/transaction-store.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/electron/services/transaction-store.cjs	2026-08-15 16:58:51.471268548 +0000
+@@ -3,10 +3,12 @@
+ const crypto=require('crypto');
+ function safeId(v=''){return String(v).replace(/[^a-zA-Z0-9_-]/g,'_');}
+ function atomic(file,value){const tmp=`${file}.tmp-${process.pid}-${Date.now()}`;fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,file);}
++function statType(st){if(!st)return'missing';if(st.isFile())return'file';if(st.isDirectory())return'directory';if(st.isSymbolicLink())return'link';return'other';}
++function sourceSnapshot(file){try{const st=fs.lstatSync(file);return{type:statType(st),size:Number(st.size||0),mtimeMs:Number(st.mtimeMs||0),ctimeMs:Number(st.ctimeMs||0),dev:Number(st.dev||0),ino:Number(st.ino||0)};}catch{return null;}}
+ class TransactionStore{
+  constructor(baseDir,{journal=null,maxTransactions=500}={}){this.dir=path.join(baseDir,'transactions');this.journal=journal;this.maxTransactions=maxTransactions;fs.mkdirSync(this.dir,{recursive:true});}
+  file(id){return path.join(this.dir,`${safeId(id)}.json`);}
+- create({kind,cycleId=null,root='',operations=[]}){const id=`tx-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;const now=new Date().toISOString();const tx={schemaVersion:'workspace-file-transaction-v1',id,kind,cycleId,root:path.resolve(root||'.'),status:'prepared',createdAt:now,updatedAt:now,finishedAt:null,operations:operations.map((o,i)=>({index:i,source:path.resolve(o.source),destination:path.resolve(o.destination),stage:o.stage?path.resolve(o.stage):null,size:Number(o.size||0),meta:{kind:String(o.kind||''),itemIds:Array.isArray(o.itemIds)?o.itemIds:[]},state:'pending',error:null}))};this.save(tx);this.journal?.append('TRANSACTION_PREPARED',{cycleId,transactionId:id,payload:{kind,operations:tx.operations.length,root:tx.root}});return tx;}
++ create({kind,cycleId=null,root='',operations=[]}){const id=`tx-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;const now=new Date().toISOString();const tx={schemaVersion:'workspace-file-transaction-v1',id,kind,cycleId,root:path.resolve(root||'.'),status:'prepared',createdAt:now,updatedAt:now,finishedAt:null,operations:operations.map((o,i)=>{const src=path.resolve(o.source),meta={...(o.meta&&typeof o.meta==='object'?o.meta:{}),kind:String(o.kind||o.meta?.kind||''),itemIds:Array.isArray(o.itemIds)?o.itemIds:Array.isArray(o.meta?.itemIds)?o.meta.itemIds:[]};if(!meta.sourceSnapshot)meta.sourceSnapshot=sourceSnapshot(src);return{index:i,source:src,destination:path.resolve(o.destination),stage:o.stage?path.resolve(o.stage):null,size:Number(o.size||meta.sourceSnapshot?.size||0),meta,state:'pending',error:null};})};this.save(tx);this.journal?.append('TRANSACTION_PREPARED',{cycleId,transactionId:id,payload:{kind,operations:tx.operations.length,root:tx.root}});return tx;}
+  save(tx){tx.updatedAt=new Date().toISOString();atomic(this.file(tx.id),tx);this.prune();return tx;}
+  get(id){try{return JSON.parse(fs.readFileSync(this.file(id),'utf8'));}catch{return null;}}
+  list({recoverableOnly=false,limit=500}={}){let rows=[];try{rows=fs.readdirSync(this.dir).filter(f=>f.endsWith('.json')).map(f=>{try{return JSON.parse(fs.readFileSync(path.join(this.dir,f),'utf8'))}catch{return null}}).filter(Boolean);}catch{}if(recoverableOnly)rows=rows.filter(x=>!['completed','rolled-back','abandoned'].includes(x.status));return rows.sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,limit);}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/package.json /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/package.json
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/package.json	2026-08-15 15:29:44.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/package.json	2026-08-15 17:06:48.832479745 +0000
+@@ -2,7 +2,7 @@
+   "name": "windows-workspace-agent",
+   "version": "1.0.0-rc1",
+   "private": true,
+-  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit5 write-integrity hardening: crash-safe File Explorer batch resume/undo, destination race guards, watcher gap truthfulness, explicit configuration capacity, plus cert-kit4 dual-Windows release-lane closure.",
++  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit6 long-job consistency hardening: crash-window commit evidence, idempotent rollback retry, recovery identity binding, startup write-gap detection, and persistent-index freshness truthfulness, while retaining cert-kit5 write integrity and cert-kit4 release-lane closure.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+@@ -15,7 +15,7 @@
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+     "test:windows-uia-uat": "node tests/windows-uia-action.uat.cjs",
+-    "test:index": "node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs",
++    "test:index": "node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/index-freshness-guard-rc1.test.cjs",
+     "test:index-scale": "node --expose-gc tests/persistent-index-scale-v080.cjs",
+     "test:windows-index-uat": "node tests/persistent-index-windows.uat.cjs",
+     "build:win:installer": "npm run build && electron-builder --win nsis --x64",
+@@ -54,7 +54,7 @@
+     "test:windows-grounding-v093-uat": "node tests/windows-production-grounding-v093.uat.cjs",
+     "test:explorer": "node tests/file-explorer-skill-pack-v094.test.cjs",
+     "test:windows-explorer-uat": "node tests/windows-file-explorer-v094.uat.cjs",
+-    "test:explorer-batch": "node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs",
++    "test:explorer-batch": "node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs",
+     "test:windows-explorer-v095-uat": "node tests/windows-file-explorer-v095.uat.cjs",
+     "test:explorer-production": "node tests/file-explorer-production-v096.test.cjs && node tests/explorer-batch-schema-v096.test.cjs",
+     "test:windows-explorer-v096-uat": "node tests/windows-file-explorer-v096.uat.cjs",
+@@ -74,7 +74,7 @@
+     "verify:manual-evidence:rc1": "node scripts/verify-manual-evidence-rc1.cjs",
+     "certify:envelope:rc1": "node scripts/rc1-certification-envelope.cjs",
+     "certify:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-certify.ps1",
+-    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs",
++    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs",
+     "verify:release-manifest:rc1": "node scripts/verify-release-manifest-rc1.cjs",
+     "finalize:rc1": "node scripts/rc1-finalize.cjs"
+   },
+@@ -135,6 +135,6 @@
+     "dataEpoch": 1,
+     "releaseCandidate": "rc1",
+     "coreFeatureAdditionsAllowed": false,
+-    "toolingRevision": "cert-kit5"
++    "toolingRevision": "cert-kit6"
+   }
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/scripts/rc1-finalize.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/scripts/rc1-finalize.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/scripts/rc1-finalize.cjs	2026-08-15 15:29:44.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/scripts/rc1-finalize.cjs	2026-08-15 17:06:48.832852658 +0000
+@@ -8,7 +8,7 @@
+ function meta(p){const a=path.resolve(root,p),s=fs.statSync(a);return{path:a,bytes:s.size,sha256:shaFile(a)}}
+ function fail(code,message,extra={}){console.error(JSON.stringify({ok:false,code,message,...extra},null,2));process.exit(1)}
+ const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+-if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit5'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT5_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit5 معتبر است.');
++if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit6'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT6_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit6 معتبر است.');
+ const artifactReport=arg('artifact-report'),peerReport=arg('peer-report'),releaseManifest=arg('release-manifest'),manualEvidence=arg('manual-evidence');
+ for(const [name,value] of Object.entries({artifactReport,peerReport,releaseManifest,manualEvidence}))if(!value||!fs.existsSync(path.resolve(root,value)))fail('FINALIZATION_INPUT_REQUIRED',`${name} معتبر لازم است.`,{name,value});
+ const requireSigning=process.argv.includes('--require-signing');
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/scripts/verify-rc1-source.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/scripts/verify-rc1-source.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/scripts/verify-rc1-source.cjs	2026-08-15 15:29:44.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/scripts/verify-rc1-source.cjs	2026-08-15 17:06:48.832796084 +0000
+@@ -7,7 +7,7 @@
+ const rc=pkg.workspaceAgentRelease||{};
+ if(pkg.version!=='1.0.0-rc1')fail('RC1_VERSION_REQUIRED','Source candidate باید دقیقاً version=1.0.0-rc1 باشد.',{version:pkg.version});
+ if(rc.channel!=='rc'||rc.releaseCandidate!=='rc1'||rc.featureFreeze!==true||rc.coreFeatureAdditionsAllowed!==false)fail('RC1_FREEZE_CONTRACT_INVALID','RC channel / feature-freeze contract نامعتبر است.',{workspaceAgentRelease:rc});
+-if(rc.toolingRevision!=='cert-kit5')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit5 باشد.',{toolingRevision:rc.toolingRevision});
++if(rc.toolingRevision!=='cert-kit6')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit6 باشد.',{toolingRevision:rc.toolingRevision});
+ if(rc.baselineVersion!=='0.9.8'||compareVersions(pkg.version,rc.baselineVersion)<=0)fail('RC1_BASELINE_INVALID','Baseline باید 0.9.8 و RC جدیدتر از آن باشد.',{baseline:rc.baselineVersion,version:pkg.version});
+ if(Number(rc.dataEpoch)!==Number(DATA_EPOCH))fail('RC1_DATA_EPOCH_MISMATCH','Data Epoch package با Update Guard تطابق ندارد.',{packageEpoch:rc.dataEpoch,runtimeEpoch:DATA_EPOCH});
+ if(pkg.build?.appId!=='com.workspaceagent.windows')fail('RC1_APP_ID_CHANGED','App ID در RC نباید تغییر کند.',{appId:pkg.build?.appId});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/index-freshness-guard-rc1.test.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/index-freshness-guard-rc1.test.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/index-freshness-guard-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/index-freshness-guard-rc1.test.cjs	2026-08-15 17:05:17.216149044 +0000
+@@ -0,0 +1,45 @@
++const assert=require('assert');
++const fs=require('fs');
++const fsp=fs.promises;
++const path=require('path');
++const os=require('os');
++const {PersistentFileIndex}=require('../electron/services/persistent-file-index.cjs');
++const {FileWatcherService}=require('../electron/services/file-watcher-service.cjs');
++const {reconcilePathsForRoots}=require('../electron/services/index-freshness-guard.cjs');
++const {RCSelfCheckService}=require('../electron/services/rc-self-check-service.cjs');
++const {explorerSearch}=require('../electron/services/file-explorer-service.cjs');
++const {indexedFileSearchCycle,indexedDuplicatesCycle}=require('../electron/services/persistent-index-cycles.cjs');
++
++(async()=>{
++  const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-rc1-index-freshness-')),root=path.join(base,'root');await fsp.mkdir(root,{recursive:true});
++  await fsp.writeFile(path.join(root,'seed.txt'),'seed');
++  const index=new PersistentFileIndex(path.join(base,'index'));
++  let scan=await index.scan(root,{resume:false,maxDirsSession:100,maxWallTimeMs:10000});if(scan.status!=='completed')scan=await index.scan(root,{resume:true,maxDirsSession:100,maxWallTimeMs:10000});assert.equal(scan.status,'completed');
++  const indexedSearch=await explorerSearch(root,{query:'seed',index,limit:20});assert.equal(indexedSearch.source,'persistent-index');
++
++  // A bounded subtree reconcile that cannot cover the full directory must never leave the root claiming "completed".
++  const large=path.join(root,'large');await fsp.mkdir(large);for(let i=0;i<7;i++)await fsp.writeFile(path.join(large,`f-${i}.txt`),String(i));
++  const partial=await index.reconcilePath(root,large,{maxSubtreeFiles:2,maxSubtreeDirs:10});
++  assert.equal(partial.ok,false);assert.equal(partial.requiresFullRescan,true);assert.equal((await index.status(root)).status,'stale');
++  const fallbackSearch=await explorerSearch(root,{query:'seed',index,limit:20,maxFiles:1000});assert.equal(fallbackSearch.source,'bounded-scan');
++  await assert.rejects(()=>indexedFileSearchCycle({index}).next({steps:[],evidence:[],input:{root,filters:{query:'seed'}}}),e=>e.code==='INDEX_NOT_FRESH');
++  await assert.rejects(()=>indexedDuplicatesCycle({index}).next({steps:[],evidence:[],input:{root}}),e=>e.code==='INDEX_NOT_FRESH');
++
++  // Verified-write reconciliation propagates partial truth to watcher dirty state instead of pretending index freshness.
++  const watcher=new FileWatcherService(path.join(base,'watcher'),{debounceMs:60000});
++  const guarded=await reconcilePathsForRoots({index,watcher,roots:[root],paths:[large],reason:'TEST_RECONCILE_GAP'});
++  assert.equal(guarded.ok,false);assert.equal(guarded.requiresFullRescan,true);assert(watcher.status().dirtyRoots.some(x=>path.resolve(x.root)===path.resolve(root)));
++
++  // Watch delivery that resolves with a partial result is itself a rescan gap, not a successful delivery claim.
++  const watcher2=new FileWatcherService(path.join(base,'watcher2'),{onBatch:async batch=>({ok:false,requiresFullRescan:true,staleRoots:[root],summary:{failed:1}})});
++  watcher2.deliveryQueue.push([{id:'e1',root,path:large}]);await watcher2._drain();
++  assert.equal(watcher2.status().needsFullRescan,true);assert.equal(watcher2.status().reconcileWarnings,1);
++
++  // RC self-check surfaces stale roots as a warning rather than a clean index PASS.
++  const self=new RCSelfCheckService({userData:base,appVersion:'1.0.0-rc1',persistentFileIndex:index,watcherService:watcher});
++  const report=self.run({deepIndex:false});
++  const serialized=JSON.stringify(report);assert(serialized.includes('INDEX_STALE_ROOTS'),'stale index must be visible in self-check evidence');
++
++  watcher.stopAll();watcher2.stopAll();index.close();await fsp.rm(base,{recursive:true,force:true});
++  console.log('index-freshness-guard-rc1.test.cjs PASS',{partialTruth:true,indexFallback:true,staleIndexedSkillsBlocked:true,watcherDirty:true,selfCheckStale:true});
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/long-job-recovery-index-rc1.test.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/long-job-recovery-index-rc1.test.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/long-job-recovery-index-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/long-job-recovery-index-rc1.test.cjs	2026-08-15 17:04:20.960239526 +0000
+@@ -0,0 +1,56 @@
++const assert=require('assert');
++const fs=require('fs');
++const fsp=fs.promises;
++const path=require('path');
++const os=require('os');
++const crypto=require('crypto');
++const {ExplorerBatchStore}=require('../electron/services/explorer-batch-store.cjs');
++const {buildBatchManifest,processBatchChunk,undoBatch}=require('../electron/services/explorer-batch-service.cjs');
++const {TransactionStore}=require('../electron/services/transaction-store.cjs');
++const {classifyOp}=require('../electron/services/recovery-service.cjs');
++
++async function write(p,text){await fsp.mkdir(path.dirname(p),{recursive:true});await fsp.writeFile(p,text);}
++async function hash(p){return crypto.createHash('sha256').update(await fsp.readFile(p)).digest('hex');}
++
++(async()=>{
++  const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-rc1-long-job-'));
++  const root=path.join(base,'workspace'),dest=path.join(root,'dest');await fsp.mkdir(dest,{recursive:true});
++  const store=new ExplorerBatchStore(base);
++
++  // Crash exactly after stage->destination rename but before SQLite item commit: commit-ready evidence resumes safely.
++  await write(path.join(root,'replace.txt'),'NEW-VALUE');await write(path.join(dest,'replace.txt'),'OLD-VALUE');
++  const plan=await buildBatchManifest({root,operation:'copy',sourcesRelative:['replace.txt'],destinationDirRelative:'dest',conflictPolicy:'replace',duplicateAware:false});
++  store.createJob({id:'commit-window',cycleId:'cycle-commit-window',root,sourceRoot:root,destinationRoot:root,operation:'copy',destinationDir:dest,conflictPolicy:'replace',duplicateAware:false,items:plan.items});
++  const artifactRoot=path.join(root,'.workspace-agent-batch','commit-window'),stageDir=path.join(artifactRoot,'stage'),backupDir=path.join(artifactRoot,'backup');
++  await fsp.mkdir(stageDir,{recursive:true});await fsp.mkdir(backupDir,{recursive:true});
++  const stage=path.join(stageDir,'0.part'),backup=path.join(backupDir,'0-replace.txt');
++  await fsp.copyFile(path.join(root,'replace.txt'),stage);await fsp.rename(path.join(dest,'replace.txt'),backup);
++  const h=await hash(stage);store.updateItem('commit-window',0,{state:'commit-ready',stagePath:stage,backupPath:backup,sourceHash:h,destinationHash:h});
++  await fsp.rename(stage,path.join(dest,'replace.txt')); // simulated crash window: DB still says commit-ready
++  let out=await processBatchChunk(store,'commit-window',{limit:2});
++  assert.equal(out.status,'completed');assert.equal(store.item('commit-window',0).state,'done');assert.equal(await fsp.readFile(path.join(dest,'replace.txt'),'utf8'),'NEW-VALUE');
++  let undo=await undoBatch(store,'commit-window');assert.equal(undo[0].ok,true);assert.equal(await fsp.readFile(path.join(dest,'replace.txt'),'utf8'),'OLD-VALUE');
++
++  // Partial rollback is retryable and idempotent: already-rolled-back items are not run again.
++  await write(path.join(root,'a.txt'),'A');await write(path.join(root,'b.txt'),'B');
++  const plan2=await buildBatchManifest({root,operation:'copy',sourcesRelative:['a.txt','b.txt'],destinationDirRelative:'dest',conflictPolicy:'skip',duplicateAware:false});
++  store.createJob({id:'rollback-retry',cycleId:'cycle-rollback-retry',root,sourceRoot:root,destinationRoot:root,operation:'copy',destinationDir:dest,conflictPolicy:'skip',duplicateAware:false,items:plan2.items});
++  out=await processBatchChunk(store,'rollback-retry',{limit:8});assert.equal(out.status,'completed');
++  await write(path.join(dest,'b.txt'),'B-TAMPERED');
++  undo=await undoBatch(store,'rollback-retry');assert(undo.some(x=>x.ok===false));
++  assert.equal(store.item('rollback-retry',0).state,'rolled-back');assert.equal(store.item('rollback-retry',1).state,'rollback-failed');assert(!fs.existsSync(path.join(dest,'a.txt')));
++  await write(path.join(dest,'b.txt'),'B');
++  const retry=await undoBatch(store,'rollback-retry');assert.equal(retry.length,1,'retry must only include the failed rollback item');assert.equal(retry[0].ok,true);
++  assert.equal(store.item('rollback-retry',0).state,'rolled-back');assert.equal(store.item('rollback-retry',1).state,'rolled-back');assert.equal(store.get('rollback-retry').status,'rolled-back');
++
++  // Recovery identity evidence must reject an unrelated same-size replacement at the destination.
++  const txStore=new TransactionStore(path.join(base,'tx'));
++  const src=path.join(root,'identity.txt'),dst=path.join(dest,'identity.txt');await write(src,'12345678');
++  const tx=txStore.create({kind:'explorer-move',cycleId:'cycle-identity',root,operations:[{kind:'explorer-move-file',source:src,destination:dst,size:8}]});
++  await fsp.rename(src,dst);await new Promise(r=>setTimeout(r,8));await write(dst,'ABCDEFGH');
++  const current=txStore.get(tx.id);const classified=classifyOp(current.operations[0]);
++  assert.equal(classified.state,'ambiguous');assert.equal(classified.safeResume,false);assert.equal(classified.safeRollback,false);
++
++  store.close();await fsp.rm(base,{recursive:true,force:true});
++  console.log('long-job-recovery-index-rc1.test.cjs PASS',{commitWindow:true,rollbackRetry:true,recoveryIdentity:true});
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/rc1-release-matrix-contract.test.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/rc1-release-matrix-contract.test.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-15 15:29:44.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-15 17:06:48.833064142 +0000
+@@ -5,9 +5,9 @@
+ const {detectWindowsFamily,validatePeerPair,MANUAL_KEYS}=require('../scripts/rc1-certification-envelope.cjs');
+ assert.equal(detectWindowsFamily({windowsFamily:'Windows10'}),'Windows10');
+ assert.equal(detectWindowsFamily({os:{caption:'Microsoft Windows 11 Pro',build:'26100'}}),'Windows11');
+-const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit5',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit5',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit5'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit5'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
++const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit6',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit6',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit6'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit6'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
+ assert(MANUAL_KEYS.includes('realUpgradeFrom0_9_8'),'real packaged upgrade evidence must be required');
+ const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');
+ for(const token of ['PeerWindowsReport','--require-dual-windows','100000,1000000','yyyyMMdd-HHmmss-fff','windows-runs'])assert(orchestrator.includes(token),`missing RC1 matrix invariant: ${token}`);
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/rc1-source-contract.test.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/rc1-source-contract.test.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/rc1-source-contract.test.cjs	2026-08-15 15:29:44.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/rc1-source-contract.test.cjs	2026-08-15 17:06:48.833024673 +0000
+@@ -8,7 +8,7 @@
+ assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+ assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+ assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+-assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit5');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
++assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit6');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
+ const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+ assert(/PASS/.test(out));
+ console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit6.txt' /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/startup-write-freshness-rc1.test.cjs /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/startup-write-freshness-rc1.test.cjs
+--- /mnt/data/wa_certkit6_baseline/windows-workspace-agent-v1.0.0-rc1-cert-kit5-write-integrity-hardening-source/tests/startup-write-freshness-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit6_work/windows-workspace-agent-v1.0.0-rc1-cert-kit6-long-job-consistency-source/tests/startup-write-freshness-rc1.test.cjs	2026-08-15 17:04:20.961496991 +0000
+@@ -0,0 +1,32 @@
++const assert=require('assert');
++const fs=require('fs');
++const fsp=fs.promises;
++const path=require('path');
++const os=require('os');
++const {CycleStore}=require('../electron/services/cycle-store.cjs');
++const {ExplorerBatchStore}=require('../electron/services/explorer-batch-store.cjs');
++const {reconcileStartupWriteFreshness}=require('../electron/services/index-freshness-guard.cjs');
++
++(async()=>{
++  const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-rc1-startup-freshness-')),root=path.join(base,'root'),dst=path.join(base,'dst');await fsp.mkdir(root);await fsp.mkdir(dst);
++  const cycles=new CycleStore(path.join(base,'state'));
++  cycles.save({id:'cycle-interrupted',type:'explorer-batch-copy',status:'interrupted',updatedAt:new Date().toISOString(),steps:[],evidence:[]});
++  const batches=new ExplorerBatchStore(path.join(base,'batch-state'));
++  batches.createJob({id:'job-running',cycleId:'cycle-interrupted',root,sourceRoot:root,destinationRoot:dst,operation:'copy',destinationDir:dst,conflictPolicy:'skip',duplicateAware:false,items:[]});
++  batches.mark('job-running',{status:'running'});
++  // Even a job whose own status already says completed is still suspect if its cycle checkpoint was interrupted after filesystem work.
++  batches.createJob({id:'job-completed-window',cycleId:'cycle-interrupted',root,sourceRoot:root,destinationRoot:dst,operation:'copy',destinationDir:dst,conflictPolicy:'skip',duplicateAware:false,items:[]});
++  batches.mark('job-completed-window',{status:'completed'});
++
++  const markedIndex=[],markedWatcher=[];
++  const fakeIndex={markStale:(r,reason)=>{markedIndex.push([path.resolve(r),reason]);return{ok:true};}};
++  const fakeWatcher={markDirty:(r,reason)=>{markedWatcher.push([path.resolve(r),reason]);return{root:r,reason};}};
++  const recoveryService={inspect:()=>[{id:'tx-pending',root,cycleId:'cycle-interrupted',operations:[],status:'prepared'}]};
++  const result=await reconcileStartupWriteFreshness({cycleStore:cycles,batchStore:batches,recoveryService,index:fakeIndex,watcher:fakeWatcher});
++  assert.equal(result.interruptedCycles,1);assert.equal(result.batchJobs,2);assert.equal(result.batchJobsChanged,1);assert.equal(result.recoveryTransactions,1);
++  assert.equal(batches.get('job-running').status,'interrupted');assert.equal(batches.get('job-completed-window').status,'completed');
++  assert(markedIndex.some(([r])=>r===path.resolve(root)));assert(markedIndex.some(([r])=>r===path.resolve(dst)));assert.equal(markedWatcher.length,markedIndex.length);
++
++  batches.close();await fsp.rm(base,{recursive:true,force:true});
++  console.log('startup-write-freshness-rc1.test.cjs PASS',{runningJobInterrupted:true,completedWindowMarked:true,recoveryRootMarked:true});
++})().catch(e=>{console.error(e);process.exit(1)});

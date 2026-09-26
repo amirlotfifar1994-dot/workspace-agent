@@ -1,0 +1,959 @@
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/README_FA.md ./README_FA.md
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/README_FA.md	2026-08-13 19:27:10.000000000 +0000
++++ ./README_FA.md	2026-08-14 04:26:28.762288385 +0000
+@@ -1,53 +1,59 @@
+-# Workspace Agent v0.9.4 — File Explorer Skill Pack
++# Workspace Agent v0.9.5 — Advanced File Explorer Operations
+ 
+-نسخه v0.9.4 اولین Skill Pack کاربردی برای **Windows File Explorer** را روی Safety Core و Grounding نسخه‌های قبلی اضافه می‌کند. هدف این نسخه این نیست که AI آزادانه روی Explorer کلیک کند؛ عملیات File Explorer به مسیرهای deterministic و قابل‌بررسی تقسیم شده‌اند.
++نسخه v0.9.5 قابلیت‌های File Explorer نسخه v0.9.4 را به عملیات **Batch / Recursive** ارتقا می‌دهد، بدون اینکه مرز Safety شکسته شود. AI و Mission همچنان اجازه اجرای مستقیم Writeهای File Explorer را ندارند.
+ 
+-## قابلیت‌های File Explorer
++## قابلیت‌های جدید
+ 
+-### Read / UI-local
+-- `Properties`: خواندن metadata با `lstat` بدون دنبال‌کردن symlink/junction.
+-- `Search`: استفاده از Persistent SQLite Index در صورت آماده‌بودن؛ fallback به bounded scan.
+-- `Navigate`: بازکردن پوشه با Electron Shell فقط از مسیر تعاملی.
+-- `Reveal / Select`: نمایش آیتم در File Explorer با `showItemInFolder` فقط از مسیر تعاملی.
++- Batch Copy چند فایل/پوشه با چند Source.
++- Recursive Directory Copy با Manifest پایدار.
++- Batch Move چند فایل/پوشه؛ جابه‌جایی پوشه در سطح Top-level به‌صورت rename-based انجام می‌شود.
++- Conflict policy: `skip`، `rename` و `replace` برای فایل.
++- Replace پوشه موجود عمداً Block است.
++- Duplicate-aware copy/move: مقصد هم‌اندازه با SHA-256 بررسی و در صورت یکسان‌بودن `skipped` می‌شود؛ Source در Move حذف نمی‌شود.
++- Chunked execution با `paused` checkpoint، Resume و Cancel امن.
++- Partial Rollback برای Batch کامل‌شده، Cancel‌شده یا Failed/Interrupted در handler مجاز.
++- SQLite job/item checkpoint برای Resume بعد از Restart/Crash.
++- Replace با Stage + Backup + Commit و بازیابی حالت‌های میانی `staged/backed-up/committed`.
++- Progress شامل total/done/skipped/failed و bytes.
++- Persistent Index بعد از هر chunk برای Source/Destinationهای واقعی reconcile می‌شود.
++- مسیرهای داخلی `.workspace-agent-*` توسط File Watcher نادیده گرفته می‌شوند.
+ 
+-### Controlled Write
+-- `New Folder`
+-- `Copy File`
+-- `Move File/Folder`
+-- `Rename File/Folder`
++## Safety Boundary
+ 
+-Writeها مسیر زیر را دارند:
++مسیر اجرا:
+ 
+-`Resolve relative path → Reparse guard → Preview → Confirmation → Fresh preflight → Execute → Verify → Undo`
++`Manifest → Preview → Confirmation → Fresh Root Guard → Chunk → per-item checkpoint → Verify → Index reconcile → Pause/Complete`
+ 
+-## Safety Boundary
++Batch Writeها `interactiveOnly` هستند. Generic `wa:start-cycle` آن‌ها را با `RESTRICTED_EXPLORER_WRITE_ENTRYPOINT` رد می‌کند و فقط IPC اختصاصی File Explorer Batch اجازه Preview می‌دهد.
++
++- تمام مسیرها Workspace-relative هستند.
++- `..` escape، absolute/UNC injection و reparse traversal Block است.
++- Sourceهای داخل یکدیگر برای Batch Block می‌شوند تا عملیات دو بار روی یک Tree اجرا نشود.
++- مقصد recursive داخل Source Block می‌شود.
++- حداکثر Sourceهای یک Batch: 500.
++- سقف پیش‌فرض Manifest: 50,000 item.
++- Cancel فقط در مرز امن item/chunk اعمال می‌شود؛ فایل نیمه‌Commit‌شده «done» ثبت نمی‌شود.
++
++## Conflict Policy
++
++- `skip`: مقصد موجود بدون تغییر باقی می‌ماند.
++- `rename`: نام آزاد مانند `file (1).ext` انتخاب می‌شود و در Manifest ثابت می‌ماند.
++- `replace`: فقط برای فایل؛ مقصد قبلی ابتدا Backup می‌شود و برای Undo نگه داشته می‌شود.
++
++## Recovery / Undo
++
++Copy replace:
+ 
+-- File Explorer Writeها `interactiveOnly` هستند و Local AI / Mission نمی‌تواند مستقیماً آن‌ها را اجرا کند.
+-- Generic `wa:start-cycle` برای چهار Write جدید با `RESTRICTED_EXPLORER_WRITE_ENTRYPOINT` بسته است.
+-- فقط IPC اختصاصی `wa:start-explorer-write` می‌تواند Preview بسازد.
+-- تمام مسیرهای Write باید نسبت به Workspace باشند؛ absolute path و `..` escape مسدود است.
+-- Write از داخل symlink/junction عبور نمی‌کند.
+-- مقصد موجود به‌صورت fail-closed Block می‌شود؛ overwrite خاموش است.
+-- Copy recursive پوشه در v0.9.4 عمداً غیرفعال است.
+-- پس از Write تأییدشده، Persistent Index به‌صورت مستقیم برای Source/Destination reconcile می‌شود؛ fs.watch تنها منبع همگام‌سازی نیست.
+-- Copy فایل با staging + source recheck + SHA-256 verify انجام می‌شود.
+-- Undo Copy فقط اگر Hash مقصد هنوز با فایل ایجادشده برابر باشد انجام می‌شود؛ اگر کاربر مقصد را ویرایش کرده باشد Undo متوقف می‌شود.
+-- Undo New Folder فقط برای پوشه خالی انجام می‌شود.
+-
+-## Recovery
+-
+-Recovery Center اکنون transaction نوع `explorer-copy-file` را می‌شناسد. در Copy، منبع هرگز به‌عنوان Move تفسیر نمی‌شود:
+-- source only → Resume می‌تواند stage و commit کند.
+-- source + stage → Resume فقط stage را commit می‌کند.
+-- source + destination → Copy committed محسوب می‌شود.
+-- Rollback مقصد/Stage کپی را حذف می‌کند، نه Source را.
++`Source → Stage → fsync → Backup old destination → Commit Stage → SHA-256 verify`
+ 
+-Move/Rename از transaction/recovery rename-based موجود استفاده می‌کنند و directory transaction نیز با metadata نوع پوشه تشخیص داده می‌شود.
++اگر برنامه در `backed-up` یا `committed` بسته شود، Resume وضعیت فایل‌ها را دوباره بررسی و همان item را idempotent کامل می‌کند. Undo فقط زمانی انجام می‌شود که فایل ایجادشده/جابه‌جا‌شده هنوز با state مورد انتظار سازگار باشد.
+ 
+ ## Validation
+ 
+-- تمام Regressionهای v0.1 تا v0.9.3 PASS هستند.
+-- `tests/file-explorer-skill-pack-v094.test.cjs` مسیر، symlink، Copy SHA-256، Move/Undo، Rename، New Folder، Confirmation و Copy Recovery را تست می‌کند.
+-- `tests/windows-file-explorer-v094.uat.cjs` برای Windows واقعی، Unicode/Emoji، long path، junction و Write/Undo آماده است.
++- Dependency pins / Source hygiene / Syntax / JSX: PASS.
++- کل Regression قدیمی + تست‌های v0.9.5: PASS.
++- `file-explorer-batch-v095.test.cjs`: recursive copy، checkpoint/resume، duplicate-aware، rename، replace+undo، cancel+partial rollback، interrupted resume و policyها.
++- `explorer-batch-recovery-v095.test.cjs`: Crash-stateهای `backed-up` و `committed`.
++- `windows-file-explorer-v095.uat.cjs`: Windows-only UAT برای NTFS، Unicode/Emoji، 240 فایل، چند checkpoint و Rollback.
+ 
+-جزئیات معماری: `docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md`.
++جزئیات: `docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md` و `docs/VALIDATION_v0.9.5_FA.md`.
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md ./docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md	2026-08-14 04:26:28.763074804 +0000
+@@ -0,0 +1,37 @@
++# مدل Advanced File Explorer — v0.9.5
++
++## هدف
++
++عملیات حجیم File Explorer باید قابل توقف، قابل ادامه، قابل ممیزی و قابل Rollback باشند. v0.9.5 از یک SQLite Job Store مجزا استفاده می‌کند تا manifest و state هر item خارج از RAM و مستقل از UI نگهداری شود.
++
++## State Machine آیتم
++
++`pending → processing → staged → backed-up → committed → done`
++
++حالت‌های انتهایی دیگر: `skipped` و `failed`.
++
++Copy بدون Replace معمولاً `processing → staged → committed → done` است. Replace فایل بین `staged` و `committed` مقصد قبلی را به Backup منتقل می‌کند.
++
++## Resume
++
++`paused` یک وضعیت غیرنهایی Cycle است. Cycle Engine فقط برای handlerهایی که `resumable=true` دارند Resume را قبول می‌کند. Cycle `interrupted` نیز فقط برای همان handler قابل Resume است.
++
++## Cancel
++
++Cancel در Batch handler فقط در checkpoint امن اعمال می‌شود. Batch handler `allowCancel=true` و `allowPartialUndo=true` دارد. Rollback حالت cancelled/failed/interrupted فقط برای چنین handlerی مجاز است؛ رفتار Cycleهای قدیمی تغییر نکرده است.
++
++## Recursive Copy
++
++Directory Copy ابتدا Tree را با `opendir()` می‌خواند و itemهای `mkdir` و `file-copy` می‌سازد. Symlink/Junction داخل Tree Fail-closed است. برای جلوگیری از recursion، destination داخل source Block می‌شود.
++
++## Conflict
++
++`skip` و `rename` برای فایل و پوشه پشتیبانی می‌شوند. `replace` فقط فایل را پوشش می‌دهد. Merge/Replace کردن Directory موجود در v0.9.5 عمداً انجام نمی‌شود چون rollback کامل Tree نیاز به semantics جدا دارد.
++
++## Duplicate-aware
++
++اگر مقصد فایل وجود داشته باشد و اندازه برابر باشد، SHA-256 منبع/مقصد مقایسه می‌شود. فایل یکسان `skipped: identical-existing` می‌شود. در Move، Source حذف نمی‌شود؛ حذف duplicate تصمیم جداگانه و پرریسک است.
++
++## Internal artifacts
++
++Stage و Backup در `.workspace-agent-batch/<jobId>/` نگه‌داری می‌شوند. File Watcher مسیرهای `.workspace-agent-*` را ignore می‌کند و Persistent Index نیز اسکن hidden directory را در full scan کنار می‌گذارد.
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/CHANGELOG_v0.9.5_FA.md ./docs/CHANGELOG_v0.9.5_FA.md
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/CHANGELOG_v0.9.5_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/CHANGELOG_v0.9.5_FA.md	2026-08-14 04:26:28.763787433 +0000
+@@ -0,0 +1,15 @@
++# Changelog v0.9.5
++
++- افزودن `ExplorerBatchStore` مبتنی بر SQLite.
++- افزودن `explorer-batch-copy` و `explorer-batch-move`.
++- Recursive copy با checkpoint/resume.
++- Multi-source selection و Manifest تا 50k item.
++- Conflict policies: skip / rename / file replace.
++- Duplicate-aware SHA-256.
++- Cycle state جدید `paused` و Resume/Cancel کنترل‌شده برای handlerهای opt-in.
++- Partial rollback برای batch handler در cancelled/failed/interrupted.
++- Crash recovery برای replace در stateهای backed-up/committed.
++- Progress و Batch UI.
++- Persistent-index direct reconcile بعد از chunk.
++- Ignore کردن `.workspace-agent-*` در File Watcher.
++- Skill Registry: 34 Skill / 12 Write.
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/FILE_INVENTORY_v0.9.5.txt ./docs/FILE_INVENTORY_v0.9.5.txt
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/FILE_INVENTORY_v0.9.5.txt	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/FILE_INVENTORY_v0.9.5.txt	2026-08-14 04:27:00.935819758 +0000
+@@ -0,0 +1,246 @@
++./.node-version
++./.npmrc
++./.nvmrc
++./README_FA.md
++./docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md
++./docs/ARCHITECTURE_FA.md
++./docs/CERTIFICATION_MODEL_v0.8.4_FA.md
++./docs/CHANGELOG_v0.4_FA.md
++./docs/CHANGELOG_v0.5_FA.md
++./docs/CHANGELOG_v0.6_FA.md
++./docs/CHANGELOG_v0.7.1_FA.md
++./docs/CHANGELOG_v0.7.2_FA.md
++./docs/CHANGELOG_v0.7_FA.md
++./docs/CHANGELOG_v0.8.0_FA.md
++./docs/CHANGELOG_v0.8.1_FA.md
++./docs/CHANGELOG_v0.8.2_FA.md
++./docs/CHANGELOG_v0.8.3_FA.md
++./docs/CHANGELOG_v0.8.4_FA.md
++./docs/CHANGELOG_v0.9.0_FA.md
++./docs/CHANGELOG_v0.9.1_FA.md
++./docs/CHANGELOG_v0.9.2_FA.md
++./docs/CHANGELOG_v0.9.3_FA.md
++./docs/CHANGELOG_v0.9.4_FA.md
++./docs/CHANGELOG_v0.9.5_FA.md
++./docs/DIFF_v0.7.1.txt
++./docs/DIFF_v0.7.2.txt
++./docs/DIFF_v0.8.0.txt
++./docs/DIFF_v0.8.1.txt
++./docs/DIFF_v0.8.2.txt
++./docs/DIFF_v0.8.3.txt
++./docs/DIFF_v0.8.4.txt
++./docs/DIFF_v0.9.0.txt
++./docs/DIFF_v0.9.1.txt
++./docs/DIFF_v0.9.2.txt
++./docs/DIFF_v0.9.3.txt
++./docs/DIFF_v0.9.4.txt
++./docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md
++./docs/FILE_INVENTORY_v0.8.2.txt
++./docs/FILE_INVENTORY_v0.8.3.txt
++./docs/FILE_INVENTORY_v0.8.4.txt
++./docs/FILE_INVENTORY_v0.9.0.txt
++./docs/FILE_INVENTORY_v0.9.1.txt
++./docs/FILE_INVENTORY_v0.9.2.txt
++./docs/FILE_INVENTORY_v0.9.3.txt
++./docs/FILE_INVENTORY_v0.9.4.txt
++./docs/FILE_INVENTORY_v0.9.5.txt
++./docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md
++./docs/LOCAL_AI_MODEL_v0.9_FA.md
++./docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md
++./docs/PERSISTENT_INDEX_MODEL_FA.md
++./docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md
++./docs/PRODUCTION_HARDENING_v0.8.1_FA.md
++./docs/RECOVERY_MODEL_FA.md
++./docs/RELEASE_READINESS_v0.8.2.json
++./docs/RELEASE_READINESS_v0.8.3.json
++./docs/RELEASE_READINESS_v0.8.4.json
++./docs/RELEASE_READINESS_v0.9.0.json
++./docs/RELEASE_READINESS_v0.9.1.json
++./docs/RELEASE_READINESS_v0.9.2.json
++./docs/RELEASE_READINESS_v0.9.3.json
++./docs/RELEASE_READINESS_v0.9.4.json
++./docs/RELEASE_READINESS_v0.9.5.json
++./docs/ROADMAP_FA.md
++./docs/SOURCE_REUSE_AUDIT_FA.md
++./docs/SYSTEM_RESILIENCE_MODEL_v0.8.3_FA.md
++./docs/UPSTREAM_INTEGRATION_FA.md
++./docs/UPSTREAM_PROVENANCE.md
++./docs/VALIDATION_v0.4_FA.md
++./docs/VALIDATION_v0.5_FA.md
++./docs/VALIDATION_v0.6_FA.md
++./docs/VALIDATION_v0.7.1_FA.md
++./docs/VALIDATION_v0.7.2_FA.md
++./docs/VALIDATION_v0.7_FA.md
++./docs/VALIDATION_v0.8.0_FA.md
++./docs/VALIDATION_v0.8.1_FA.md
++./docs/VALIDATION_v0.8.2_FA.md
++./docs/VALIDATION_v0.8.3_FA.md
++./docs/VALIDATION_v0.8.4_FA.md
++./docs/VALIDATION_v0.9.0_FA.md
++./docs/VALIDATION_v0.9.1_FA.md
++./docs/VALIDATION_v0.9.2_FA.md
++./docs/VALIDATION_v0.9.3_FA.md
++./docs/VALIDATION_v0.9.4_FA.md
++./docs/VALIDATION_v0.9.5_FA.md
++./docs/WINDOWS_PATH_RELEASE_MODEL_v0.8.2_FA.md
++./docs/WINDOWS_RELEASE_CHECKLIST_FA.md
++./docs/WINDOWS_SYSTEM_UAT_v0.8.3_FA.md
++./docs/WINDOWS_UIA_ACTION_MODEL_FA.md
++./docs/deferred/corel-bridge.cjs.txt
++./electron/ipc.cjs
++./electron/main.cjs
++./electron/preload.cjs
++./electron/services/ai-call-guard.cjs
++./electron/services/ai-planner.cjs
++./electron/services/ai-redaction.cjs
++./electron/services/automation-conditions.cjs
++./electron/services/automation-service.cjs
++./electron/services/automation-store.cjs
++./electron/services/capability-registry.cjs
++./electron/services/configuration-service.cjs
++./electron/services/cycle-engine.cjs
++./electron/services/cycle-store.cjs
++./electron/services/drive-audit.cjs
++./electron/services/duplicate-finder.cjs
++./electron/services/event-journal.cjs
++./electron/services/explorer-batch-cycles.cjs
++./electron/services/explorer-batch-service.cjs
++./electron/services/explorer-batch-store.cjs
++./electron/services/file-analyzer.cjs
++./electron/services/file-cycles.cjs
++./electron/services/file-explorer-cycles.cjs
++./electron/services/file-explorer-service.cjs
++./electron/services/file-indexer.cjs
++./electron/services/file-insights.cjs
++./electron/services/file-search.cjs
++./electron/services/file-watcher-service.cjs
++./electron/services/fingerprint-store.cjs
++./electron/services/goal-planner.cjs
++./electron/services/grounding-memory-store.cjs
++./electron/services/hardware-profile-service.cjs
++./electron/services/hash-worker-pool.cjs
++./electron/services/hash-worker.cjs
++./electron/services/image-similarity.cjs
++./electron/services/indexed-duplicate-finder.cjs
++./electron/services/lifecycle-state.cjs
++./electron/services/local-ai-config-store.cjs
++./electron/services/local-ai-runtime-manager.cjs
++./electron/services/local-ai-service.cjs
++./electron/services/local-openai-provider.cjs
++./electron/services/maintenance.cjs
++./electron/services/managed-zone-audit.cjs
++./electron/services/managed-zone-store.cjs
++./electron/services/mission-compiler.cjs
++./electron/services/office-text-extractor.cjs
++./electron/services/organizer.cjs
++./electron/services/path-policy.cjs
++./electron/services/pdf-text-extractor.cjs
++./electron/services/persistent-file-index.cjs
++./electron/services/persistent-index-cycles.cjs
++./electron/services/quarantine.cjs
++./electron/services/recommendation-applier.cjs
++./electron/services/recovery-service.cjs
++./electron/services/renamer.cjs
++./electron/services/resource-pressure-guard.cjs
++./electron/services/review-queue-store.cjs
++./electron/services/root-resilience-service.cjs
++./electron/services/similarity-core.cjs
++./electron/services/skill-memory-store.cjs
++./electron/services/skill-registry.cjs
++./electron/services/skill-retriever.cjs
++./electron/services/snapshot-store.cjs
++./electron/services/startup-advisor.cjs
++./electron/services/storage-trend-store.cjs
++./electron/services/system-resilience-controller.cjs
++./electron/services/text-similarity.cjs
++./electron/services/transaction-store.cjs
++./electron/services/ui-grounding-core.cjs
++./electron/services/ui-grounding-layout.cjs
++./electron/services/ui-grounding-service.cjs
++./electron/services/ui-grounding-session-store.cjs
++./electron/services/ui-outcome-verifier.cjs
++./electron/services/vision-crop-service.cjs
++./electron/services/windows-action-policy.cjs
++./electron/services/windows-action-session-store.cjs
++./electron/services/windows-inspector.cjs
++./electron/services/windows-path-utils.cjs
++./electron/services/windows-uia-actions.cjs
++./electron/services/windows-uia.cjs
++./electron/services/windows-volume-probe.cjs
++./electron/services/workspace-cycles.cjs
++./electron/services/workspace-intelligence.cjs
++./index.html
++./package.json
++./scripts/generate-lockfile.ps1
++./scripts/local-ai-smoke.ps1
++./scripts/verify-release-inputs.cjs
++./scripts/verify-source-hygiene.cjs
++./scripts/windows-certification.ps1
++./scripts/windows-release.ps1
++./src/App.jsx
++./src/components/CycleTimeline.jsx
++./src/main.jsx
++./src/styles/app.css
++./tests/ai-mission-v090.test.cjs
++./tests/automation-v04.test.cjs
++./tests/cycle-engine.test.cjs
++./tests/cycle-root-guard-v083.test.cjs
++./tests/explorer-batch-recovery-v095.test.cjs
++./tests/file-cycles.integration.test.cjs
++./tests/file-explorer-batch-v095.test.cjs
++./tests/file-explorer-skill-pack-v094.test.cjs
++./tests/file-guardian.test.cjs
++./tests/fixtures/lifecycle-crash-child-v084.cjs
++./tests/fixtures/persistent-index-crash-child-v081.cjs
++./tests/lifecycle-resource-v084.test.cjs
++./tests/local-ai-capability-v091.test.cjs
++./tests/local-ai-foundation-v090.test.cjs
++./tests/local-ai-grounding-vision-v092.test.cjs
++./tests/local-ai-guard-v090.test.cjs
++./tests/local-ai-server-v090.uat.cjs
++./tests/mission.integration.test.cjs
++./tests/multi-index-isolation-v084.test.cjs
++./tests/multi-root-isolation-v084.test.cjs
++./tests/office-extractor-v05.test.cjs
++./tests/packaged-app-smoke-v084.cjs
++./tests/packaged-worker-smoke-v082.cjs
++./tests/persistent-index-crash-v081.test.cjs
++./tests/persistent-index-cycles-v080.test.cjs
++./tests/persistent-index-scale-v080.cjs
++./tests/persistent-index-v080.test.cjs
++./tests/persistent-index-windows.uat.cjs
++./tests/production-hardening-v07.test.cjs
++./tests/production-hardening-v081.test.cjs
++./tests/real-local-ai-runtime-v091.test.cjs
++./tests/resource-cycle-integration-v084.test.cjs
++./tests/root-interruption-v083.test.cjs
++./tests/scale-benchmark-v07.cjs
++./tests/semantic-cycles-v05.test.cjs
++./tests/semantic-intelligence-v05.test.cjs
++./tests/system-resilience-v083.test.cjs
++./tests/ui-grounded-action-v092.test.cjs
++./tests/ui-grounding-core-v092.test.cjs
++./tests/ui-grounding-layout-v093.test.cjs
++./tests/ui-grounding-recovery-v093.test.cjs
++./tests/ui-grounding-scale-v092.cjs
++./tests/ui-grounding-service-v092.test.cjs
++./tests/upstream-foundation-v071.test.cjs
++./tests/vision-crop-v093.test.cjs
++./tests/windows-agent-v03.test.cjs
++./tests/windows-agent-v06.test.cjs
++./tests/windows-file-explorer-v094.uat.cjs
++./tests/windows-file-explorer-v095.uat.cjs
++./tests/windows-intelligent-grounding-v092.uat.cjs
++./tests/windows-local-ai-runtime-v091.uat.cjs
++./tests/windows-multiroot-v084.uat.cjs
++./tests/windows-path-hardening-v082.test.cjs
++./tests/windows-production-grounding-v093.uat.cjs
++./tests/windows-production-v081.uat.cjs
++./tests/windows-removable-drive-v083.uat.cjs
++./tests/windows-scale-resilience-v083.uat.cjs
++./tests/windows-system-resilience-v083.uat.cjs
++./tests/windows-uia-action-v072.test.cjs
++./tests/windows-uia-action.uat.cjs
++./tests/windows-verification-v082.uat.cjs
++./tests/windows-volume-probe-v083.test.cjs
++./vite.config.js
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/RELEASE_READINESS_v0.9.5.json ./docs/RELEASE_READINESS_v0.9.5.json
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/RELEASE_READINESS_v0.9.5.json	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/RELEASE_READINESS_v0.9.5.json	2026-08-14 04:26:28.765367321 +0000
+@@ -0,0 +1,20 @@
++{
++  "version": "0.9.5",
++  "coreSource": "READY",
++  "regression": "PASS",
++  "sourceHygiene": "PASS",
++  "syntax": "PASS",
++  "jsx": "PASS",
++  "batchRecursiveCopy": "PASS",
++  "batchMove": "PASS",
++  "conflictPolicies": "PASS_WITH_DIRECTORY_REPLACE_BLOCKED",
++  "duplicateAware": "PASS",
++  "checkpointResume": "PASS",
++  "cancelPartialRollback": "PASS",
++  "replaceCrashRecovery": "PASS",
++  "windowsUat": "PENDING_WINDOWS",
++  "packageLock": "PENDING",
++  "nsis": "PENDING",
++  "portable": "PENDING",
++  "authenticode": "PENDING"
++}
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/VALIDATION_v0.9.5_FA.md ./docs/VALIDATION_v0.9.5_FA.md
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/VALIDATION_v0.9.5_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/VALIDATION_v0.9.5_FA.md	2026-08-14 04:27:13.870896092 +0000
+@@ -0,0 +1,25 @@
++# Validation v0.9.5
++
++## PASS در محیط فعلی
++
++- `npm run check:dependency-pins`
++- `npm run check:source-hygiene`
++- `npm run check:syntax`
++- `npm run check:jsx`
++- تمام Regressionهای نسخه‌های قبل
++- `tests/file-explorer-batch-v095.test.cjs`
++- `tests/explorer-batch-recovery-v095.test.cjs`
++
++سناریوهای جدید تأییدشده: Recursive Copy چندسطحی، checkpoint/resume، Duplicate Skip، Conflict Rename، Replace+Undo، Cancel+Partial Rollback، Resume از Interrupted، Symlink rejection، Replace-directory rejection، Recovery بعد از Backup و Recovery بعد از Commit.
++
++**زنجیره اصلی `npm test`: 41 تست/سوییت PASS.**
++
++## Windows-only
++
++`npm run test:windows-explorer-v095-uat` در محیط فعلی `SKIP (Windows only)` است و PASS واقعی Windows محسوب نشده است.
++
++## Release boundary
++
++- `npm run check:release-inputs` → `LOCKFILE_REQUIRED` چون lockfile واقعی هنوز باید روی محیط آنلاین تولید/review شود.
++- `npm run build` → `vite: not found` چون node_modules در محیط فعلی نصب نیست.
++- NSIS/Portable/Authenticode هنوز Windows-certified نیستند.
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/ipc.cjs ./electron/ipc.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/ipc.cjs	2026-08-13 19:22:18.000000000 +0000
++++ ./electron/ipc.cjs	2026-08-14 04:22:58.499281302 +0000
+@@ -17,7 +17,7 @@
+   let size=image.getSize();if(Math.max(size.width,size.height)>maxDimension){const scale=maxDimension/Math.max(size.width,size.height);image=image.resize({width:Math.max(1,Math.round(size.width*scale)),height:Math.max(1,Math.round(size.height*scale)),quality:'best'});size=image.getSize();}
+   let mime='image/png',buf=image.toPNG();if(buf.length>8*1024*1024){mime='image/jpeg';buf=image.toJPEG(92);}return{imageDataUrl:`data:${mime};base64,${buf.toString('base64')}`,meta:{applied,cropFraction:plan.ok?plan.cropFraction:1,mapping:plan.ok?plan.mapping.source:'unmapped-user-image',mappingConfidence:plan.ok?plan.mapping.confidence:'untrusted',mappingCode:plan.ok?'OK':plan.code,sourceSize:source,outputSize:size}};
+ }
+-function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null, localAIService=null, uiGroundingService=null }) {
++function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null, localAIService=null, uiGroundingService=null, explorerBatchStore=null }) {
+   const importTokens=new Map();
+   ipcMain.handle('wa:select-folder', async e => trusted(e) ? (await dialog.showOpenDialog({properties:['openDirectory']})).filePaths[0] || '' : '');
+   ipcMain.handle('wa:cycles', e => trusted(e) ? store.list(100) : deny());
+@@ -53,11 +53,18 @@
+   ipcMain.handle('wa:ai-plan', async (e,command='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.plan(command,{root});}catch(error){return{ok:false,code:error.code||'AI_PLAN_FAILED',message:error.message,retryAfterMs:error.retryAfterMs||null}}});
+   ipcMain.handle('wa:ai-start-mission', async (e,planToken='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const rec=localAIService.consumePlan(planToken,{root});const c=engine.create('mission',{root,command:'[LOCAL_AI_PLAN]',goalPlan:rec.goalPlan,planSource:'local-ai-token',aiCommandHash:rec.commandHash},{source:'local-ai-token',budget:{maxIterations:80,maxWallTimeMs:30*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'AI_MISSION_START_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-vision-file', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};const r=await dialog.showOpenDialog({title:'انتخاب تصویر برای Local Vision',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true};try{return await localAIService.analyzeImageFile(r.filePaths[0]);}catch(error){return{ok:false,code:error.code||'AI_VISION_FAILED',message:error.message}}});
+-  ipcMain.handle('wa:start-cycle', async (e,type,input={}) => { if(!trusted(e)) return deny(); const explorerWrites=new Set(['explorer-new-folder','explorer-copy','explorer-move','explorer-rename']); if(String(type)==='windows-ui-action')return{ok:false,code:'RESTRICTED_CYCLE_ENTRYPOINT',message:'Windows UI Action فقط از entrypoint تعاملی امن با ephemeral session قابل شروع است.'}; if(explorerWrites.has(String(type)))return{ok:false,code:'RESTRICTED_EXPLORER_WRITE_ENTRYPOINT',message:'File Explorer Write فقط از entrypoint تعاملی اختصاصی قابل شروع است.'}; if(String(type)==='mission'&&(input?.goalPlan||input?.planToken||input?.planSource))return{ok:false,code:'AI_PLAN_DIRECT_INJECTION_BLOCKED',message:'AI Plan فقط با token موقت صادرشده از Local AI Service قابل اجراست.'}; const c=engine.create(type,input); const result=await engine.run(c.id);if(String(type)==='persistent-index-scan'&&result?.status==='completed'&&input?.root){watcherService.clearDirty(input.root);if(input?.resume===false)await rootResilienceService?.acknowledgeRoot?.(input.root);}return result; });
++  ipcMain.handle('wa:start-cycle', async (e,type,input={}) => { if(!trusted(e)) return deny(); const explorerWrites=new Set(['explorer-new-folder','explorer-copy','explorer-move','explorer-rename','explorer-batch-copy','explorer-batch-move']); if(String(type)==='windows-ui-action')return{ok:false,code:'RESTRICTED_CYCLE_ENTRYPOINT',message:'Windows UI Action فقط از entrypoint تعاملی امن با ephemeral session قابل شروع است.'}; if(explorerWrites.has(String(type)))return{ok:false,code:'RESTRICTED_EXPLORER_WRITE_ENTRYPOINT',message:'File Explorer Write فقط از entrypoint تعاملی اختصاصی قابل شروع است.'}; if(String(type)==='mission'&&(input?.goalPlan||input?.planToken||input?.planSource))return{ok:false,code:'AI_PLAN_DIRECT_INJECTION_BLOCKED',message:'AI Plan فقط با token موقت صادرشده از Local AI Service قابل اجراست.'}; const c=engine.create(type,input); const result=await engine.run(c.id);if(String(type)==='persistent-index-scan'&&result?.status==='completed'&&input?.root){watcherService.clearDirty(input.root);if(input?.resume===false)await rootResilienceService?.acknowledgeRoot?.(input.root);}return result; });
+   ipcMain.handle('wa:start-explorer-write', async (e,type,input={}) => {
+     if(!trusted(e))return deny();const allowed=new Set(['explorer-new-folder','explorer-copy','explorer-move','explorer-rename']);if(!allowed.has(String(type)))return{ok:false,code:'EXPLORER_WRITE_TYPE_BLOCKED'};
+     try{const c=engine.create(String(type),input,{source:'interactive-file-explorer',budget:{maxIterations:6,maxWallTimeMs:30*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'EXPLORER_WRITE_START_FAILED',message:error.message,details:error.details||null};}
+   });
++  ipcMain.handle('wa:start-explorer-batch', async (e,type,input={}) => {
++    if(!trusted(e))return deny();if(!explorerBatchStore)return{ok:false,code:'EXPLORER_BATCH_UNAVAILABLE'};const allowed=new Set(['explorer-batch-copy','explorer-batch-move']);if(!allowed.has(String(type)))return{ok:false,code:'EXPLORER_BATCH_TYPE_BLOCKED'};
++    try{const c=engine.create(String(type),input,{source:'interactive-file-explorer-batch',budget:{maxIterations:10000,maxWallTimeMs:12*60*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'EXPLORER_BATCH_START_FAILED',message:error.message,details:error.details||null};}
++  });
++  ipcMain.handle('wa:explorer-batch-resume', async (e,cycleId='') => {if(!trusted(e))return deny();try{return await engine.resume(String(cycleId))}catch(error){return{ok:false,code:error.code||'EXPLORER_BATCH_RESUME_FAILED',message:error.message}}});
++  ipcMain.handle('wa:explorer-batch-cancel', async (e,cycleId='') => {if(!trusted(e))return deny();try{return await engine.cancel(String(cycleId))}catch(error){return{ok:false,code:error.code||'EXPLORER_BATCH_CANCEL_FAILED',message:error.message}}});
++  ipcMain.handle('wa:explorer-batch-status', (e,jobId='') => trusted(e) ? (explorerBatchStore?.status?.(String(jobId))||{ok:false,code:'EXPLORER_BATCH_JOB_NOT_FOUND'}) : deny());
+   ipcMain.handle('wa:start-uia-action', async (e,request={}) => {
+     if(!trusted(e))return deny();
+     const session=windowsActionSessionStore.create(request);if(!session.ok)return session;
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/main.cjs ./electron/main.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/main.cjs	2026-08-13 19:25:50.000000000 +0000
++++ ./electron/main.cjs	2026-08-14 04:22:29.966650510 +0000
+@@ -28,9 +28,11 @@
+ const { fileSearchCycle, snapshotCycle, snapshotDiffCycle, maintenanceCleanupCycle, windowsSystemCycle, windowsUiMapCycle, windowsUiActionCycle, renameCycle, similarImagesCycle, similarTextsCycle, workspaceIntelligenceCycle, reviewQueueBuildCycle, recommendationApplyCycle, managedZoneAuditCycle, driveAuditCycle, pdfIntelligenceCycle, missionCycle } = require('./services/workspace-cycles.cjs');
+ const { persistentIndexScanCycle, persistentIndexMaintenanceCycle, indexedFileSearchCycle, indexedDuplicatesCycle } = require('./services/persistent-index-cycles.cjs');
+ const { explorerPropertiesCycle, explorerSearchCycle, explorerNavigateCycle, explorerSelectCycle, explorerWriteCycle } = require('./services/file-explorer-cycles.cjs');
++const { ExplorerBatchStore } = require('./services/explorer-batch-store.cjs');
++const { batchCycle } = require('./services/explorer-batch-cycles.cjs');
+ const { registerIpc } = require('./ipc.cjs');
+ 
+-let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;let uiGroundingService;
++let mainWindow;let automationService;let watcherService;let persistentFileIndex;let explorerBatchStore;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;let uiGroundingService;
+ 
+ function certificationSmokeOutput(){const eq=process.argv.find(x=>String(x).startsWith('--cert-smoke-output='));if(eq)return String(eq).slice('--cert-smoke-output='.length);const i=process.argv.indexOf('--cert-smoke-output');return i>=0?String(process.argv[i+1]||''):'';}
+ function certificationUserData(){const eq=process.argv.find(x=>String(x).startsWith('--cert-user-data='));if(eq)return String(eq).slice('--cert-user-data='.length);const i=process.argv.indexOf('--cert-user-data');return i>=0?String(process.argv[i+1]||''):'';}
+@@ -42,15 +44,15 @@
+   const dev=process.env.VITE_DEV_SERVER_URL; if(dev) mainWindow.loadURL(dev); else mainWindow.loadFile(path.join(__dirname,'..','dist','index.html'));
+ }
+ app.whenReady().then(async()=>{
+-  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+-  const reconcileExplorerWrite=async completed=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const paths=[completed?.source,completed?.destination].filter(Boolean);const results=[];for(const p of [...new Set(paths)]){try{results.push(await persistentFileIndex.reconcilePath(completed.root,p));}catch(error){results.push({ok:false,path:p,code:error.code||'INDEX_RECONCILE_FAILED'});}}return{ok:results.every(x=>x?.ok!==false),results};};engine.register('explorer-properties',explorerPropertiesCycle());engine.register('explorer-search',explorerSearchCycle({index:persistentFileIndex}));engine.register('explorer-navigate',explorerNavigateCycle({shellAdapter:shell}));engine.register('explorer-select',explorerSelectCycle({shellAdapter:shell}));engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-move',explorerWriteCycle({action:'move',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-rename',explorerWriteCycle({action:'rename',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
++  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); try{explorerBatchStore=new ExplorerBatchStore(userData,{journal});}catch(error){explorerBatchStore=null;journal.append('EXPLORER_BATCH_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message}});} const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
++  const reconcileExplorerWrite=async completed=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const paths=[completed?.source,completed?.destination].filter(Boolean);const results=[];for(const p of [...new Set(paths)]){try{results.push(await persistentFileIndex.reconcilePath(completed.root,p));}catch(error){results.push({ok:false,path:p,code:error.code||'INDEX_RECONCILE_FAILED'});}}return{ok:results.every(x=>x?.ok!==false),results};};engine.register('explorer-properties',explorerPropertiesCycle());engine.register('explorer-search',explorerSearchCycle({index:persistentFileIndex}));engine.register('explorer-navigate',explorerNavigateCycle({shellAdapter:shell}));engine.register('explorer-select',explorerSelectCycle({shellAdapter:shell}));engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-move',explorerWriteCycle({action:'move',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-rename',explorerWriteCycle({action:'rename',transactionStore,onVerified:reconcileExplorerWrite}));const reconcileExplorerPaths=async({root,paths=[]})=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const results=[];for(const p of [...new Set(paths.filter(Boolean))]){try{results.push(await persistentFileIndex.reconcilePath(root,p));}catch(error){results.push({ok:false,path:p,code:error.code||'INDEX_RECONCILE_FAILED'});}}return{ok:results.every(x=>x?.ok!==false),results};};if(explorerBatchStore){engine.register('explorer-batch-copy',batchCycle({operation:'copy',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths}));engine.register('explorer-batch-move',batchCycle({operation:'move',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths}));}engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+   }});automationService.start();
+-  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService});void localAIService.hardwareProfile({visionPreferred:localAIService.settings().allowVision}).catch(()=>{});void localAIService.autoStartManagedRuntime().catch(()=>{});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService});app.quit();return;}createWindow();
++  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService,explorerBatchStore});void localAIService.hardwareProfile({visionPreferred:localAIService.settings().allowVision}).catch(()=>{});void localAIService.autoStartManagedRuntime().catch(()=>{});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService});app.quit();return;}createWindow();
+   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0) createWindow();});
+ });
+-app.on('before-quit',()=>{localAIService?.terminateRuntimeNow?.();automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();persistentFileIndex?.close();});
++app.on('before-quit',()=>{localAIService?.terminateRuntimeNow?.();automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();explorerBatchStore?.close();persistentFileIndex?.close();});
+ app.on('will-quit',()=>{try{lifecycleState?.markCleanExit('will-quit');}catch{}});
+ app.on('window-all-closed',()=>{if(process.platform!=='darwin') app.quit();});
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/preload.cjs ./electron/preload.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/preload.cjs	2026-08-13 19:22:18.000000000 +0000
++++ ./electron/preload.cjs	2026-08-14 04:22:59.074901179 +0000
+@@ -2,7 +2,7 @@
+ contextBridge.exposeInMainWorld('workspaceAgent', {
+   selectFolder: () => ipcRenderer.invoke('wa:select-folder'), cycles: () => ipcRenderer.invoke('wa:cycles'), capabilities: () => ipcRenderer.invoke('wa:capabilities'), skills: () => ipcRenderer.invoke('wa:skills'), indexStatus: root => ipcRenderer.invoke('wa:index-status',root), indexRoots: () => ipcRenderer.invoke('wa:index-roots'), indexHealth: deep => ipcRenderer.invoke('wa:index-health',deep), indexSearch: input => ipcRenderer.invoke('wa:index-search',input), indexErrors: (root,limit=200) => ipcRenderer.invoke('wa:index-errors',root,limit), snapshots: root => ipcRenderer.invoke('wa:snapshots',root), planGoal: command => ipcRenderer.invoke('wa:plan-goal',command),
+   aiStatus:()=>ipcRenderer.invoke('wa:ai-status'), aiSettings:()=>ipcRenderer.invoke('wa:ai-settings'), aiSettingsUpdate:patch=>ipcRenderer.invoke('wa:ai-settings-update',patch), aiHealth:()=>ipcRenderer.invoke('wa:ai-health'), aiHardwareProfile:vision=>ipcRenderer.invoke('wa:ai-hardware-profile',vision), aiApplyHardwareAdvice:advice=>ipcRenderer.invoke('wa:ai-apply-hardware-advice',advice), aiRuntimeStatus:()=>ipcRenderer.invoke('wa:ai-runtime-status'), aiRuntimeSelection:()=>ipcRenderer.invoke('wa:ai-runtime-selection'), aiRuntimePickExecutable:()=>ipcRenderer.invoke('wa:ai-runtime-pick-executable'), aiRuntimePickModel:()=>ipcRenderer.invoke('wa:ai-runtime-pick-model'), aiRuntimeStart:()=>ipcRenderer.invoke('wa:ai-runtime-start'), aiRuntimeStop:()=>ipcRenderer.invoke('wa:ai-runtime-stop'), aiRuntimeRestart:()=>ipcRenderer.invoke('wa:ai-runtime-restart'), aiCapabilityProbe:vision=>ipcRenderer.invoke('wa:ai-capability-probe',vision), aiWarmup:()=>ipcRenderer.invoke('wa:ai-warmup'), aiUiAssist:()=>ipcRenderer.invoke('wa:ai-ui-assist'), aiGroundUi:intent=>ipcRenderer.invoke('wa:ai-ground-ui',intent), aiGroundUiVision:token=>ipcRenderer.invoke('wa:ai-ground-ui-vision',token), startGroundedUiaAction:input=>ipcRenderer.invoke('wa:start-uia-grounded-action',input), aiVerifyUiaCycle:id=>ipcRenderer.invoke('wa:ai-verify-uia-cycle',id), aiPlan:(command,root)=>ipcRenderer.invoke('wa:ai-plan',command,root), aiStartMission:(token,root)=>ipcRenderer.invoke('wa:ai-start-mission',token,root), aiVisionFile:()=>ipcRenderer.invoke('wa:ai-vision-file'),
+-  startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startExplorerWrite: (type,input) => ipcRenderer.invoke('wa:start-explorer-write',type,input), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
++  startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startExplorerWrite: (type,input) => ipcRenderer.invoke('wa:start-explorer-write',type,input), startExplorerBatch:(type,input)=>ipcRenderer.invoke('wa:start-explorer-batch',type,input), explorerBatchResume:cycleId=>ipcRenderer.invoke('wa:explorer-batch-resume',cycleId), explorerBatchCancel:cycleId=>ipcRenderer.invoke('wa:explorer-batch-cancel',cycleId), explorerBatchStatus:jobId=>ipcRenderer.invoke('wa:explorer-batch-status',jobId), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
+   reviewList:root=>ipcRenderer.invoke('wa:review-list',root),reviewUpdate:(id,patch)=>ipcRenderer.invoke('wa:review-update',id,patch),reviewClear:root=>ipcRenderer.invoke('wa:review-clear',root),
+   zonesList:()=>ipcRenderer.invoke('wa:zones-list'),zonesAdd:input=>ipcRenderer.invoke('wa:zones-add',input),zonesRemove:id=>ipcRenderer.invoke('wa:zones-remove',id),storageTrend:root=>ipcRenderer.invoke('wa:storage-trend',root),
+   journalList:filters=>ipcRenderer.invoke('wa:journal-list',filters),journalVerify:()=>ipcRenderer.invoke('wa:journal-verify'),recoveryList:()=>ipcRenderer.invoke('wa:recovery-list'),recoveryAct:(id,action)=>ipcRenderer.invoke('wa:recovery-act',id,action),watchList:()=>ipcRenderer.invoke('wa:watch-list'),watchEvents:limit=>ipcRenderer.invoke('wa:watch-events',limit),watchStatus:()=>ipcRenderer.invoke('wa:watch-status'),resilienceStatus:()=>ipcRenderer.invoke('wa:resilience-status'),resilienceProbe:()=>ipcRenderer.invoke('wa:resilience-probe'),certStatus:()=>ipcRenderer.invoke('wa:cert-status'),resourcePressure:()=>ipcRenderer.invoke('wa:resource-pressure'),watchAdd:(root,title)=>ipcRenderer.invoke('wa:watch-add',root,title),watchRemove:id=>ipcRenderer.invoke('wa:watch-remove',id),configExport:()=>ipcRenderer.invoke('wa:config-export'),configImportPreview:()=>ipcRenderer.invoke('wa:config-import-preview'),configImportApply:token=>ipcRenderer.invoke('wa:config-import-apply',token),
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/cycle-engine.cjs ./electron/services/cycle-engine.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/cycle-engine.cjs	2026-08-13 09:23:39.000000000 +0000
++++ ./electron/services/cycle-engine.cjs	2026-08-14 04:25:10.299126100 +0000
+@@ -48,7 +48,7 @@
+     if(this.beforeRun){let gate;try{gate=await this.beforeRun(cycle,{...context,phase:'run'});}catch(error){gate={ok:false,code:error.code||'CYCLE_PREFLIGHT_FAILED',message:error.message}}if(gate?.ok===false){cycle.status='failed';cycle.evidence.push({at:now(),level:'error',code:gate.code||'CYCLE_PREFLIGHT_BLOCKED',text:gate.message||'Cycle preflight عملیات را متوقف کرد.',details:gate.details||gate.state||null});this.store.save(cycle);this.journal?.append('CYCLE_PREFLIGHT_BLOCKED',{cycleId:cycle.id,payload:{type:cycle.type,code:gate.code||'CYCLE_PREFLIGHT_BLOCKED'}});return this.finalize(cycle,context);}}
+     cycle.status = 'running'; cycle.updatedAt = now(); cycle.meta = cycle.meta || {}; cycle.meta.runStartedAt = cycle.meta.runStartedAt || now(); this.store.save(cycle); this.journal?.append('CYCLE_RUNNING',{cycleId:cycle.id,payload:{type:cycle.type,iteration:cycle.iteration,budget:cycle.budget}});
+ 
+-    while (!TERMINAL.has(cycle.status) && cycle.status !== 'waiting-confirmation') {
++    while (!TERMINAL.has(cycle.status) && cycle.status !== 'waiting-confirmation' && cycle.status !== 'paused') {
+       const maxIterations = Number(cycle.budget?.maxIterations || this.maxIterations);
+       const maxWallTimeMs = Number(cycle.budget?.maxWallTimeMs || this.maxWallTimeMs);
+       const elapsedMs = Date.now() - Date.parse(cycle.meta.runStartedAt || cycle.createdAt || now());
+@@ -90,13 +90,20 @@
+     if (cycle.status === 'cancelled') return this.finalize(cycle, context);
+     return this.run(cycle.id, context);
+   }
++  async resume(cycleId, context = {}) {
++    let cycle=this.store.get(cycleId);if(!cycle)throw Object.assign(new Error('Cycle not found'),{code:'CYCLE_NOT_FOUND'});const handler=this.handlers.get(cycle.type);if(!handler?.resumable)throw Object.assign(new Error('این چرخه Resume پشتیبانی نمی‌کند.'),{code:'CYCLE_NOT_RESUMABLE'});if(!['paused','interrupted'].includes(cycle.status))return cycle;cycle.status='running';cycle.finishedAt=null;cycle.end=null;cycle.meta=cycle.meta||{};cycle.meta.resumedAt=now();cycle.evidence=Array.isArray(cycle.evidence)?cycle.evidence:[];cycle.evidence.push({at:now(),code:'CYCLE_RESUMED'});this.store.save(cycle);this.journal?.append('CYCLE_RESUMED',{cycleId:cycle.id,payload:{type:cycle.type}});return this.run(cycle.id,context);
++  }
++  async cancel(cycleId, context = {}) {
++    let cycle=this.store.get(cycleId);if(!cycle)throw Object.assign(new Error('Cycle not found'),{code:'CYCLE_NOT_FOUND'});const handler=this.handlers.get(cycle.type);if(!handler?.allowCancel)throw Object.assign(new Error('Cancel برای این چرخه فعال نیست.'),{code:'CYCLE_CANCEL_NOT_ALLOWED'});if(TERMINAL.has(cycle.status)&&cycle.status!=='interrupted')return cycle;let patch={};if(typeof handler.cancel==='function')patch=await handler.cancel(cycle,context)||{};cycle={...cycle,...patch,status:'cancelled',finishedAt:now(),updatedAt:now()};cycle.evidence=Array.isArray(cycle.evidence)?cycle.evidence:[];cycle.evidence.push({at:cycle.finishedAt,code:'CYCLE_CANCELLED_SAFE_BOUNDARY'});cycle.end=null;this.store.save(cycle);this.journal?.append('CYCLE_CANCELLED',{cycleId:cycle.id,payload:{type:cycle.type}});return this.finalize(cycle,context);
++  }
+   async rollback(cycleId, context={}){
+     let cycle=this.store.get(cycleId);
+     if(!cycle) return {ok:false,message:'چرخه پیدا نشد'};
+     const handler=this.handlers.get(cycle.type);
+     if(typeof handler?.undo!=='function') return {ok:false,message:'Undo برای این چرخه فعال نیست'};
+     if(this.beforeRun){let gate;try{gate=await this.beforeRun(cycle,{...context,phase:'rollback'});}catch(error){gate={ok:false,code:error.code||'ROLLBACK_PREFLIGHT_FAILED',message:error.message}}if(gate?.ok===false){this.journal?.append('ROLLBACK_PREFLIGHT_BLOCKED',{cycleId:cycle.id,payload:{type:cycle.type,code:gate.code||'ROLLBACK_PREFLIGHT_BLOCKED'}});return{ok:false,code:gate.code||'ROLLBACK_PREFLIGHT_BLOCKED',message:gate.message||'Rollback preflight متوقف شد',results:[]};}}
+-    if(cycle.status!=='completed') return {ok:false,message:'فقط چرخه کامل‌شده قابل Undo است'};
++    const rollbackAllowed=cycle.status==='completed'||(handler?.allowPartialUndo&&['cancelled','failed','interrupted'].includes(cycle.status));
++    if(!rollbackAllowed) return {ok:false,message:'این وضعیت چرخه قابل Undo نیست'};
+     let results;
+     try{results=await handler.undo(cycle,context);}catch(error){
+       cycle.evidence.push({at:now(),code:'ROLLBACK_FAILED',ok:false,error:error.code||error.message});cycle.updatedAt=now();this.store.save(cycle);this.journal?.append('CYCLE_ROLLBACK_FAILED',{cycleId:cycle.id,payload:{error:error.code||error.message}});return{ok:false,message:error.message,results:[]};
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/explorer-batch-cycles.cjs ./electron/services/explorer-batch-cycles.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/explorer-batch-cycles.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/explorer-batch-cycles.cjs	2026-08-14 04:22:14.197340952 +0000
+@@ -0,0 +1,27 @@
++const path=require('path');
++const crypto=require('crypto');
++const {buildBatchManifest,processBatchChunk,undoBatch}=require('./explorer-batch-service.cjs');
++function step(id,kind,status,label,detail=''){return{id,kind,status,label,detail,at:new Date().toISOString()};}
++function evidence(code,data={}){return{at:new Date().toISOString(),code,...data};}
++function batchCycle({operation='copy',store,onPathsVerified=null,chunkSize=16}={}){
++  if(!store)throw new Error('ExplorerBatchStore required');
++  return{
++    resumable:true,allowCancel:true,allowPartialUndo:true,
++    async next(cycle){
++      if(!cycle.batchJobId){
++        const plan=await buildBatchManifest({root:cycle.input.root,operation,sourcesRelative:cycle.input.sourcesRelative||[],destinationDirRelative:cycle.input.destinationDirRelative||'',conflictPolicy:cycle.input.conflictPolicy||'skip',duplicateAware:cycle.input.duplicateAware!==false,maxItems:cycle.input.maxItems||50000});
++        const jobId=`batch-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;store.createJob({id:jobId,cycleId:cycle.id,root:plan.root,operation:plan.operation,destinationDir:plan.destinationDir,conflictPolicy:plan.conflictPolicy,duplicateAware:plan.duplicateAware,items:plan.items});
++        return{batchJobId:jobId,batchPlan:{schemaVersion:plan.schemaVersion,operation:plan.operation,totalItems:plan.totalItems,totalBytes:plan.totalBytes,sourceCount:plan.sources.length,destinationDir:plan.destinationDir,conflictPolicy:plan.conflictPolicy,duplicateAware:plan.duplicateAware,planHash:plan.planHash},status:'waiting-confirmation',steps:[step('manifest','simulation','completed','ساخت Manifest پایدار',`${plan.sources.length} source · ${plan.totalItems} item`),step('policy','simulation','completed','Conflict + Duplicate Policy',`${plan.conflictPolicy} · duplicate-aware=${plan.duplicateAware}`),step('confirm','approval','waiting-confirmation',`تأیید Batch ${operation}`,'اجرا chunked است و بین chunkها Pause/Resume/Cancel دارد'),step('execute','write','pending','اجرای Batch','checkpoint بعد از هر item'),step('verify','verify','pending','Verify + Index reconcile')],evidence:[...cycle.evidence,evidence('EXPLORER_BATCH_PREVIEW',{operation,totalItems:plan.totalItems,totalBytes:plan.totalBytes,sourceCount:plan.sources.length,conflictPolicy:plan.conflictPolicy,duplicateAware:plan.duplicateAware,planHash:plan.planHash})]};
++      }
++      const confirm=cycle.steps.find(s=>s.id==='confirm');if(confirm?.status!=='approved'&&cycle.status!=='running')return{status:cycle.status};
++      const chunk=await processBatchChunk(store,cycle.batchJobId,{limit:Math.max(1,Math.min(64,Number(cycle.input.chunkSize||chunkSize)||chunkSize))});
++      let reconcile=null;if(chunk.paths?.length&&onPathsVerified){try{reconcile=await onPathsVerified({root:cycle.input.root,paths:chunk.paths});}catch(error){reconcile={ok:false,code:error.code||'EXPLORER_BATCH_INDEX_RECONCILE_FAILED',message:error.message};}}
++      const p=chunk.progress||store.status(cycle.batchJobId);const executeStatus=chunk.status==='completed'?'completed':chunk.status==='failed'?'failed':chunk.status==='cancelled'?'cancelled':'running';const verifyStatus=chunk.status==='completed'?'completed':chunk.status==='failed'?'failed':'pending';
++      return{status:chunk.status==='paused'?'paused':chunk.status,batchProgress:p,reconcile,result:{operation,batchJobId:cycle.batchJobId,progress:p,reconcile},undoStack:p?.doneItems?[{kind:'explorer-batch',jobId:cycle.batchJobId}]:[],steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write',executeStatus,'اجرای Batch',`${p.doneItems+p.skippedItems}/${p.totalItems} · skipped ${p.skippedItems}`):s.id==='verify'?step('verify','verify',verifyStatus,'Verify + Index reconcile',chunk.status==='completed'?'Batch کامل و checkpointها نهایی شدند':`progress ${p.doneItems+p.skippedItems}/${p.totalItems}`):s),evidence:[...cycle.evidence,evidence(chunk.status==='completed'?'EXPLORER_BATCH_COMPLETED':chunk.status==='paused'?'EXPLORER_BATCH_CHECKPOINT':chunk.status==='cancelled'?'EXPLORER_BATCH_CANCELLED':'EXPLORER_BATCH_FAILED',{operation,status:chunk.status,totalItems:p.totalItems,doneItems:p.doneItems,skippedItems:p.skippedItems,failedItems:p.failedItems,doneBytes:p.doneBytes,totalBytes:p.totalBytes,indexReconcileOk:reconcile?.ok??null})]};
++    },
++    async cancel(cycle){if(cycle.batchJobId)store.requestCancel(cycle.batchJobId);const p=cycle.batchJobId?store.status(cycle.batchJobId):null;if(cycle.batchJobId)store.mark(cycle.batchJobId,{status:'cancelled',finished_at:new Date().toISOString()});return{batchProgress:p,result:{operation,batchJobId:cycle.batchJobId,progress:p,cancelled:true}};},
++    async undo(cycle){if(!cycle.batchJobId)return[{ok:false,error:'EXPLORER_BATCH_JOB_MISSING'}];return undoBatch(store,cycle.batchJobId);},
++    async onEnd(cycle){const p=cycle.batchProgress||cycle.result?.progress;return{summary:cycle.status==='completed'?`Batch ${operation} کامل شد: ${p?.doneItems||0} انجام، ${p?.skippedItems||0} رد شد.`:cycle.status==='cancelled'?`Batch ${operation} در مرز امن متوقف شد؛ عملیات انجام‌شده قابل Rollback است.`:cycle.status==='paused'?`Batch ${operation} در checkpoint امن Pause شد.`:`Batch ${operation} کامل نشد.`,quality:cycle.status==='completed'?'verified':cycle.status==='cancelled'?'cancelled':cycle.status==='paused'?'checkpointed':'failed',nextCycleSuggestions:['explorer-properties']};}
++  };
++}
++module.exports={batchCycle};
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/explorer-batch-service.cjs ./electron/services/explorer-batch-service.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/explorer-batch-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/explorer-batch-service.cjs	2026-08-14 04:23:47.450252750 +0000
+@@ -0,0 +1,104 @@
++const fs=require('fs');
++const fsp=fs.promises;
++const path=require('path');
++const crypto=require('crypto');
++const {resolveWrite,assertNoLinkChain,statSnapshot,sameSnapshot,sha256File}=require('./file-explorer-service.cjs');
++const {assertInsideRoot,comparable}=require('./path-policy.cjs');
++const SCHEMA_VERSION='workspace-explorer-batch-v1';
++const OPS=new Set(['copy','move']);
++const CONFLICTS=new Set(['skip','rename','replace']);
++function now(){return new Date().toISOString();}
++function err(code,message,details=null){return Object.assign(new Error(message),{code,details});}
++async function lstatMaybe(p){try{return await fsp.lstat(p);}catch(e){if(e.code==='ENOENT')return null;throw e;}}
++function safeId(v=''){return String(v||'job').replace(/[^a-zA-Z0-9_-]/g,'_');}
++function fileNameParts(name){const ext=path.extname(name),base=ext?name.slice(0,-ext.length):name;return{base,ext};}
++function uniquePath(desired,reserved=new Set()){
++  if(!fs.existsSync(desired)&&!reserved.has(comparable(desired)))return desired;const dir=path.dirname(desired),{base,ext}=fileNameParts(path.basename(desired));
++  for(let i=1;i<=9999;i++){const p=path.join(dir,`${base} (${i})${ext}`);if(!fs.existsSync(p)&&!reserved.has(comparable(p)))return p;}throw err('EXPLORER_BATCH_RENAME_EXHAUSTED','برای Conflict Rename نام آزاد پیدا نشد.');
++}
++function relation(a,b){const aa=path.resolve(a),bb=path.resolve(b),rel=path.relative(aa,bb);return rel===''?'same':(!rel.startsWith('..')&&!path.isAbsolute(rel))?'inside':'outside';}
++async function fileIdentical(a,b){const [sa,sb]=await Promise.all([lstatMaybe(a),lstatMaybe(b)]);if(!sa?.isFile()||!sb?.isFile()||Number(sa.size)!==Number(sb.size))return false;const [ha,hb]=await Promise.all([sha256File(a),sha256File(b)]);return ha===hb;}
++async function sourceRecord(root,relative){const r=resolveWrite(root,relative);if(!r.relativePath)throw err('EXPLORER_BATCH_SOURCE_REQUIRED','منبع Batch لازم است.');await assertNoLinkChain(r.root,r.path,{includeTarget:true});const st=await lstatMaybe(r.path);if(!st)throw err('EXPLORER_BATCH_SOURCE_MISSING','یکی از منابع Batch پیدا نشد.',{relative});if(st.isSymbolicLink())throw err('EXPLORER_BATCH_LINK_BLOCKED','Symlink/Junction به‌عنوان منبع Batch مجاز نیست.',{relative});if(!st.isFile()&&!st.isDirectory())throw err('EXPLORER_BATCH_SOURCE_TYPE_BLOCKED','نوع منبع پشتیبانی نمی‌شود.',{relative});return{root:r.root,relative:r.relativePath,path:r.path,st,snapshot:statSnapshot(st)};}
++async function buildBatchManifest({root,operation='copy',sourcesRelative=[],destinationDirRelative='',conflictPolicy='skip',duplicateAware=true,maxItems=50000}={}){
++  const op=String(operation||'copy'),conflict=String(conflictPolicy||'skip');if(!OPS.has(op))throw err('EXPLORER_BATCH_OPERATION_BLOCKED','عملیات Batch باید copy یا move باشد.');if(!CONFLICTS.has(conflict))throw err('EXPLORER_BATCH_CONFLICT_POLICY_INVALID','Conflict policy معتبر نیست.');
++  const list=[...new Set((Array.isArray(sourcesRelative)?sourcesRelative:[]).map(x=>String(x||'').trim()).filter(Boolean))];if(!list.length)throw err('EXPLORER_BATCH_SOURCES_REQUIRED','حداقل یک منبع لازم است.');if(list.length>500)throw err('EXPLORER_BATCH_TOO_MANY_SOURCES','حداکثر ۵۰۰ منبع در یک Batch پذیرفته می‌شود.');
++  const destRec=resolveWrite(root,destinationDirRelative);await assertNoLinkChain(destRec.root,destRec.path,{includeTarget:true});const dstSt=await lstatMaybe(destRec.path);if(!dstSt?.isDirectory())throw err('EXPLORER_BATCH_DESTINATION_DIRECTORY_REQUIRED','مقصد Batch باید پوشه موجود باشد.');
++  const sources=[];for(const rel of list)sources.push(await sourceRecord(destRec.root,rel));
++  for(let i=0;i<sources.length;i++)for(let k=i+1;k<sources.length;k++){if(relation(sources[i].path,sources[k].path)!=='outside'||relation(sources[k].path,sources[i].path)!=='outside')throw err('EXPLORER_BATCH_OVERLAPPING_SOURCES','منابع Batch نباید داخل یکدیگر باشند.',{a:sources[i].relative,b:sources[k].relative});}
++  const reserved=new Set(),items=[];let totalBytes=0;
++  const push=item=>{if(items.length>=Math.max(1,Number(maxItems)||50000))throw err('EXPLORER_BATCH_MANIFEST_LIMIT','تعداد آیتم‌های recursive از سقف امن Batch عبور کرد.',{maxItems});items.push(item);totalBytes+=Number(item.size||0);reserved.add(comparable(item.destination));};
++  for(const src of sources){
++    if(src.st.isDirectory()&&relation(src.path,destRec.path)!=='outside')throw err('EXPLORER_BATCH_DESTINATION_INSIDE_SOURCE','مقصد داخل منبع پوشه قرار دارد و باعث recursion می‌شود.',{source:src.relative,destination:destRec.relativePath});
++    let top=assertInsideRoot(path.join(destRec.path,path.basename(src.path)),src.root),topExists=await lstatMaybe(top),preSkip=null;const reservedConflict=reserved.has(comparable(top));
++    if(topExists||reservedConflict){
++      if(topExists&&src.st.isFile()&&topExists.isFile()&&duplicateAware&&Number(src.st.size)===Number(topExists.size)&&await fileIdentical(src.path,top))preSkip='identical-existing';
++      else if(conflict==='skip')preSkip='conflict-skip';
++      else if(conflict==='rename'){top=uniquePath(top,reserved);topExists=null;}
++      else if(conflict==='replace'&&(src.st.isDirectory()||topExists?.isDirectory?.()||reservedConflict))throw err('EXPLORER_BATCH_REPLACE_DIRECTORY_BLOCKED','Replace پوشه موجود عمداً Block است؛ برای پوشه از skip یا rename استفاده کنید.');
++    }
++    if(preSkip){push({kind:src.st.isDirectory()?'skip-tree':'skip-file',source:src.path,destination:top,size:Number(src.st.size||0),mtimeMs:Number(src.st.mtimeMs||0),meta:{reason:preSkip,sourceSnapshot:src.snapshot}});continue;}
++    if(src.st.isFile()){push({kind:op==='copy'?'file-copy':'file-move',source:src.path,destination:top,size:Number(src.st.size||0),mtimeMs:Number(src.st.mtimeMs||0),meta:{sourceSnapshot:src.snapshot,replace:conflict==='replace'&&Boolean(topExists)}});continue;}
++    if(op==='move'){push({kind:'dir-move',source:src.path,destination:top,size:0,mtimeMs:Number(src.st.mtimeMs||0),meta:{sourceSnapshot:src.snapshot}});continue;}
++    push({kind:'mkdir',source:src.path,destination:top,size:0,mtimeMs:Number(src.st.mtimeMs||0),meta:{top:true}});
++    const stack=[{source:src.path,destination:top}];
++    while(stack.length){const cur=stack.pop();let dir;try{dir=await fsp.opendir(cur.source);}catch(e){throw err('EXPLORER_BATCH_DIRECTORY_UNREADABLE','پوشه منبع Batch قابل خواندن نیست.',{path:cur.source,code:e.code});}
++      try{for await(const entry of dir){const s=path.join(cur.source,entry.name),d=assertInsideRoot(path.join(cur.destination,entry.name),src.root);if(entry.isSymbolicLink())throw err('EXPLORER_BATCH_REPARSE_ENTRY_BLOCKED','داخل پوشه recursive symlink/junction پیدا شد؛ Batch متوقف شد.',{path:s});if(entry.isDirectory()){push({kind:'mkdir',source:s,destination:d,size:0,mtimeMs:0,meta:{top:false}});stack.push({source:s,destination:d});continue;}if(!entry.isFile())continue;const st=await fsp.lstat(s);push({kind:'file-copy',source:s,destination:d,size:Number(st.size||0),mtimeMs:Number(st.mtimeMs||0),meta:{sourceSnapshot:statSnapshot(st),replace:false}});}}
++      finally{try{await dir.close()}catch{}}
++    }
++  }
++  const canonical=JSON.stringify({root:comparable(destRec.root),operation:op,destinationDir:comparable(destRec.path),conflictPolicy:conflict,duplicateAware:Boolean(duplicateAware),items:items.map(x=>[x.kind,comparable(x.source||''),comparable(x.destination),x.size,x.mtimeMs,x.meta?.reason||'',Boolean(x.meta?.replace)])});
++  const planHash=crypto.createHash('sha256').update(canonical).digest('hex');return{schemaVersion:SCHEMA_VERSION,root:destRec.root,operation:op,destinationDir:destRec.path,conflictPolicy:conflict,duplicateAware:Boolean(duplicateAware),sources:list,items,totalItems:items.length,totalBytes,planHash,createdAt:now()};
++}
++async function syncFile(p){const fh=await fsp.open(p,'r');try{await fh.sync();}finally{await fh.close();}}
++async function processCopy(item,job,store,artifacts){
++  const srcSt=await lstatMaybe(item.source);if(!srcSt?.isFile())throw err('EXPLORER_BATCH_SOURCE_CHANGED','منبع فایل دیگر وجود ندارد یا نوعش عوض شده.',{source:item.source});if(!sameSnapshot(srcSt,item.meta?.sourceSnapshot||{type:'file',size:item.size,mtimeMs:item.mtime_ms}))throw err('EXPLORER_BATCH_SOURCE_CHANGED','منبع از زمان Preview تغییر کرده است.',{source:item.source});
++  let dstSt=await lstatMaybe(item.destination);const priorBackup=item.backup_path?await lstatMaybe(item.backup_path):null;const hadBackup=Boolean(priorBackup);
++  if(item.state==='committed'&&dstSt?.isFile()){const hs=await sha256File(item.source),hd=await sha256File(item.destination);if(hs!==hd)throw err('EXPLORER_BATCH_COPY_HASH_MISMATCH','Commit قبلی Batch با منبع برابر نیست.');const undo=hadBackup?{kind:'restore-replaced-copy',destination:item.destination,backup:item.backup_path,sha256:hd,size:Number(srcSt.size)}:{kind:'remove-copied-file',path:item.destination,sha256:hd,size:Number(srcSt.size)};store.updateItem(job.id,item.seq,{state:'done',sourceHash:hs,destinationHash:hd,undo});return{state:'done',paths:[item.destination]};}
++  if(dstSt?.isFile()&&job.duplicate_aware&&Number(dstSt.size)===Number(srcSt.size)&&!hadBackup&&await fileIdentical(item.source,item.destination)){store.updateItem(job.id,item.seq,{state:'skipped',reason:'identical-existing',sourceHash:await sha256File(item.source),destinationHash:await sha256File(item.destination)});return{state:'skipped',paths:[]};}
++  if(dstSt&&job.conflict_policy==='skip'){store.updateItem(job.id,item.seq,{state:'skipped',reason:'conflict-skip'});return{state:'skipped',paths:[]};}
++  if(dstSt&&job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد بعد از Preview اشغال شده است.',{destination:item.destination});
++  if(dstSt&&!dstSt.isFile())throw err('EXPLORER_BATCH_REPLACE_TYPE_BLOCKED','Replace فقط روی فایل موجود مجاز است.');
++  await fsp.mkdir(path.dirname(item.destination),{recursive:true});await fsp.mkdir(artifacts.stageDir,{recursive:true});await fsp.mkdir(artifacts.backupDir,{recursive:true});
++  const stage=item.stage_path||path.join(artifacts.stageDir,`${item.seq}.part`),backup=item.backup_path||path.join(artifacts.backupDir,`${item.seq}-${path.basename(item.destination)}`);
++  store.updateItem(job.id,item.seq,{state:item.state==='backed-up'?'backed-up':'processing',stagePath:stage,backupPath:(dstSt||hadBackup)?backup:null});
++  if(!await lstatMaybe(stage)&&item.state!=='committed'){await fsp.copyFile(item.source,stage,fs.constants.COPYFILE_EXCL);await syncFile(stage);}if(item.state!=='backed-up')store.updateItem(job.id,item.seq,{state:'staged',stagePath:stage,backupPath:(dstSt||hadBackup)?backup:null});
++  const srcAfter=await fsp.lstat(item.source);if(!sameSnapshot(srcAfter,item.meta?.sourceSnapshot||{type:'file',size:item.size,mtimeMs:item.mtime_ms}))throw err('EXPLORER_BATCH_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد.');
++  dstSt=await lstatMaybe(item.destination);if(dstSt&&!hadBackup){if(job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد قبل از Commit اشغال شد.');if(await lstatMaybe(backup))throw err('EXPLORER_BATCH_BACKUP_COLLISION','Backup path اشغال است.');await fsp.rename(item.destination,backup);store.updateItem(job.id,item.seq,{state:'backed-up',stagePath:stage,backupPath:backup});}
++  if(!(await lstatMaybe(item.destination))&&await lstatMaybe(stage))await fsp.rename(stage,item.destination);store.updateItem(job.id,item.seq,{state:'committed',stagePath:stage,backupPath:(hadBackup||dstSt)?backup:null});
++  const [hs,hd]=await Promise.all([sha256File(item.source),sha256File(item.destination)]);if(hs!==hd)throw err('EXPLORER_BATCH_COPY_HASH_MISMATCH','SHA-256 مقصد Copy با منبع برابر نیست.');
++  const replaceUsed=hadBackup||Boolean(dstSt);const undo=replaceUsed?{kind:'restore-replaced-copy',destination:item.destination,backup,sha256:hd,size:Number(srcSt.size)}:{kind:'remove-copied-file',path:item.destination,sha256:hd,size:Number(srcSt.size)};
++  store.updateItem(job.id,item.seq,{state:'done',sourceHash:hs,destinationHash:hd,stagePath:null,backupPath:replaceUsed?backup:null,undo});return{state:'done',paths:[item.destination]};
++}
++async function processMove(item,job,store,artifacts){
++  const src=await lstatMaybe(item.source);if(!src) {
++    const dst=await lstatMaybe(item.destination);if(dst){const backupPresent=item.backup_path?Boolean(await lstatMaybe(item.backup_path)):false;const undo=backupPresent?{kind:'restore-replaced-move',source:item.source,destination:item.destination,backup:item.backup_path,after:statSnapshot(dst)}:{kind:'move-back',source:item.destination,destination:item.source,after:statSnapshot(dst)};store.updateItem(job.id,item.seq,{state:'done',reason:'resume-destination-present',undo});return{state:'done',paths:[item.source,item.destination]};}throw err('EXPLORER_BATCH_MOVE_SOURCE_MISSING','منبع Move پیدا نشد.');
++  }
++  let dst=await lstatMaybe(item.destination);if(dst&&job.conflict_policy==='skip'){store.updateItem(job.id,item.seq,{state:'skipped',reason:'conflict-skip'});return{state:'skipped',paths:[]};}
++  if(dst&&job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد Move اشغال شده است.');if(dst&&(!dst.isFile()||!src.isFile()))throw err('EXPLORER_BATCH_REPLACE_DIRECTORY_BLOCKED','Replace برای Move پوشه مجاز نیست.');
++  await fsp.mkdir(path.dirname(item.destination),{recursive:true});await fsp.mkdir(artifacts.backupDir,{recursive:true});const backup=item.backup_path||path.join(artifacts.backupDir,`${item.seq}-${path.basename(item.destination)}`),hadBackup=Boolean(item.backup_path&&await lstatMaybe(item.backup_path));
++  store.updateItem(job.id,item.seq,{state:hadBackup?'backed-up':'processing',backupPath:(dst||hadBackup)?backup:null});if(dst&&!hadBackup){if(await lstatMaybe(backup))throw err('EXPLORER_BATCH_BACKUP_COLLISION','Backup path اشغال است.');await fsp.rename(item.destination,backup);store.updateItem(job.id,item.seq,{state:'backed-up',backupPath:backup});}
++  await fsp.rename(item.source,item.destination);const after=await fsp.lstat(item.destination);const replaceUsed=hadBackup||Boolean(dst);const undo=replaceUsed?{kind:'restore-replaced-move',source:item.source,destination:item.destination,backup,after:statSnapshot(after)}:{kind:'move-back',source:item.destination,destination:item.source,after:statSnapshot(after)};store.updateItem(job.id,item.seq,{state:'done',backupPath:replaceUsed?backup:null,undo});return{state:'done',paths:[item.source,item.destination]};
++}
++async function processItem(item,job,store,artifacts){
++  if(item.kind==='skip-tree'||item.kind==='skip-file'){store.updateItem(job.id,item.seq,{state:'skipped',reason:item.meta?.reason||'skipped'});return{state:'skipped',paths:[]};}
++  if(item.kind==='mkdir'){const st=await lstatMaybe(item.destination);if(st){if(!st.isDirectory())throw err('EXPLORER_BATCH_MKDIR_CONFLICT','مسیر پوشه Batch با فایل اشغال شده است.');store.updateItem(job.id,item.seq,{state:'done',reason:'directory-already-exists'});return{state:'done',paths:[]};}await fsp.mkdir(item.destination,{recursive:false});store.updateItem(job.id,item.seq,{state:'done',undo:{kind:'remove-empty-directory',path:item.destination}});return{state:'done',paths:[item.destination]};}
++  if(item.kind==='file-copy')return processCopy(item,job,store,artifacts);
++  if(item.kind==='file-move'||item.kind==='dir-move')return processMove(item,job,store,artifacts);
++  throw err('EXPLORER_BATCH_ITEM_KIND_UNKNOWN','نوع آیتم Batch ناشناخته است.',{kind:item.kind});
++}
++async function processBatchChunk(store,jobId,{limit=16,onProgress=null}={}){
++  let job=store.get(jobId);if(!job)throw err('EXPLORER_BATCH_JOB_NOT_FOUND','Batch job پیدا نشد.');if(job.cancel_requested){store.mark(jobId,{status:'cancelled',finished_at:now()});return{status:'cancelled',progress:store.status(jobId),paths:[]};}
++  store.mark(jobId,{status:'running'});const items=store.next(jobId,limit);const root=job.root,artifacts={root:path.join(root,'.workspace-agent-batch',safeId(jobId)),stageDir:path.join(root,'.workspace-agent-batch',safeId(jobId),'stage'),backupDir:path.join(root,'.workspace-agent-batch',safeId(jobId),'backup')};assertInsideRoot(artifacts.root,root);
++  const paths=[];for(const item of items){job=store.get(jobId);if(job.cancel_requested){store.mark(jobId,{status:'cancelled',finished_at:now()});break;}try{const r=await processItem(item,job,store,artifacts);paths.push(...(r.paths||[]));}catch(error){store.updateItem(jobId,item.seq,{state:'failed',reason:error.code||error.message});store.mark(jobId,{status:'failed',finished_at:now(),summary_json:{code:error.code||'EXPLORER_BATCH_ITEM_FAILED',message:error.message,seq:item.seq}});throw error;}onProgress?.(store.status(jobId));await new Promise(r=>setImmediate(r));}
++  const progress=store.status(jobId);if(progress.status==='cancelled')return{status:'cancelled',progress,paths:[...new Set(paths)]};const remaining=Number(progress.totalItems)-Number(progress.doneItems)-Number(progress.skippedItems)-Number(progress.failedItems);if(remaining<=0){store.mark(jobId,{status:progress.failedItems?'failed':'completed',finished_at:now()});return{status:progress.failedItems?'failed':'completed',progress:store.status(jobId),paths:[...new Set(paths)]};}store.mark(jobId,{status:'paused'});return{status:'paused',progress:store.status(jobId),paths:[...new Set(paths)]};
++}
++async function undoOne(item){const u=item.undo;if(!u)return{ok:true,seq:item.seq,skipped:true};try{
++  if(u.kind==='remove-empty-directory'){const st=await lstatMaybe(u.path);if(!st)return{ok:true,seq:item.seq,alreadyGone:true};if(!st.isDirectory())return{ok:false,seq:item.seq,error:'UNDO_TARGET_TYPE_CHANGED'};if((await fsp.readdir(u.path)).length)return{ok:false,seq:item.seq,error:'UNDO_FOLDER_NOT_EMPTY'};await fsp.rmdir(u.path);return{ok:true,seq:item.seq};}
++  if(u.kind==='remove-copied-file'){const st=await lstatMaybe(u.path);if(!st)return{ok:true,seq:item.seq,alreadyGone:true};if(!st.isFile()||Number(st.size)!==Number(u.size))return{ok:false,seq:item.seq,error:'UNDO_COPY_TARGET_CHANGED'};if(await sha256File(u.path)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_COPY_HASH_CHANGED'};await fsp.rm(u.path);return{ok:true,seq:item.seq};}
++  if(u.kind==='move-back'){if(!(await lstatMaybe(u.source)))return{ok:false,seq:item.seq,error:'UNDO_SOURCE_MISSING'};if(await lstatMaybe(u.destination))return{ok:false,seq:item.seq,error:'UNDO_DESTINATION_EXISTS'};await fsp.rename(u.source,u.destination);return{ok:true,seq:item.seq};}
++  if(u.kind==='restore-replaced-copy'){const st=await lstatMaybe(u.destination);if(st){if(!st.isFile()||await sha256File(u.destination)!==u.sha256)return{ok:false,seq:item.seq,error:'UNDO_REPLACED_COPY_CHANGED'};await fsp.rm(u.destination);}if(!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING'};await fsp.rename(u.backup,u.destination);return{ok:true,seq:item.seq};}
++  if(u.kind==='restore-replaced-move'){if(await lstatMaybe(u.source))return{ok:false,seq:item.seq,error:'UNDO_SOURCE_OCCUPIED'};if(!(await lstatMaybe(u.destination)))return{ok:false,seq:item.seq,error:'UNDO_DESTINATION_MISSING'};await fsp.rename(u.destination,u.source);if(!(await lstatMaybe(u.backup)))return{ok:false,seq:item.seq,error:'UNDO_BACKUP_MISSING'};await fsp.rename(u.backup,u.destination);return{ok:true,seq:item.seq};}
++  return{ok:false,seq:item.seq,error:'UNDO_KIND_UNKNOWN'};
++ }catch(error){return{ok:false,seq:item.seq,error:error.code||error.message};}}
++async function undoBatch(store,jobId){const rows=store.undoItems(jobId),results=[];for(const item of rows)results.push(await undoOne(item));const ok=results.every(x=>x.ok!==false);store.mark(jobId,{status:ok?'rolled-back':'rollback-failed',finished_at:now(),summary_json:{undoResults:results.length,ok}});return results;}
++module.exports={SCHEMA_VERSION,buildBatchManifest,processBatchChunk,undoBatch,fileIdentical,uniquePath};
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/explorer-batch-store.cjs ./electron/services/explorer-batch-store.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/explorer-batch-store.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./electron/services/explorer-batch-store.cjs	2026-08-14 04:21:31.576790403 +0000
+@@ -0,0 +1,60 @@
++const fs=require('fs');
++const path=require('path');
++let DatabaseSync=null;try{({DatabaseSync}=require('node:sqlite'));}catch{}
++function now(){return new Date().toISOString();}
++function j(v,d=null){try{return JSON.parse(v)}catch{return d}}
++class ExplorerBatchStore{
++  constructor(baseDir,{journal=null}={}){
++    if(!DatabaseSync)throw Object.assign(new Error('Batch Explorer به node:sqlite نیاز دارد.'),{code:'EXPLORER_BATCH_SQLITE_UNAVAILABLE'});
++    this.dir=path.join(baseDir,'explorer-batch');fs.mkdirSync(this.dir,{recursive:true});this.dbPath=path.join(this.dir,'jobs.sqlite');this.journal=journal;
++    this.db=new DatabaseSync(this.dbPath);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
++    this.db.exec(`
++      CREATE TABLE IF NOT EXISTS jobs(
++        id TEXT PRIMARY KEY,cycle_id TEXT,root TEXT NOT NULL,operation TEXT NOT NULL,destination_dir TEXT NOT NULL,
++        conflict_policy TEXT NOT NULL,duplicate_aware INTEGER NOT NULL DEFAULT 1,status TEXT NOT NULL,
++        cursor INTEGER NOT NULL DEFAULT 0,total_items INTEGER NOT NULL DEFAULT 0,done_items INTEGER NOT NULL DEFAULT 0,
++        skipped_items INTEGER NOT NULL DEFAULT 0,failed_items INTEGER NOT NULL DEFAULT 0,total_bytes INTEGER NOT NULL DEFAULT 0,
++        done_bytes INTEGER NOT NULL DEFAULT 0,cancel_requested INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,finished_at TEXT,
++        summary_json TEXT
++      );
++      CREATE TABLE IF NOT EXISTS items(
++        job_id TEXT NOT NULL,seq INTEGER NOT NULL,kind TEXT NOT NULL,source TEXT,destination TEXT NOT NULL,size INTEGER NOT NULL DEFAULT 0,
++        mtime_ms REAL NOT NULL DEFAULT 0,state TEXT NOT NULL DEFAULT 'pending',reason TEXT,source_hash TEXT,destination_hash TEXT,
++        stage_path TEXT,backup_path TEXT,undo_json TEXT,meta_json TEXT,updated_at TEXT NOT NULL,
++        PRIMARY KEY(job_id,seq),FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE CASCADE
++      );
++      CREATE INDEX IF NOT EXISTS idx_explorer_batch_items_state ON items(job_id,state,seq);
++    `);
++    this.st={
++      jobGet:this.db.prepare('SELECT * FROM jobs WHERE id=?'),
++      itemGet:this.db.prepare('SELECT * FROM items WHERE job_id=? AND seq=?'),
++      nextItems:this.db.prepare("SELECT * FROM items WHERE job_id=? AND state IN ('pending','processing','staged','backed-up','committed') ORDER BY seq LIMIT ?"),
++      addItem:this.db.prepare('INSERT INTO items(job_id,seq,kind,source,destination,size,mtime_ms,state,meta_json,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)'),
++      updateItem:this.db.prepare('UPDATE items SET state=?,reason=?,source_hash=?,destination_hash=?,stage_path=?,backup_path=?,undo_json=?,meta_json=?,updated_at=? WHERE job_id=? AND seq=?'),
++      counts:this.db.prepare("SELECT COUNT(*) total,SUM(CASE WHEN state='done' THEN 1 ELSE 0 END) done,SUM(CASE WHEN state='skipped' THEN 1 ELSE 0 END) skipped,SUM(CASE WHEN state='failed' THEN 1 ELSE 0 END) failed,SUM(CASE WHEN state='done' THEN size ELSE 0 END) done_bytes FROM items WHERE job_id=?"),
++      undoItems:this.db.prepare("SELECT * FROM items WHERE job_id=? AND undo_json IS NOT NULL AND state IN ('done','skipped') ORDER BY seq DESC"),
++    };
++  }
++  _row(row){if(!row)return null;return{...row,duplicate_aware:Boolean(row.duplicate_aware),cancel_requested:Boolean(row.cancel_requested),summary:j(row.summary_json,null)};}
++  _item(row){if(!row)return null;return{...row,undo:j(row.undo_json,null),meta:j(row.meta_json,{})};}
++  createJob({id,cycleId='',root,operation,destinationDir,conflictPolicy='skip',duplicateAware=true,items=[]}){
++    const stamp=now();this.db.exec('BEGIN IMMEDIATE');try{
++      this.db.prepare('INSERT INTO jobs(id,cycle_id,root,operation,destination_dir,conflict_policy,duplicate_aware,status,total_items,total_bytes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,cycleId,root,operation,destinationDir,conflictPolicy,duplicateAware?1:0,'prepared',items.length,items.reduce((n,x)=>n+Number(x.size||0),0),stamp,stamp);
++      let seq=0;for(const item of items)this.st.addItem.run(id,seq++,item.kind,item.source||null,item.destination,Number(item.size||0),Number(item.mtimeMs||0),'pending',JSON.stringify(item.meta||{}),stamp);
++      this.db.exec('COMMIT');
++    }catch(error){try{this.db.exec('ROLLBACK')}catch{}throw error;}
++    this.journal?.append('EXPLORER_BATCH_PREPARED',{cycleId,payload:{jobId:id,operation,items:items.length,conflictPolicy,duplicateAware}});return this.get(id);
++  }
++  get(id){return this._row(this.st.jobGet.get(id));}
++  item(id,seq){return this._item(this.st.itemGet.get(id,seq));}
++  next(id,limit=20){return this.st.nextItems.all(id,Math.max(1,Math.min(200,Number(limit)||20))).map(x=>this._item(x));}
++  updateItem(id,seq,patch={}){const cur=this.item(id,seq);if(!cur)return null;const next={...cur,...patch};this.st.updateItem.run(String(next.state||'pending'),next.reason||null,next.source_hash||next.sourceHash||null,next.destination_hash||next.destinationHash||null,next.stage_path||next.stagePath||null,next.backup_path||next.backupPath||null,next.undo?JSON.stringify(next.undo):next.undo_json||null,JSON.stringify(next.meta||{}),now(),id,seq);this.refresh(id);return this.item(id,seq);}
++  mark(id,patch={}){const job=this.get(id);if(!job)return null;const fields=[],vals=[];const allowed=['status','cursor','cancel_requested','finished_at','summary_json'];for(const [k,v] of Object.entries(patch)){if(!allowed.includes(k))continue;fields.push(`${k}=?`);vals.push(k==='summary_json'&&typeof v!=='string'?JSON.stringify(v):v);}if(fields.length){fields.push('updated_at=?');vals.push(now(),id);this.db.prepare(`UPDATE jobs SET ${fields.join(',')} WHERE id=?`).run(...vals);}return this.refresh(id);}
++  refresh(id){const c=this.st.counts.get(id)||{};const row=this.get(id);if(!row)return null;const cursorRow=this.db.prepare("SELECT MIN(seq) n FROM items WHERE job_id=? AND state NOT IN ('done','skipped','failed')").get(id);const cursor=cursorRow?.n==null?Number(row.total_items||0):Number(cursorRow.n);this.db.prepare('UPDATE jobs SET cursor=?,done_items=?,skipped_items=?,failed_items=?,done_bytes=?,updated_at=? WHERE id=?').run(cursor,Number(c.done||0),Number(c.skipped||0),Number(c.failed||0),Number(c.done_bytes||0),now(),id);return this.get(id);}
++  requestCancel(id){const job=this.get(id);if(!job)return null;this.db.prepare('UPDATE jobs SET cancel_requested=1,updated_at=? WHERE id=?').run(now(),id);this.journal?.append('EXPLORER_BATCH_CANCEL_REQUESTED',{cycleId:job.cycle_id,payload:{jobId:id}});return this.get(id);}
++  clearCancel(id){this.db.prepare('UPDATE jobs SET cancel_requested=0,updated_at=? WHERE id=?').run(now(),id);return this.get(id);}
++  undoItems(id){return this.st.undoItems.all(id).map(x=>this._item(x));}
++  status(id){const r=this.refresh(id);if(!r)return null;return{schemaVersion:'workspace-explorer-batch-status-v1',jobId:r.id,cycleId:r.cycle_id,operation:r.operation,status:r.status,totalItems:r.total_items,doneItems:r.done_items,skippedItems:r.skipped_items,failedItems:r.failed_items,totalBytes:r.total_bytes,doneBytes:r.done_bytes,cursor:r.cursor,cancelRequested:r.cancel_requested,conflictPolicy:r.conflict_policy,duplicateAware:r.duplicate_aware,createdAt:r.created_at,updatedAt:r.updated_at,finishedAt:r.finished_at};}
++  close(){try{this.db.close()}catch{}}
++}
++module.exports={ExplorerBatchStore};
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/file-watcher-service.cjs ./electron/services/file-watcher-service.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/file-watcher-service.cjs	2026-08-13 09:16:41.000000000 +0000
++++ ./electron/services/file-watcher-service.cjs	2026-08-14 04:25:51.291561459 +0000
+@@ -32,7 +32,7 @@
+  stopOne(id){try{this.handles.get(id)?.close();}catch{}this.handles.delete(id);}
+  _schedule(ms=this.debounceMs){if(this.flushTimer)return;this.flushTimer=setTimeout(()=>this.flush(),ms);}
+  queue(row,eventType,filename){
+-  const rel=String(filename||'');const full=normalizeDisplayPath(path.resolve(row.root,rel));if(!insideRoot(row.root,full))return;this.metrics.received+=1;
++  const rel=String(filename||'');const first=rel.split(/[\\/]/).filter(Boolean)[0]?.toLowerCase()||'';if(first.startsWith('.workspace-agent-'))return;const full=normalizeDisplayPath(path.resolve(row.root,rel));if(!insideRoot(row.root,full))return;this.metrics.received+=1;
+   const key=`${row.id}|${full}`;const existing=this.pending.get(key);if(existing){this.metrics.coalesced+=1;this.pending.delete(key);}
+   this.pending.set(key,{id:`we-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,watchId:row.id,root:row.root,eventType:String(eventType||'change'),path:full,relativePath:path.relative(row.root,full),at:new Date().toISOString(),coalesced:Number(existing?.coalesced||0)+(existing?1:0)});
+   while(this.pending.size>this.maxPending){const oldest=this.pending.keys().next().value;if(oldest===undefined)break;const dropped=this.pending.get(oldest);this.pending.delete(oldest);this.metrics.droppedPending+=1;if(dropped)this._markDirty(dropped.root,'PENDING_BACKPRESSURE_DROP');}
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/skill-registry.cjs ./electron/services/skill-registry.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/skill-registry.cjs	2026-08-13 19:21:58.000000000 +0000
++++ ./electron/services/skill-registry.cjs	2026-08-14 04:22:41.580800167 +0000
+@@ -31,6 +31,8 @@
+   {id:'skill.explorer.copy',cycleType:'explorer-copy',title:'File Explorer Copy File',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
+   {id:'skill.explorer.move',cycleType:'explorer-move',title:'File Explorer Move',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
+   {id:'skill.explorer.rename',cycleType:'explorer-rename',title:'File Explorer Rename',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
++  {id:'skill.explorer.batch-copy',cycleType:'explorer-batch-copy',title:'File Explorer Batch / Recursive Copy',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
++  {id:'skill.explorer.batch-move',cycleType:'explorer-batch-move',title:'File Explorer Batch Move',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
+   {id:'skill.windows.system',cycleType:'windows-system',title:'Windows System Doctor',risk:'read',confirmation:false,group:'windows',status:'active'},
+   {id:'skill.windows.uia-map',cycleType:'windows-ui-map',title:'Windows UIA Grounding Map',risk:'read',confirmation:false,group:'windows',status:'beta'},
+   {id:'skill.windows.uia-action',cycleType:'windows-ui-action',title:'Pinned Windows UIA Action',risk:'write',confirmation:true,group:'windows',status:'beta',interactiveOnly:true},
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/package.json ./package.json
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/package.json	2026-08-13 19:22:29.000000000 +0000
++++ ./package.json	2026-08-14 04:24:58.179843586 +0000
+@@ -1,16 +1,16 @@
+ {
+   "name": "windows-workspace-agent",
+-  "version": "0.9.4",
++  "version": "0.9.5",
+   "private": true,
+-  "description": "Cycle-driven Windows workspace agent with safe File Explorer Skill Pack, crash-resilient indexing, managed local AI, production-hardened UIA grounding, and verified file operations.",
++  "description": "Cycle-driven Windows workspace agent with advanced checkpointed File Explorer batch/recursive operations, safe conflict policies, local AI, production UIA grounding, and crash-resilient indexing.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs && node --check electron/services/file-explorer-service.cjs && node --check electron/services/file-explorer-cycles.cjs && node --check tests/file-explorer-skill-pack-v094.test.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs && node tests/file-explorer-skill-pack-v094.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs && node --check electron/services/file-explorer-service.cjs && node --check electron/services/file-explorer-cycles.cjs && node --check tests/file-explorer-skill-pack-v094.test.cjs && node --check electron/services/explorer-batch-store.cjs && node --check electron/services/explorer-batch-service.cjs && node --check electron/services/explorer-batch-cycles.cjs && node --check tests/file-explorer-batch-v095.test.cjs && node --check tests/explorer-batch-recovery-v095.test.cjs && node --check tests/windows-file-explorer-v095.uat.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs && node tests/file-explorer-skill-pack-v094.test.cjs && node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -53,7 +53,9 @@
+     "test:grounding-v093": "node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs",
+     "test:windows-grounding-v093-uat": "node tests/windows-production-grounding-v093.uat.cjs",
+     "test:explorer": "node tests/file-explorer-skill-pack-v094.test.cjs",
+-    "test:windows-explorer-uat": "node tests/windows-file-explorer-v094.uat.cjs"
++    "test:windows-explorer-uat": "node tests/windows-file-explorer-v094.uat.cjs",
++    "test:explorer-batch": "node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs",
++    "test:windows-explorer-v095-uat": "node tests/windows-file-explorer-v095.uat.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/src/App.jsx ./src/App.jsx
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/src/App.jsx	2026-08-13 19:23:04.000000000 +0000
++++ ./src/App.jsx	2026-08-14 04:23:25.248293462 +0000
+@@ -6,7 +6,7 @@
+ const actionsForRole=c=>{const t=String(c?.element?.controlType||'');const a=['focus'];if(/Button|MenuItem|Hyperlink|ListItem|TabItem/.test(t))a.push('invoke');if(/CheckBox|RadioButton|ToggleButton/.test(t))a.push('toggle');if(/ComboBox|TreeItem|MenuItem/.test(t))a.push('expand','collapse');if(/Edit|Document|ComboBox/.test(t))a.push('setValue');if(c?.element?.canScrollIntoView)a.push('scrollIntoView');return [...new Set(a)]};
+ const tabs={home:'مرکز فرمان',system:'Windows System',explorer:'File Explorer Skills',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+- const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null),[explorerForm,setExplorerForm]=useState({relativePath:'',query:'',sourceRelative:'',destinationRelative:'',newName:''}),[explorerResult,setExplorerResult]=useState(null),[explorerError,setExplorerError]=useState('');
++ const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null),[explorerForm,setExplorerForm]=useState({relativePath:'',query:'',sourceRelative:'',destinationRelative:'',newName:'',batchSources:'',batchDestination:'',conflictPolicy:'skip',duplicateAware:true}),[explorerResult,setExplorerResult]=useState(null),[explorerError,setExplorerError]=useState('');
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -23,6 +23,9 @@
+  async function run(type,input={}){const actualRoot=input.root||root;if(!actualRoot&&!['windows-system','windows-ui-map'].includes(type))return;setBusy(true);try{const c=await api.startCycle(type,{root:actualRoot,...input});setCycle(c);if(type==='workspace-health'&&c.result)setHealth(c.result);if((type==='duplicates'||type==='indexed-duplicates')&&c.result)setDup(c.result);if((type==='file-search'||type==='indexed-file-search')&&c.result)setSearchResult(c.result);if(type==='persistent-index-scan'||type==='persistent-index-maintenance')await refreshIndex(actualRoot);if(type==='windows-system'&&c.result)setSystem(c.result);if(type==='windows-ui-map'&&c.result)setUiaMap(c.result);if(type==='workspace-intelligence'&&c.result)setIntel(c.result);if(type==='similar-images'&&c.result)setSimilarImages(c.result);if(type==='similar-texts'&&c.result)setSimilarTexts(c.result);if(type==='managed-zone-audit'&&c.result)setZoneReport(c.result);if(type==='drive-audit'&&c.result)setDriveReport(c.result);if(type==='pdf-intelligence'&&c.result)setPdfReport(c.result);if(type==='review-queue-build'||type==='recommendation-apply')await refreshReviews(actualRoot);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
+  async function explorerRead(type,input={}){setExplorerError('');setExplorerResult(null);const c=await run(type,input);if(c?.result)setExplorerResult(c.result);else if(c?.ok===false)setExplorerError(c.message||c.code||'File Explorer Skill ناموفق بود.');return c}
+  async function explorerWrite(type,input={}){if(!root)return;setExplorerError('');setBusy(true);try{const c=await api.startExplorerWrite(type,{root,...input});if(c?.id){setCycle(c);await refresh();await refreshRecovery();await refreshJournal();return c}setExplorerError(c?.message||c?.code||'Explorer Write Preview ساخته نشد.');return c}finally{setBusy(false)}}
++ async function explorerBatch(type){if(!root)return;const sources=String(explorerForm.batchSources||'').split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);if(!sources.length){setExplorerError('حداقل یک مسیر منبع برای Batch وارد کنید.');return}setExplorerError('');setBusy(true);try{const c=await api.startExplorerBatch(type,{root,sourcesRelative:sources,destinationDirRelative:explorerForm.batchDestination,conflictPolicy:explorerForm.conflictPolicy,duplicateAware:explorerForm.duplicateAware,chunkSize:16,maxItems:50000});if(c?.id){setCycle(c);await refresh();return c}setExplorerError(c?.message||c?.code||'Batch Preview ساخته نشد.');return c}finally{setBusy(false)}}
++ async function explorerBatchResume(id){setBusy(true);try{const c=await api.explorerBatchResume(id);if(c?.id)setCycle(c);else setExplorerError(c?.message||c?.code||'Resume ناموفق بود.');await refresh();return c}finally{setBusy(false)}}
++ async function explorerBatchCancel(id){setBusy(true);try{const c=await api.explorerBatchCancel(id);if(c?.id)setCycle(c);else setExplorerError(c?.message||c?.code||'Cancel ناموفق بود.');await refresh();return c}finally{setBusy(false)}}
+  async function startUiaAction(target,action,value=''){setUiaError('');setBusy(true);try{const selector={processId:target.processId,windowName:uiaMap?.focusedWindow?.name||'',windowClassName:uiaMap?.focusedWindow?.className||'',automationId:target.automationId||'',name:target.name||'',className:target.className||'',controlType:target.controlType||'',frameworkId:target.frameworkId||''};const c=await api.startWindowsUiAction({action,selector,value,sensitive:false});if(c?.id){setCycle(c);await refresh();await refreshJournal();return c}setUiaError(c?.message||c?.code||'ساخت Action Preview ناموفق بود.');return c}catch(error){setUiaError(error?.message||'خطای UIA Action')}finally{setBusy(false)}}
+  async function confirm(id,d){setBusy(true);try{const c=await api.confirmCycle(id,d);setCycle(c);if(c.type==='recommendation-apply')await refreshReviews(c.input?.root);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
+  async function undo(id){setBusy(true);try{const r=await api.undoCycle(id);if(r.cycle){setCycle(r.cycle);if(r.cycle.type==='recommendation-apply')await refreshReviews(r.cycle.input?.root)}await refresh()}finally{setBusy(false)}}
+@@ -51,7 +54,7 @@
+  {rootTabs.includes(tab)&&<section className="picker"><div><b>Workspace</b><span>{root||'پوشه‌ای انتخاب نشده'}</span></div><button onClick={pick}>انتخاب پوشه</button></section>}
+  {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="File Explorer Skills" sub="Properties / Search / Copy / Move / Rename" on={()=>setTab('explorer')} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/><Task title="Local AI" sub="Qwen / llama.cpp · Plan-only" on={()=>setTab('ai')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
+  {tab==='system'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('windows-system')} disabled={busy}>اجرای Windows System Doctor</button><span>Read-only؛ Startup Advisor فقط اولویت Review می‌دهد و Registry/Process را تغییر نمی‌دهد.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{system&&<SystemReport data={system}/>}</>}
+- {tab==='explorer'&&<><div className="panel"><div className="panel-title"><div><h3>File Explorer Skill Pack</h3><p>همه مسیرها نسبت به Workspace هستند. Readها بدون تغییر فایل؛ Writeها فقط Preview → Confirm → Execute → Verify.</p></div><b>v0.9.4</b></div><div className="formgrid"><input value={explorerForm.relativePath} onChange={e=>setExplorerForm(x=>({...x,relativePath:e.target.value}))} placeholder="مسیر نسبی، مثلاً docs/report.pdf"/><button onClick={()=>explorerRead('explorer-properties',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Properties</button><button onClick={()=>explorerRead('explorer-navigate',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Open in Explorer</button><button onClick={()=>explorerRead('explorer-select',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Reveal / Select</button></div><div className="formgrid"><input value={explorerForm.query} onChange={e=>setExplorerForm(x=>({...x,query:e.target.value}))} placeholder="Search query"/><button className="primary" onClick={()=>explorerRead('explorer-search',{query:explorerForm.query,limit:100})} disabled={!root||!explorerForm.query||busy}>Search</button></div>{explorerError&&<div className="action-error"><b>Explorer Skill متوقف شد</b><p>{explorerError}</p></div>}</div><div className="panel"><h3>Controlled Write Skills</h3><p>Copy در این Foundation فقط فایل معمولی است؛ کپی recursive پوشه عمداً Block است. Symlink/Junction traversal نیز برای Write مسدود است.</p><div className="formgrid"><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی؛ برای New Folder نام پوشه جدید"/><button onClick={()=>explorerWrite('explorer-new-folder',{destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.destinationRelative||busy}>Preview New Folder</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="منبع نسبی"/><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی دقیق"/><button onClick={()=>explorerWrite('explorer-copy',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Copy</button><button onClick={()=>explorerWrite('explorer-move',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Move</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="فایل/پوشه برای Rename"/><input value={explorerForm.newName} onChange={e=>setExplorerForm(x=>({...x,newName:e.target.value}))} placeholder="نام جدید فقط، بدون مسیر"/><button onClick={()=>explorerWrite('explorer-rename',{sourceRelative:explorerForm.sourceRelative,newName:explorerForm.newName})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.newName||busy}>Preview Rename</button></div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{explorerResult&&<ExplorerResult data={explorerResult}/>}</>}
++ {tab==='explorer'&&<><div className="panel"><div className="panel-title"><div><h3>File Explorer Skill Pack</h3><p>همه مسیرها نسبت به Workspace هستند. Readها بدون تغییر فایل؛ Writeها فقط Preview → Confirm → Execute → Verify.</p></div><b>v0.9.5</b></div><div className="formgrid"><input value={explorerForm.relativePath} onChange={e=>setExplorerForm(x=>({...x,relativePath:e.target.value}))} placeholder="مسیر نسبی، مثلاً docs/report.pdf"/><button onClick={()=>explorerRead('explorer-properties',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Properties</button><button onClick={()=>explorerRead('explorer-navigate',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Open in Explorer</button><button onClick={()=>explorerRead('explorer-select',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Reveal / Select</button></div><div className="formgrid"><input value={explorerForm.query} onChange={e=>setExplorerForm(x=>({...x,query:e.target.value}))} placeholder="Search query"/><button className="primary" onClick={()=>explorerRead('explorer-search',{query:explorerForm.query,limit:100})} disabled={!root||!explorerForm.query||busy}>Search</button></div>{explorerError&&<div className="action-error"><b>Explorer Skill متوقف شد</b><p>{explorerError}</p></div>}</div><div className="panel"><h3>Controlled Write Skills</h3><p>Writeهای تک‌آیتمی قبلی حفظ شده‌اند. برای Recursive/Batch از بخش Advanced Batch استفاده کنید؛ Symlink/Junction traversal همچنان مسدود است.</p><div className="formgrid"><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی؛ برای New Folder نام پوشه جدید"/><button onClick={()=>explorerWrite('explorer-new-folder',{destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.destinationRelative||busy}>Preview New Folder</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="منبع نسبی"/><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی دقیق"/><button onClick={()=>explorerWrite('explorer-copy',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Copy</button><button onClick={()=>explorerWrite('explorer-move',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Move</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="فایل/پوشه برای Rename"/><input value={explorerForm.newName} onChange={e=>setExplorerForm(x=>({...x,newName:e.target.value}))} placeholder="نام جدید فقط، بدون مسیر"/><button onClick={()=>explorerWrite('explorer-rename',{sourceRelative:explorerForm.sourceRelative,newName:explorerForm.newName})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.newName||busy}>Preview Rename</button></div></div><div className="panel"><h3>Advanced Batch / Recursive Operations</h3><p>هر خط یک مسیر نسبی Workspace. اجرا chunked و checkpointed است؛ Replace پوشه موجود Block می‌ماند.</p><textarea value={explorerForm.batchSources} onChange={e=>setExplorerForm(x=>({...x,batchSources:e.target.value}))} placeholder={'docs\nphotos\nreport.pdf'} rows={5}/><div className="formgrid"><input value={explorerForm.batchDestination} onChange={e=>setExplorerForm(x=>({...x,batchDestination:e.target.value}))} placeholder="پوشه مقصد نسبی، مثلاً archive"/><select value={explorerForm.conflictPolicy} onChange={e=>setExplorerForm(x=>({...x,conflictPolicy:e.target.value}))}><option value="skip">Conflict: Skip</option><option value="rename">Conflict: Rename</option><option value="replace">Conflict: Replace file</option></select><label><input type="checkbox" checked={explorerForm.duplicateAware} onChange={e=>setExplorerForm(x=>({...x,duplicateAware:e.target.checked}))}/> Duplicate-aware SHA-256</label></div><div className="actions"><button className="primary" onClick={()=>explorerBatch('explorer-batch-copy')} disabled={!root||!explorerForm.batchSources||!explorerForm.batchDestination||busy}>Preview Batch / Recursive Copy</button><button onClick={()=>explorerBatch('explorer-batch-move')} disabled={!root||!explorerForm.batchSources||!explorerForm.batchDestination||busy}>Preview Batch Move</button></div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo} onResume={explorerBatchResume} onCancel={explorerBatchCancel}/>{explorerResult&&<ExplorerResult data={explorerResult}/>}</>}
+  {tab==='uia'&&<><div className="toolbar"><button className="primary large" onClick={()=>{setUiaError('');run('windows-ui-map')}} disabled={busy}>خواندن UI پنجره فعال</button><span>Grounding خواندنی + Action کنترل‌شده با Preview/Confirm/Pin/Verify؛ بدون coordinate click، SendKeys عمومی یا Password write.</span></div>{uiaError&&<div className="panel action-error"><b>Action متوقف شد</b><p>{uiaError}</p></div>}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{uiaMap&&<UiaReport data={uiaMap} onAction={startUiaAction} busy={busy}/>}</>}
+  {tab==='mission'&&<><div className="panel"><h3>فرمان فارسی</h3><textarea className="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="مثلاً: این پوشه رو هوشمند بررسی کن، پیشنهادها رو برای Review آماده کن و چیزی رو خودکار تغییر نده"/><div className="actions"><button onClick={plan} disabled={!command}>فقط ساخت Plan</button><button className="primary" onClick={mission} disabled={!root||!command||busy}>اجرای Mission</button></div>{goal&&<div className="preview-box"><b>{goal.summary}</b><p>Confidence: {Math.round(goal.confidence*100)}%</p>{goal.notes?.map((n,i)=><small key={i}>{n}</small>)}{goal.steps.map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'نیازمند تأیید':'Read-only/Local'}</small></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+  {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>External loopback endpoint یا Managed llama-server؛ مدل هیچ Tool اجرایی مستقیم دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>AI</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Runtime</span><b>{aiRuntime?.managed?`${aiRuntime.state} · ${aiRuntime.pid||'-'}`:'External / manual'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback · no raw prompt · no background screenshot</b></div></>}</div><div className="panel"><h3>Hardware Advisor</h3><p>RAM/CPU و روی Windows اطلاعات WMI GPU خوانده می‌شود. VRAM WMI فقط سیگنال کم‌اعتماد است و Fit تضمین نمی‌شود.</p><div className="actions"><button onClick={probeAIHardware} disabled={busy}>Probe Hardware</button>{aiHardware?.advice&&<button onClick={async()=>{const r=await api.aiApplyHardwareAdvice(aiHardware.advice);if(r?.ok){setAiSettings(r.settings);await refreshAI()}}}>اعمال تنظیمات Runtime پیشنهادی</button>}</div>{aiHardware&&<><div className="meter"><span>RAM</span><b>{bytes(aiHardware.memory?.totalBytes)}</b></div><div className="meter"><span>CPU</span><b>{aiHardware.cpu?.logicalCores||'-'} threads</b></div><div className="meter"><span>GPU</span><b>{(aiHardware.gpus||[]).map(g=>g.name).join(' · ')||'نامشخص'}</b></div><div className="meter"><span>Suggested</span><b>{aiHardware.advice?.modelFamily} · ctx {fmt(aiHardware.advice?.contextSize)}</b></div><small>{aiHardware.advice?.note}</small></>}</div><div className="panel wide"><h3>Managed llama.cpp Runtime</h3><p>Agent فقط فایل <code>llama-server</code> و مدل <code>.gguf</code> انتخاب‌شده توسط کاربر را با آرگومان‌های allowlisted اجرا می‌کند. Host همیشه 127.0.0.1 و Web UI خاموش است.</p>{aiSettings&&<div className="formgrid"><label><span>Managed Runtime</span><input type="checkbox" checked={Boolean(aiSettings.managedRuntime)} onChange={e=>setAiSettings({...aiSettings,managedRuntime:e.target.checked})}/></label><label><span>Start with Agent</span><input type="checkbox" checked={Boolean(aiSettings.runtimeStartOnLaunch)} onChange={e=>setAiSettings({...aiSettings,runtimeStartOnLaunch:e.target.checked})}/></label><div className="inline"><input value={aiSettings.runtimeExecutablePath||''} readOnly placeholder="llama-server.exe"/><button onClick={pickAIRuntimeExe}>انتخاب Runtime</button></div><div className="inline"><input value={aiSettings.runtimeModelPath||''} readOnly placeholder="model.gguf"/><button onClick={pickAIModel}>انتخاب GGUF</button></div><label><span>Port</span><input type="number" value={aiSettings.runtimePort||8080} onChange={e=>setAiSettings({...aiSettings,runtimePort:Number(e.target.value)})}/></label><label><span>Context</span><input type="number" value={aiSettings.runtimeContextSize||8192} onChange={e=>setAiSettings({...aiSettings,runtimeContextSize:Number(e.target.value)})}/></label><label><span>CPU Threads (0=auto)</span><input type="number" value={aiSettings.runtimeThreads||0} onChange={e=>setAiSettings({...aiSettings,runtimeThreads:Number(e.target.value)})}/></label><label><span>GPU Layers</span><select value={String(aiSettings.runtimeGpuLayers||'auto')} onChange={e=>setAiSettings({...aiSettings,runtimeGpuLayers:e.target.value})}><option value="auto">auto</option><option value="all">all</option><option value="0">CPU only</option></select></label><div className="actions"><button onClick={saveAI}>ذخیره تنظیمات</button><button className="primary" disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('start')}>Start</button><button disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('restart')}>Restart</button><button disabled={busy} onClick={()=>runtimeAction('stop')}>Stop</button></div></div>}{aiSelection&&<p>{aiSelection.ok?`Model ${aiSelection.modelFile} · ${bytes(aiSelection.modelBytes)} · RAM ratio ${Math.round((aiSelection.ramRatio||0)*100)}%`:`Selection: ${aiSelection.error?.code||'ناقص'}`} {aiSelection.warning||''}</p>}{aiRuntime?.logs?.length>0&&<details><summary>آخرین Runtime Logهای حافظه‌ای</summary><pre className="preview-box">{aiRuntime.logs.slice(-12).map(x=>`${x.kind}: ${x.text}`).join('\n')}</pre></details>}</div><div className="panel"><h3>Provider + Capability</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id / managed alias"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health</button><button onClick={warmupAI}>Warmup</button><button onClick={()=>probeAICapabilities(false)}>Probe JSON</button><button disabled={!aiSettings.allowVision} onClick={()=>probeAICapabilities(true)}>Probe Vision</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}{aiCapabilities&&<div className="preview-box"><b>Capability Probe: {aiCapabilities.ok?'PASS':'CHECK'}</b><small>Schema JSON: {aiCapabilities.schemaJson?.ok?'OK':'NO'} · Vision advertised: {aiCapabilities.vision?.supported?'YES':'NO'} · Vision tested: {aiCapabilities.vision?.tested?(aiCapabilities.vision?.ok?'PASS':'FAIL'):'NO'}</small><small>Context: {fmt(aiCapabilities.props?.contextSize||0)} · Slots: {fmt(aiCapabilities.props?.totalSlots||0)} · Build: {aiCapabilities.props?.buildInfo||'-'}</small></div>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIUiAssist}>UIA-first / Vision fallback</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}{aiUiAssist?.ok&&<div className="panel wide"><h3>UI Assist</h3><p>Source: <b>{aiUiAssist.source}</b> · {aiUiAssist.reason}</p><small>Policy: UIA first · هیچ Screenshot خودکاری گرفته نمی‌شود.</small>{aiUiAssist.source==='uia'?<p>{fmt(aiUiAssist.uia?.elements?.length)} کنترل از UI Automation کافی بود؛ Vision فراخوانی نشد.</p>:<p>{aiUiAssist.vision?.summary}</p>}</div>}<div className="panel wide"><h3>Intelligent UI Grounding</h3><p>هدف را با زبان طبیعی بگو. UIA Candidate می‌سازد؛ Vision فقط همان Candidateها را تأیید/رد می‌کند و Target یا coordinate جدید نمی‌سازد.</p><div className="formgrid"><input value={uiGroundIntent} onChange={e=>setUiGroundIntent(e.target.value)} placeholder="مثلاً: دکمه ذخیره تنظیمات را پیدا کن"/><div className="actions"><button className="primary" disabled={busy||!uiGroundIntent.trim()} onClick={groundUiIntent}>Ground با UIA</button><button disabled={busy||!uiGrounding?.ok||!aiSettings?.allowVision} onClick={groundUiWithVision}>Vision corroboration</button></div></div>{uiGrounding?.ok&&<><div className="mini-stats"><b>{Math.round((uiGrounding.result?.topConfidence||0)*100)}%</b><span>Top confidence</span><b>{uiGrounding.result?.quality||'-'}</b><span>Quality</span><b>{uiGrounding.result?.visionUsed?'YES':'NO'}</b><span>Vision fused</span></div><div className="formgrid"><label><span>Action فقط با انتخاب کاربر</span><select value={groundAction} onChange={e=>setGroundAction(e.target.value)}><option value="focus">focus</option><option value="invoke">invoke</option><option value="toggle">toggle</option><option value="expand">expand</option><option value="collapse">collapse</option><option value="scrollIntoView">scrollIntoView</option><option value="setValue">setValue</option></select></label>{groundAction==='setValue'&&<input value={groundValue} maxLength={2048} onChange={e=>setGroundValue(e.target.value)} placeholder="مقدار غیرحساس"/>}</div>{(uiGrounding.result?.candidates||[]).map((c,i)=><div className="uia-row" key={c.id}><div><b>#{i+1} · {c.element?.name||'(بدون Name)'}</b><small>{c.element?.controlType} · {c.element?.surfaceKind||'window'} · semantic {Math.round((c.semanticScore||0)*100)}% · context {Math.round((c.contextScore||0)*100)}% · {c.element?.isOffscreen?'offscreen · ':''}{c.vision?.matched?`vision ${Math.round((c.vision.confidence||0)*100)}%`:'UIA only'}</small></div><div className="uia-actions"><span>{Math.round(((c.fusedConfidence??c.confidence)||0)*100)}%</span><button disabled={busy||!actionsForRole(c).includes(groundAction)} onClick={()=>startGroundedAction(c)}>Preview همین Candidate</button></div></div>)}</>}{cycle?.type==='windows-ui-action'&&cycle?.status==='completed'&&<div className="preview-box"><b>Post-action verification</b><small>UIA verification قبلاً انجام شده؛ این مرحله فقط corroboration تصویری روی Screenshot انتخابی است.</small><button disabled={busy||!aiSettings?.allowVision} onClick={verifyCurrentUiaVisual}>Visual Verify آخرین UI Action</button>{uiVisualVerify?.ok&&<small>نتیجه: {uiVisualVerify.visual?.result||'deterministic'} · {Math.round((uiVisualVerify.visual?.confidence||0)*100)}% · overall {uiVisualVerify.overall||'-'}</small>}</div>}</div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}\n {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/src/components/CycleTimeline.jsx ./src/components/CycleTimeline.jsx
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/src/components/CycleTimeline.jsx	2026-08-13 05:38:27.000000000 +0000
++++ ./src/components/CycleTimeline.jsx	2026-08-14 04:25:10.299272918 +0000
+@@ -1,9 +1,9 @@
+ import React from 'react';
+-const fa={created:'ساخته شد',running:'در حال اجرا','waiting-confirmation':'منتظر تأیید',completed:'تمام',failed:'خطا',cancelled:'لغو','rolled-back':'برگشت داده شد',pending:'در صف',approved:'تأیید شد'};
++const fa={created:'ساخته شد',running:'در حال اجرا','waiting-confirmation':'منتظر تأیید',completed:'تمام',failed:'خطا',cancelled:'لغو',paused:'مکث امن','rolled-back':'برگشت داده شد',pending:'در صف',approved:'تأیید شد'};
+ const bytes=n=>{if(!n)return'۰ B';const u=['B','KB','MB','GB','TB'];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${new Intl.NumberFormat('fa-IR',{maximumFractionDigits:1}).format(v)} ${u[i]}`};
+-export default function CycleTimeline({cycle,onConfirm,onUndo}){
++export default function CycleTimeline({cycle,onConfirm,onUndo,onResume,onCancel}){
+   if(!cycle)return <div className="empty">هنوز چرخه‌ای اجرا نشده.</div>;
+-  const undoable=['organize','duplicate-review','maintenance-cleanup','rename','mission'].includes(cycle.type);const canUndo=cycle.status==='completed'&&undoable;
++  const batch=['explorer-batch-copy','explorer-batch-move'].includes(cycle.type);const undoable=['organize','duplicate-review','maintenance-cleanup','rename','mission','explorer-batch-copy','explorer-batch-move'].includes(cycle.type);const canUndo=(cycle.status==='completed'||(batch&&['cancelled','failed','interrupted'].includes(cycle.status)))&&undoable;
+   const previewOps=(cycle.operations||[]).slice(0,10);
+   return <div className="cycle-card">
+     <div className="cycle-head"><div><b>{cycle.type}</b><small>{cycle.id}</small></div><span className={`badge ${cycle.status}`}>{fa[cycle.status]||cycle.status}</span></div>
+@@ -13,6 +13,8 @@
+     {cycle.status==='waiting-confirmation'&&cycle.type==='mission'&&<div className="preview-box"><b>Mission Guard</b><p>یک چرخه فرزند به عملیات Write رسیده است. تأیید شما فقط همان گام را آزاد می‌کند.</p><small>{cycle.pendingChildId}</small></div>}
+     {cycle.goalPlan&&<div className="preview-box"><b>Goal Plan</b><p>{cycle.goalPlan.summary}</p>{(cycle.goalPlan.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'Confirm required':'Read-only'}</small></div>)}</div>}
+     {cycle.status==='waiting-confirmation'&&<div className="actions"><button className="primary" onClick={()=>onConfirm(cycle.id,'approve')}>تأیید همین گام و اجرا</button><button onClick={()=>onConfirm(cycle.id,'reject')}>لغو</button></div>}
++    {cycle.status==='paused'&&batch&&<div className="actions"><button className="primary" onClick={()=>onResume?.(cycle.id)}>ادامه از Checkpoint</button><button onClick={()=>onCancel?.(cycle.id)}>لغو امن Batch</button></div>}
++    {batch&&cycle.batchProgress&&<div className="preview-box"><b>Batch Progress</b><p>{cycle.batchProgress.doneItems+cycle.batchProgress.skippedItems} / {cycle.batchProgress.totalItems} · skipped {cycle.batchProgress.skippedItems} · failed {cycle.batchProgress.failedItems}</p><small>{cycle.batchProgress.doneBytes||0} / {cycle.batchProgress.totalBytes||0} bytes</small></div>}
+     {canUndo&&<button className="danger ghost" onClick={()=>onUndo(cycle.id)}>Restore / Undo این چرخه</button>}
+     {cycle.end&&<div className="endbox"><div className="end-title"><b>پایان چرخه</b><span className={`quality ${cycle.end.quality}`}>{cycle.end.quality||cycle.end.status}</span></div><span>{cycle.end.summary}</span><small>Evidence: {cycle.end.evidenceCount||0} · Steps OK: {cycle.end.completedSteps||0}</small>{cycle.end.nextCycleSuggestions?.length>0&&<small>پیشنهاد چرخه بعد: {cycle.end.nextCycleSuggestions.join(' · ')}</small>}</div>}
+   </div>;
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/explorer-batch-recovery-v095.test.cjs ./tests/explorer-batch-recovery-v095.test.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/explorer-batch-recovery-v095.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/explorer-batch-recovery-v095.test.cjs	2026-08-14 04:24:39.577469045 +0000
+@@ -0,0 +1,9 @@
++const assert=require('assert');const fs=require('fs');const fsp=fs.promises;const path=require('path');const os=require('os');
++const {ExplorerBatchStore}=require('../electron/services/explorer-batch-store.cjs');
++const {buildBatchManifest,processBatchChunk,undoBatch}=require('../electron/services/explorer-batch-service.cjs');
++(async()=>{const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-v095-recovery-')),root=path.join(base,'ws');await fsp.mkdir(path.join(root,'dest'),{recursive:true});const store=new ExplorerBatchStore(base);
++ // simulate crash after destination backup, before stage commit
++ await fsp.writeFile(path.join(root,'r.txt'),'NEW');await fsp.writeFile(path.join(root,'dest','r.txt'),'OLD');let plan=await buildBatchManifest({root,operation:'copy',sourcesRelative:['r.txt'],destinationDirRelative:'dest',conflictPolicy:'replace',duplicateAware:false});let job=store.createJob({id:'j1',root,operation:'copy',destinationDir:plan.destinationDir,conflictPolicy:'replace',duplicateAware:false,items:plan.items});let item=store.item('j1',0);const art=path.join(root,'.workspace-agent-batch','j1'),stage=path.join(art,'stage','0.part'),backup=path.join(art,'backup','0-r.txt');await fsp.mkdir(path.dirname(stage),{recursive:true});await fsp.mkdir(path.dirname(backup),{recursive:true});await fsp.copyFile(item.source,stage);await fsp.rename(item.destination,backup);store.updateItem('j1',0,{state:'backed-up',stagePath:stage,backupPath:backup});let out=await processBatchChunk(store,'j1',{limit:2});assert.equal(out.status,'completed');assert.equal(await fsp.readFile(path.join(root,'dest','r.txt'),'utf8'),'NEW');let undo=await undoBatch(store,'j1');assert(undo.every(x=>x.ok));assert.equal(await fsp.readFile(path.join(root,'dest','r.txt'),'utf8'),'OLD');
++ // simulate crash after commit before item marked done
++ await fsp.writeFile(path.join(root,'c.txt'),'NEW2');await fsp.writeFile(path.join(root,'dest','c.txt'),'OLD2');plan=await buildBatchManifest({root,operation:'copy',sourcesRelative:['c.txt'],destinationDirRelative:'dest',conflictPolicy:'replace',duplicateAware:false});store.createJob({id:'j2',root,operation:'copy',destinationDir:plan.destinationDir,conflictPolicy:'replace',duplicateAware:false,items:plan.items});item=store.item('j2',0);const art2=path.join(root,'.workspace-agent-batch','j2'),backup2=path.join(art2,'backup','0-c.txt');await fsp.mkdir(path.dirname(backup2),{recursive:true});await fsp.rename(item.destination,backup2);await fsp.copyFile(item.source,item.destination);store.updateItem('j2',0,{state:'committed',backupPath:backup2});out=await processBatchChunk(store,'j2',{limit:2});assert.equal(out.status,'completed');undo=await undoBatch(store,'j2');assert(undo.every(x=>x.ok));assert.equal(await fsp.readFile(path.join(root,'dest','c.txt'),'utf8'),'OLD2');
++ store.close();await fsp.rm(base,{recursive:true,force:true});console.log('explorer-batch-recovery-v095.test.cjs PASS',{backedUpResume:true,committedResume:true});})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/file-explorer-batch-v095.test.cjs ./tests/file-explorer-batch-v095.test.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/file-explorer-batch-v095.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/file-explorer-batch-v095.test.cjs	2026-08-14 04:26:39.225332175 +0000
+@@ -0,0 +1,36 @@
++const assert=require('assert');
++const fs=require('fs');const fsp=fs.promises;const path=require('path');const os=require('os');
++const {CycleStore}=require('../electron/services/cycle-store.cjs');
++const {CycleEngine}=require('../electron/services/cycle-engine.cjs');
++const {ExplorerBatchStore}=require('../electron/services/explorer-batch-store.cjs');
++const {batchCycle}=require('../electron/services/explorer-batch-cycles.cjs');
++const {buildBatchManifest}=require('../electron/services/explorer-batch-service.cjs');
++const {registrySummary,validateSkillStep}=require('../electron/services/skill-registry.cjs');
++const {FileWatcherService}=require('../electron/services/file-watcher-service.cjs');
++async function write(p,text){await fsp.mkdir(path.dirname(p),{recursive:true});await fsp.writeFile(p,text);}
++async function runToEnd(engine,cycle){let c=cycle;while(c.status==='paused')c=await engine.resume(c.id);return c;}
++(async()=>{
++ const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-v095-'));const root=path.join(base,'workspace');await fsp.mkdir(root,{recursive:true});
++ const store=new CycleStore(base),batchStore=new ExplorerBatchStore(base);const engine=new CycleEngine({store,maxIterations:100,maxWallTimeMs:60000});
++ engine.register('explorer-batch-copy',batchCycle({operation:'copy',store:batchStore,chunkSize:3}));engine.register('explorer-batch-move',batchCycle({operation:'move',store:batchStore,chunkSize:2}));
++ // recursive copy + checkpoint/resume + undo
++ await write(path.join(root,'src','a.txt'),'A');await write(path.join(root,'src','nested','b.txt'),'B');await write(path.join(root,'src','nested','deep','c.txt'),'C');await fsp.mkdir(path.join(root,'dest'));
++ let c=engine.create('explorer-batch-copy',{root,sourcesRelative:['src'],destinationDirRelative:'dest',conflictPolicy:'rename',duplicateAware:true,chunkSize:2});c=await engine.run(c.id);assert.equal(c.status,'waiting-confirmation');assert(c.batchPlan.totalItems>=6);c=await engine.confirm(c.id,'approve');assert.equal(c.status,'paused');assert(c.batchProgress.doneItems+c.batchProgress.skippedItems>0);c=await runToEnd(engine,c);assert.equal(c.status,'completed');assert.equal(await fsp.readFile(path.join(root,'dest','src','nested','deep','c.txt'),'utf8'),'C');const rolled=await engine.rollback(c.id);assert(rolled.ok);assert(!fs.existsSync(path.join(root,'dest','src')));
++ // duplicate-aware: identical destination is skipped, source retained
++ await write(path.join(root,'one.txt'),'same');await write(path.join(root,'dest','one.txt'),'same');let d=engine.create('explorer-batch-copy',{root,sourcesRelative:['one.txt'],destinationDirRelative:'dest',conflictPolicy:'replace',duplicateAware:true,chunkSize:4});d=await engine.run(d.id);d=await engine.confirm(d.id,'approve');d=await runToEnd(engine,d);assert.equal(d.status,'completed');assert.equal(d.batchProgress.skippedItems,1);assert(fs.existsSync(path.join(root,'one.txt')));
++ // conflict rename creates deterministic free target
++ await write(path.join(root,'two.txt'),'new');await write(path.join(root,'dest','two.txt'),'old');let r=engine.create('explorer-batch-copy',{root,sourcesRelative:['two.txt'],destinationDirRelative:'dest',conflictPolicy:'rename',duplicateAware:true});r=await engine.run(r.id);r=await engine.confirm(r.id,'approve');r=await runToEnd(engine,r);assert.equal(await fsp.readFile(path.join(root,'dest','two (1).txt'),'utf8'),'new');
++ // replace file + undo restores old destination
++ await write(path.join(root,'replace.txt'),'NEW');await write(path.join(root,'dest','replace.txt'),'OLD');let x=engine.create('explorer-batch-copy',{root,sourcesRelative:['replace.txt'],destinationDirRelative:'dest',conflictPolicy:'replace',duplicateAware:false});x=await engine.run(x.id);x=await engine.confirm(x.id,'approve');x=await runToEnd(engine,x);assert.equal(await fsp.readFile(path.join(root,'dest','replace.txt'),'utf8'),'NEW');const xu=await engine.rollback(x.id);assert(xu.ok);assert.equal(await fsp.readFile(path.join(root,'dest','replace.txt'),'utf8'),'OLD');
++ // cancel at safe checkpoint + partial rollback
++ await fsp.mkdir(path.join(root,'cancel-src'));for(let i=0;i<12;i++)await write(path.join(root,'cancel-src',`f${i}.txt`),`v${i}`);let q=engine.create('explorer-batch-copy',{root,sourcesRelative:['cancel-src'],destinationDirRelative:'dest',conflictPolicy:'rename',chunkSize:2});q=await engine.run(q.id);q=await engine.confirm(q.id,'approve');assert.equal(q.status,'paused');const beforeCancel=q.batchProgress.doneItems;q=await engine.cancel(q.id);assert.equal(q.status,'cancelled');assert(beforeCancel>0);const qu=await engine.rollback(q.id);assert(qu.ok);assert.equal(qu.cycle.status,'rolled-back');
++ // interrupted cycle can resume
++ await fsp.mkdir(path.join(root,'resume-src'));for(let i=0;i<6;i++)await write(path.join(root,'resume-src',`x${i}.txt`),`x${i}`);let z=engine.create('explorer-batch-copy',{root,sourcesRelative:['resume-src'],destinationDirRelative:'dest',conflictPolicy:'rename',chunkSize:2});z=await engine.run(z.id);z=await engine.confirm(z.id,'approve');assert.equal(z.status,'paused');z.status='interrupted';z.finishedAt=new Date().toISOString();store.save(z);z=await engine.resume(z.id);z=await runToEnd(engine,z);assert.equal(z.status,'completed');
++ // replace directory blocked
++ await fsp.mkdir(path.join(root,'dirA'));await fsp.mkdir(path.join(root,'dest','dirA'));await assert.rejects(()=>buildBatchManifest({root,operation:'copy',sourcesRelative:['dirA'],destinationDirRelative:'dest',conflictPolicy:'replace'}),e=>e.code==='EXPLORER_BATCH_REPLACE_DIRECTORY_BLOCKED');
++ // symlink source blocked where supported
++ try{await fsp.symlink(path.join(root,'one.txt'),path.join(root,'link.txt'));await assert.rejects(()=>buildBatchManifest({root,operation:'copy',sourcesRelative:['link.txt'],destinationDirRelative:'dest'}),e=>e.code==='EXPLORER_BATCH_SOURCE_LINK_BLOCKED'||e.code==='EXPLORER_REPARSE_PATH_BLOCKED');}catch(e){if(!['EPERM','EACCES','ENOSYS'].includes(e.code))throw e;}
++ const watcher=new FileWatcherService(base,{debounceMs:60000});const row={id:'w1',root};watcher.queue(row,'rename',path.join('.workspace-agent-batch','x.part'));assert.equal(watcher.status().received,0);watcher.queue(row,'rename','user-file.txt');assert.equal(watcher.status().received,1);watcher.stopAll();
++ const reg=registrySummary();assert.equal(reg.total,34);assert.equal(validateSkillStep({skillId:'skill.explorer.batch-copy',type:'explorer-batch-copy'}).code,'SKILL_INTERACTIVE_ONLY');
++ batchStore.close();await fsp.rm(base,{recursive:true,force:true});console.log('file-explorer-batch-v095.test.cjs PASS',{skills:reg.total,checkpoint:true,replaceUndo:true,cancelRollback:true});
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v0.9.5.txt' /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/windows-file-explorer-v095.uat.cjs ./tests/windows-file-explorer-v095.uat.cjs
+--- /mnt/data/v094_compare/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/windows-file-explorer-v095.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/windows-file-explorer-v095.uat.cjs	2026-08-14 04:24:58.320448126 +0000
+@@ -0,0 +1,4 @@
++const fs=require('fs');const fsp=fs.promises;const path=require('path');const os=require('os');
++if(process.platform!=='win32'){console.log('windows-file-explorer-v095.uat.cjs SKIP (Windows only)');process.exit(0);}
++const assert=require('assert');const {CycleStore}=require('../electron/services/cycle-store.cjs');const {CycleEngine}=require('../electron/services/cycle-engine.cjs');const {ExplorerBatchStore}=require('../electron/services/explorer-batch-store.cjs');const {batchCycle}=require('../electron/services/explorer-batch-cycles.cjs');
++(async()=>{const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-explorer-v095-')),root=path.join(base,'workspace');await fsp.mkdir(path.join(root,'dest'),{recursive:true});await fsp.mkdir(path.join(root,'src','nested'),{recursive:true});for(let i=0;i<240;i++)await fsp.writeFile(path.join(root,'src',i%3===0?'nested':'',`فایل-${i}-🚀.txt`),`payload-${i}`);const cs=new CycleStore(base),bs=new ExplorerBatchStore(base),engine=new CycleEngine({store:cs,maxIterations:10000,maxWallTimeMs:20*60*1000});engine.register('explorer-batch-copy',batchCycle({operation:'copy',store:bs,chunkSize:17}));let c=engine.create('explorer-batch-copy',{root,sourcesRelative:['src'],destinationDirRelative:'dest',conflictPolicy:'rename',duplicateAware:true,chunkSize:17});c=await engine.run(c.id);c=await engine.confirm(c.id,'approve');let checkpoints=0;while(c.status==='paused'){checkpoints++;c=await engine.resume(c.id);}assert.equal(c.status,'completed');assert.equal(c.batchProgress.failedItems,0);assert(fs.existsSync(path.join(root,'dest','src','nested','فایل-0-🚀.txt')));const undo=await engine.rollback(c.id);assert(undo.ok);assert(!fs.existsSync(path.join(root,'dest','src')));bs.close();await fsp.rm(base,{recursive:true,force:true});console.log('windows-file-explorer-v095.uat.cjs PASS',{files:240,checkpoints,unicode:true,rollback:true});})().catch(e=>{console.error(e);process.exit(1)});

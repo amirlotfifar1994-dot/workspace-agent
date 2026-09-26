@@ -1,0 +1,12 @@
+const assert=require('assert');
+const fs=require('fs');
+const os=require('os');
+const path=require('path');
+const {RCSelfCheckService}=require('../electron/services/rc-self-check-service.cjs');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-selfcheck-'));
+const base={userData:dir,appVersion:'0.9.8',journal:{verify:()=>({ok:true,count:10}),append:()=>{}},persistentFileIndex:{health:()=>({ok:true,activeScans:0,roots:{completed:1}})},recoveryService:{inspect:()=>[]},watcherService:{status:()=>({dirtyRoots:[],blockedRoots:[],pending:0,watched:1})},rootResilienceService:{status:()=>({roots:[{status:'online',identityChanged:false}]})},lifecycleState:{status:()=>({previousSession:{cleanExit:true}})},resourcePressureGuard:{snapshot:()=>({state:'normal'})},localAIService:{status:()=>({enabled:false})},updateGuard:{status:()=>({writeBlocked:false,pending:null,stableVersion:'0.9.7'})}};
+let s=new RCSelfCheckService(base);let r=s.run();assert.strictEqual(r.overall,'pass');assert.strictEqual(r.summary.block,0);
+s=new RCSelfCheckService({...base,recoveryService:{inspect:()=>[{id:'tx'}]}});r=s.run();assert.strictEqual(r.overall,'warn');assert(r.checks.find(x=>x.id==='recovery'&&x.status==='warn'));
+s=new RCSelfCheckService({...base,journal:{verify:()=>({ok:false,invalidSeq:3}),append:()=>{}}});r=s.run();assert.strictEqual(r.overall,'block');assert(r.checks.find(x=>x.id==='journal'&&x.status==='block'));
+s=new RCSelfCheckService({...base,updateGuard:{status:()=>({writeBlocked:true,blockCode:'UPDATE_SELF_CHECK_BLOCKED',rollbackRecommended:true,pending:{targetVersion:'1.0.0-rc1'}})}});r=s.run();assert.strictEqual(r.overall,'block');
+console.log('rc-self-check-v098.test.cjs PASS');

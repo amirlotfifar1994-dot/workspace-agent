@@ -1,0 +1,957 @@
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/README_FA.md /mnt/data/wa092/README_FA.md
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/README_FA.md	2026-08-13 10:47:49.000000000 +0000
++++ /mnt/data/wa092/README_FA.md	2026-08-13 12:10:27.403764452 +0000
+@@ -1,66 +1,61 @@
+-# Workspace Agent v0.9.1 — Local AI Foundation
++# Workspace Agent v0.9.2 — Intelligent Vision & Grounding
+ 
+-تمرکز فعال پروژه **Windows Agent امن برای مدیریت Workspace/هارد** است. CorelDRAW همچنان Deferred است.
++تمرکز فعال پروژه **Windows Agent امن برای مدیریت Workspace/هارد و کنترل محدود رابط کاربری** است. CorelDRAW همچنان Deferred است تا هسته عمومی Windows Agent به بلوغ کافی برسد.
+ 
+ ## چرخه اصلی
+-Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End
++Observe → Analyze → Ground → Plan → Preview → Confirm → Execute → Verify → End
+ 
+-Writeهای فایل از Transaction / Recovery / Undo و Volume Identity Guard عبور می‌کنند. Permanent Delete و arbitrary shell غیرفعال‌اند.
++Writeهای فایل از Transaction / Recovery / Undo و Volume Identity Guard عبور می‌کنند. Permanent Delete، arbitrary shell، coordinate click و global SendKeys غیرفعال‌اند.
+ 
+-## جدید در v0.9.1
+-- **Local AI Provider** فقط روی loopback (`127.0.0.1/localhost/::1`).
+-- OpenAI-compatible transport مناسب `llama.cpp / llama-server`.
+-- Planner مدل فقط **Skillهای allowlisted** را در JSON Schema پیشنهاد می‌دهد؛ Tool execution مستقیم ندارد.
+-- خروجی مدل دوباره در برنامه validate و inputهای Path/Shell/Secret حذف می‌شوند.
+-- Plan معتبر به **token موقت 10 دقیقه‌ای** تبدیل و به Workspace فعلی bind می‌شود.
+-- AI Mission از همان Mission DAG/Cycle/Safety Core نسخه‌های قبلی استفاده می‌کند.
+-- Write Skill حتی اگر AI پیشنهاد داده باشد، Confirmation مستقل دارد.
+-- Prompt/response safety: Secret redaction، max prompt/output، timeout، rate limit، single-flight و circuit breaker.
+-- Skill Memory فقط آمار موفقیت/شکست Skill را نگه می‌دارد؛ prompt/path/content ذخیره نمی‌شود.
+-- **Local Vision Advisory** فقط روی تصویر انتخابی کاربر؛ بدون background screenshot و بدون coordinate/action generation.
+-- تب Local AI در UI برای endpoint/model، Health، Plan و Vision.
++## جدید در v0.9.2
++- **Semantic UIA Grounding**: هدف زبان طبیعی به Candidateهای واقعی Microsoft UI Automation رتبه‌بندی می‌شود.
++- رتبه‌بندی deterministic بر پایه semantic match، ControlType/structure، uniqueness و memory boost انجام می‌شود.
++- **Vision فقط corroboration است**: تنها Candidate IDهایی را می‌تواند تقویت/تضعیف کند که UIA از قبل ساخته است؛ Target یا coordinate جدید نمی‌سازد.
++- Screenshot همچنان فقط با انتخاب صریح کاربر وارد Vision می‌شود؛ background capture وجود ندارد.
++- در صورت امکان، فقط ناحیه Candidateها نسبت به پنجره فعال crop و برای VLM ارسال می‌شود.
++- Action از Frontend selector آزاد نمی‌گیرد؛ فقط `grounding session + candidate id + user-selected action` می‌گیرد و selector از session داخلی بازیابی می‌شود.
++- Backend سازگاری Action با ControlType را نیز بررسی می‌کند.
++- مسیر اجرای Action همان Preview → Confirmation → Runtime Pin → UIA Pattern → Verify نسخه‌های قبلی است.
++- **Post-action Visual Verifier** اختیاری است و فقط پس از UIA verification روی Screenshot انتخابی کاربر corroboration می‌دهد.
++- **Verified Grounding Memory** فقط signature هش‌شده + intent class + شمارنده موفقیت را نگه می‌دارد؛ raw intent، label و screenshot ذخیره نمی‌شوند.
++- Grounding ضعیف وارد Memory نمی‌شود مگر confidence کافی یا Vision corroboration قوی داشته باشد.
+ 
+-## Local AI سریع
+-یک مدل GGUF سازگار را با llama.cpp روی loopback اجرا کنید، سپس:
++## Local AI
++v0.9.1 Managed `llama-server` و Provider محلی را نگه می‌دارد. v0.9.2 مدل را به Action executor تبدیل نمی‌کند؛ مدل فقط برای Planner و Vision محدود استفاده می‌شود.
+ 
+ ```powershell
+-powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1
++$env:WA_LLAMA_SERVER='C:\tools\llama.cpp\llama-server.exe'
++$env:WA_GGUF_MODEL='D:\models\model.gguf'
++npm run test:windows-local-ai-runtime-uat
+ ```
+ 
+-در برنامه: Local AI → Enable → Base URL → Model → Save → Health Test.
++## تست Grounding روی Windows
++```powershell
++npm run test:windows-grounding-uat
++```
+ 
+-جزئیات: `docs/LOCAL_AI_MODEL_v0.9_FA.md`.
++این UAT یک WinForms کنترل‌شده می‌سازد، UIA Grounding واقعی را تست می‌کند، Candidate را از همان selector امن invoke می‌کند و crop تصویری را می‌سنجد. اگر `WA_LOCAL_AI_BASE_URL` و `WA_LOCAL_AI_MODEL` تنظیم باشند، Vision واقعی Local نیز تست می‌شود.
+ 
+ ## تست عمومی
+ ```bash
+ npm run check
+-npm run test:ai
++npm run test:grounding
+ ```
+ 
+-## Windows Certification
+-Release رسمی v0.8.x همچنان gateهای Windows واقعی را حفظ کرده است:
+-
++## Release / Certification
+ ```powershell
+ npm run release:lock
+ npm run check:release-inputs
+ npm run certify:windows
+ ```
+ 
+-## مرزهای v0.9.1
+-- مدل یا Runtime داخل سورس bundle نشده است.
+-- Cloud provider/API key در این نسخه پشتیبانی نمی‌شود.
+-- AI نمی‌تواند Windows UI Action مستقیم اجرا کند.
+-- AI نمی‌تواند Shell/PowerShell/Executable بسازد یا اجرا کند.
+-- Local AI واقعی با Qwen/llama.cpp روی Windows هنوز UAT جدا می‌خواهد.
+-
++## مرزهای v0.9.2
++- مدل یا Runtime داخل سورس bundle/download نشده است.
++- Cloud provider/API key پشتیبانی نمی‌شود.
++- Vision نمی‌تواند Target جدید، coordinate، click یا shell تولید کند.
++- Semantic Grounding خودش Action اجرا نمی‌کند.
++- Screenshot خودکار پس‌زمینه وجود ندارد.
++- Visual verifier مکمل UIA verification است، جایگزین آن نیست.
++- Windows UAT واقعی در محیط Linux توسعه PASS اعلام نمی‌شود و باید روی Windows 10/11 اجرا شود.
+ 
+-## v0.9.1 — Real Local AI Runtime
+-
+-این نسخه Managed `llama-server` اختیاری، Hardware Advisor، Capability Probe، Warmup و UIA-first/Vision-fallback را اضافه می‌کند. Runtime و GGUF از داخل پروژه دانلود یا bundle نمی‌شوند؛ کاربر باید فایل‌های محلی را صریح انتخاب کند. هر AI Plan همچنان از Skill Allowlist، Mission DAG و Safety Core عبور می‌کند.
+-
+-UAT واقعی Windows:
+-```powershell
+-$env:WA_LLAMA_SERVER='C:\tools\llama.cpp\llama-server.exe'
+-$env:WA_GGUF_MODEL='D:\models\model.gguf'
+-npm run test:windows-local-ai-runtime-uat
+-```
++جزئیات معماری: `docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md`.
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/CHANGELOG_v0.9.2_FA.md /mnt/data/wa092/docs/CHANGELOG_v0.9.2_FA.md
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/CHANGELOG_v0.9.2_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/docs/CHANGELOG_v0.9.2_FA.md	2026-08-13 12:10:27.405224649 +0000
+@@ -0,0 +1,14 @@
++# Changelog v0.9.2
++
++- Semantic UIA candidate ranking اضافه شد.
++- Grounding session موقت و candidate-bound action path اضافه شد.
++- Vision corroboration محدود به Candidate IDهای UIA اضافه شد.
++- screenshot crop mapping برای تصویر انتخابی کاربر اضافه شد.
++- Grounded Action selector از Renderer حذف و از session داخلی بازیابی شد.
++- Backend Action/ControlType compatibility gate اضافه شد.
++- Post-action Visual Verifier اضافه شد.
++- Grounding Memory هش‌شده و success-only اضافه شد.
++- anti-poison confidence gate برای memory اضافه شد.
++- UI تب Local AI با Intelligent UI Grounding و Visual Verify توسعه یافت.
++- Windows UAT اختصاصی Grounding اضافه شد.
++- چهار تست regression جدید Grounding/Vision اضافه شد.
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/DIFF_v0.9.2.txt /mnt/data/wa092/docs/DIFF_v0.9.2.txt
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/DIFF_v0.9.2.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/docs/DIFF_v0.9.2.txt	2026-08-13 12:13:53.648236095 +0000
+@@ -0,0 +1,125 @@
++diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/README_FA.md /mnt/data/wa092/README_FA.md
++--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/README_FA.md	2026-08-13 10:47:49.000000000 +0000
+++++ /mnt/data/wa092/README_FA.md	2026-08-13 12:10:27.403764452 +0000
++@@ -1,66 +1,61 @@
++-# Workspace Agent v0.9.1 — Local AI Foundation
+++# Workspace Agent v0.9.2 — Intelligent Vision & Grounding
++ 
++-تمرکز فعال پروژه **Windows Agent امن برای مدیریت Workspace/هارد** است. CorelDRAW همچنان Deferred است.
+++تمرکز فعال پروژه **Windows Agent امن برای مدیریت Workspace/هارد و کنترل محدود رابط کاربری** است. CorelDRAW همچنان Deferred است تا هسته عمومی Windows Agent به بلوغ کافی برسد.
++ 
++ ## چرخه اصلی
++-Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End
+++Observe → Analyze → Ground → Plan → Preview → Confirm → Execute → Verify → End
++ 
++-Writeهای فایل از Transaction / Recovery / Undo و Volume Identity Guard عبور می‌کنند. Permanent Delete و arbitrary shell غیرفعال‌اند.
+++Writeهای فایل از Transaction / Recovery / Undo و Volume Identity Guard عبور می‌کنند. Permanent Delete، arbitrary shell، coordinate click و global SendKeys غیرفعال‌اند.
++ 
++-## جدید در v0.9.1
++-- **Local AI Provider** فقط روی loopback (`127.0.0.1/localhost/::1`).
++-- OpenAI-compatible transport مناسب `llama.cpp / llama-server`.
++-- Planner مدل فقط **Skillهای allowlisted** را در JSON Schema پیشنهاد می‌دهد؛ Tool execution مستقیم ندارد.
++-- خروجی مدل دوباره در برنامه validate و inputهای Path/Shell/Secret حذف می‌شوند.
++-- Plan معتبر به **token موقت 10 دقیقه‌ای** تبدیل و به Workspace فعلی bind می‌شود.
++-- AI Mission از همان Mission DAG/Cycle/Safety Core نسخه‌های قبلی استفاده می‌کند.
++-- Write Skill حتی اگر AI پیشنهاد داده باشد، Confirmation مستقل دارد.
++-- Prompt/response safety: Secret redaction، max prompt/output، timeout، rate limit، single-flight و circuit breaker.
++-- Skill Memory فقط آمار موفقیت/شکست Skill را نگه می‌دارد؛ prompt/path/content ذخیره نمی‌شود.
++-- **Local Vision Advisory** فقط روی تصویر انتخابی کاربر؛ بدون background screenshot و بدون coordinate/action generation.
++-- تب Local AI در UI برای endpoint/model، Health، Plan و Vision.
+++## جدید در v0.9.2
+++- **Semantic UIA Grounding**: هدف زبان طبیعی به Candidateهای واقعی Microsoft UI Automation رتبه‌بندی می‌شود.
+++- رتبه‌بندی deterministic بر پایه semantic match، ControlType/structure، uniqueness و memory boost انجام می‌شود.
+++- **Vision فقط corroboration است**: تنها Candidate IDهایی را می‌تواند تقویت/تضعیف کند که UIA از قبل ساخته است؛ Target یا coordinate جدید نمی‌سازد.
+++- Screenshot همچنان فقط با انتخاب صریح کاربر وارد Vision می‌شود؛ background capture وجود ندارد.
+++- در صورت امکان، فقط ناحیه Candidateها نسبت به پنجره فعال crop و برای VLM ارسال می‌شود.
+++- Action از Frontend selector آزاد نمی‌گیرد؛ فقط `grounding session + candidate id + user-selected action` می‌گیرد و selector از session داخلی بازیابی می‌شود.
+++- Backend سازگاری Action با ControlType را نیز بررسی می‌کند.
+++- مسیر اجرای Action همان Preview → Confirmation → Runtime Pin → UIA Pattern → Verify نسخه‌های قبلی است.
+++- **Post-action Visual Verifier** اختیاری است و فقط پس از UIA verification روی Screenshot انتخابی کاربر corroboration می‌دهد.
+++- **Verified Grounding Memory** فقط signature هش‌شده + intent class + شمارنده موفقیت را نگه می‌دارد؛ raw intent، label و screenshot ذخیره نمی‌شوند.
+++- Grounding ضعیف وارد Memory نمی‌شود مگر confidence کافی یا Vision corroboration قوی داشته باشد.
++ 
++-## Local AI سریع
++-یک مدل GGUF سازگار را با llama.cpp روی loopback اجرا کنید، سپس:
+++## Local AI
+++v0.9.1 Managed `llama-server` و Provider محلی را نگه می‌دارد. v0.9.2 مدل را به Action executor تبدیل نمی‌کند؛ مدل فقط برای Planner و Vision محدود استفاده می‌شود.
++ 
++ ```powershell
++-powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1
+++$env:WA_LLAMA_SERVER='C:\tools\llama.cpp\llama-server.exe'
+++$env:WA_GGUF_MODEL='D:\models\model.gguf'
+++npm run test:windows-local-ai-runtime-uat
++ ```
++ 
++-در برنامه: Local AI → Enable → Base URL → Model → Save → Health Test.
+++## تست Grounding روی Windows
+++```powershell
+++npm run test:windows-grounding-uat
+++```
++ 
++-جزئیات: `docs/LOCAL_AI_MODEL_v0.9_FA.md`.
+++این UAT یک WinForms کنترل‌شده می‌سازد، UIA Grounding واقعی را تست می‌کند، Candidate را از همان selector امن invoke می‌کند و crop تصویری را می‌سنجد. اگر `WA_LOCAL_AI_BASE_URL` و `WA_LOCAL_AI_MODEL` تنظیم باشند، Vision واقعی Local نیز تست می‌شود.
++ 
++ ## تست عمومی
++ ```bash
++ npm run check
++-npm run test:ai
+++npm run test:grounding
++ ```
++ 
++-## Windows Certification
++-Release رسمی v0.8.x همچنان gateهای Windows واقعی را حفظ کرده است:
++-
+++## Release / Certification
++ ```powershell
++ npm run release:lock
++ npm run check:release-inputs
++ npm run certify:windows
++ ```
++ 
++-## مرزهای v0.9.1
++-- مدل یا Runtime داخل سورس bundle نشده است.
++-- Cloud provider/API key در این نسخه پشتیبانی نمی‌شود.
++-- AI نمی‌تواند Windows UI Action مستقیم اجرا کند.
++-- AI نمی‌تواند Shell/PowerShell/Executable بسازد یا اجرا کند.
++-- Local AI واقعی با Qwen/llama.cpp روی Windows هنوز UAT جدا می‌خواهد.
++-
+++## مرزهای v0.9.2
+++- مدل یا Runtime داخل سورس bundle/download نشده است.
+++- Cloud provider/API key پشتیبانی نمی‌شود.
+++- Vision نمی‌تواند Target جدید، coordinate، click یا shell تولید کند.
+++- Semantic Grounding خودش Action اجرا نمی‌کند.
+++- Screenshot خودکار پس‌زمینه وجود ندارد.
+++- Visual verifier مکمل UIA verification است، جایگزین آن نیست.
+++- Windows UAT واقعی در محیط Linux توسعه PASS اعلام نمی‌شود و باید روی Windows 10/11 اجرا شود.
++ 
++-## v0.9.1 — Real Local AI Runtime
++-
++-این نسخه Managed `llama-server` اختیاری، Hardware Advisor، Capability Probe، Warmup و UIA-first/Vision-fallback را اضافه می‌کند. Runtime و GGUF از داخل پروژه دانلود یا bundle نمی‌شوند؛ کاربر باید فایل‌های محلی را صریح انتخاب کند. هر AI Plan همچنان از Skill Allowlist، Mission DAG و Safety Core عبور می‌کند.
++-
++-UAT واقعی Windows:
++-```powershell
++-$env:WA_LLAMA_SERVER='C:\tools\llama.cpp\llama-server.exe'
++-$env:WA_GGUF_MODEL='D:\models\model.gguf'
++-npm run test:windows-local-ai-runtime-uat
++-```
+++جزئیات معماری: `docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md`.
++diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/CHANGELOG_v0.9.2_FA.md /mnt/data/wa092/docs/CHANGELOG_v0.9.2_FA.md
++--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/CHANGELOG_v0.9.2_FA.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/wa092/docs/CHANGELOG_v0.9.2_FA.md	2026-08-13 12:10:27.405224649 +0000
++@@ -0,0 +1,14 @@
+++# Changelog v0.9.2
+++
+++- Semantic UIA candidate ranking اضافه شد.
+++- Grounding session موقت و candidate-bound action path اضافه شد.
+++- Vision corroboration محدود به Candidate IDهای UIA اضافه شد.
+++- screenshot crop mapping برای تصویر انتخابی کاربر اضافه شد.
+++- Grounded Action selector از Renderer حذف و از session داخلی بازیابی شد.
+++- Backend Action/ControlType compatibility gate اضافه شد.
+++- Post-action Visual Verifier اضافه شد.
+++- Grounding Memory هش‌شده و success-only اضافه شد.
+++- anti-poison confidence gate برای memory اضافه شد.
+++- UI تب Local AI با Intelligent UI Grounding و Visual Verify توسعه یافت.
+++- Windows UAT اختصاصی Grounding اضافه شد.
+++- چهار تست regression جدید Grounding/Vision اضافه شد.
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md /mnt/data/wa092/docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md	2026-08-13 12:10:27.404554117 +0000
+@@ -0,0 +1,71 @@
++# مدل Intelligent Grounding در v0.9.2
++
++## هدف
++v0.9.2 فاصله بین «دیدن UI» و «اجرای Action» را بدون بازکردن مسیر Computer-use آزاد کم می‌کند. اصل بنیادی این است:
++
++**UIA هویت Target را می‌سازد؛ Vision فقط شواهد تصویری را به همان Targetهای موجود اضافه می‌کند.**
++
++## Pipeline
++1. کاربر intent متنی کوتاه می‌دهد.
++2. Microsoft UI Automation پنجره فعال و کنترل‌ها را می‌خواند.
++3. Candidateها به‌صورت deterministic رتبه‌بندی می‌شوند.
++4. اگر کیفیت پایین/مبهم باشد، کاربر می‌تواند Screenshot پنجره فعال را انتخاب کند.
++5. Crop فقط حول Candidateهای UIA ساخته می‌شود، اگر mapping پنجره↔تصویر معتبر باشد.
++6. VLM فقط از Candidate IDهای allowlisted انتخاب می‌کند.
++7. Confidence UIA + Vision fuse می‌شوند.
++8. کاربر Candidate و Action را صریحاً انتخاب می‌کند.
++9. Backend selector را از Grounding Session می‌گیرد؛ selector از Renderer پذیرفته نمی‌شود.
++10. Action Core مسیر Preview → Confirm → re-pin → Pattern → Verify را اجرا می‌کند.
++11. در صورت موفقیت و confidence کافی، signature هش‌شده در Grounding Memory تقویت می‌شود.
++12. Visual verifier پس از Action اختیاری است و هیچ Action جدیدی ایجاد نمی‌کند.
++
++## Confidence
++Confidence نهایی ترکیبی از این مؤلفه‌هاست:
++- semantic overlap با Name / AutomationId / Class / ControlType
++- structural score: enabled، onscreen، AutomationId، ControlType مناسب intent
++- uniqueness کنترل در پنجره
++- memory boost فقط از Actionهای قبلی verified
++- vision corroboration اختیاری
++
++هیچ threshold به‌تنهایی مجوز Execute نیست. Execute همیشه به انتخاب Candidate و Confirmation کاربر نیاز دارد.
++
++## Vision boundary
++VLM در Grounding:
++- coordinate دریافت/تولید نمی‌کند؛
++- Candidate جدید اختراع نمی‌کند؛
++- فقط IDهای UIA موجود را match می‌کند؛
++- password/hidden state/action instruction تولید نمی‌کند؛
++- فقط تصویر انتخاب‌شده توسط کاربر را می‌بیند.
++
++## Crop policy
++Crop نسبت BoundingRectangle کنترل‌های UIA به BoundingRectangle پنجره فعال و ابعاد Screenshot محاسبه می‌شود. اگر mapping معتبر نباشد، crop انجام نمی‌شود و این موضوع در metadata با `applied=false` ثبت می‌شود.
++
++## Action boundary
++Grounded Action endpoint فقط این موارد را از Renderer می‌پذیرد:
++- Grounding session token
++- Candidate ID
++- Action انتخاب‌شده توسط کاربر
++- Value غیرحساس در صورت `setValue`
++
++Selector از session داخلی ساخته می‌شود. Backend همچنین Action/ControlType compatibility را بررسی می‌کند.
++
++## Memory privacy
++فایل `ui-grounding-memory.json` فقط شامل:
++- `intentClass`
++- candidate signature هش‌شده
++- attempts/success
++- lastVerifiedAt
++- action counters
++
++موارد زیر ذخیره نمی‌شوند:
++- raw intent
++- raw UI label/name
++- screenshot
++- crop image
++- prompt/response Vision
++
++## Anti-poison rule
++Memory فقط بعد از UIA Verify موفق تقویت می‌شود و Grounding باید confidence متوسط به بالا یا Vision corroboration قوی داشته باشد. Reject/Preview/Failed action هیچ learning ایجاد نمی‌کند.
++
++## Verifier
++UIA verification همچنان authoritative execution check است. Visual verification فقط می‌تواند نتیجه را `corroborated / needs-review / deterministic-only` دسته‌بندی کند و هرگز Action را دوباره اجرا نمی‌کند.
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/RELEASE_READINESS_v0.9.2.json /mnt/data/wa092/docs/RELEASE_READINESS_v0.9.2.json
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/RELEASE_READINESS_v0.9.2.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/docs/RELEASE_READINESS_v0.9.2.json	2026-08-13 12:13:41.322308577 +0000
+@@ -0,0 +1,35 @@
++{
++  "schemaVersion": "workspace-release-readiness-v1",
++  "version": "0.9.2",
++  "date": "2026-08-13",
++  "coreSource": "ready",
++  "regression": "pass",
++  "sourceHygiene": "pass",
++  "semanticGroundingCore": "pass",
++  "visionCandidateAllowlist": "pass",
++  "groundingMemoryPrivacy": "pass",
++  "groundedActionBinding": "pass",
++  "postActionVerifierCore": "pass",
++  "windowsGroundingUat": "pending-windows",
++  "realLocalVisionUat": "pending-windows-model",
++  "multiMonitorDpiUat": "pending-windows",
++  "packageLock": "pending",
++  "nsisBuild": "pending-windows",
++  "portableBuild": "pending-windows",
++  "authenticode": "pending-certificate",
++  "notes": [
++    "Vision cannot create targets or coordinates.",
++    "No automatic screenshot capture is enabled.",
++    "Windows-specific UAT is not counted as PASS in the Linux validation environment."
++  ],
++  "groundingScaleBenchmark": {
++    "elements": 1500,
++    "runs": 30,
++    "p50Ms": 20.53,
++    "p95Ms": 35.13,
++    "rssMB": 101.3,
++    "expectedTargetRank": 1
++  },
++  "releaseInputGate": "fail-closed-lockfile-required",
++  "localBuild": "not-run-missing-node-modules-vite"
++}
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/UPSTREAM_PROVENANCE.md /mnt/data/wa092/docs/UPSTREAM_PROVENANCE.md
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/UPSTREAM_PROVENANCE.md	2026-08-13 10:47:47.000000000 +0000
++++ /mnt/data/wa092/docs/UPSTREAM_PROVENANCE.md	2026-08-13 12:10:27.406408614 +0000
+@@ -19,3 +19,8 @@
+ - Microsoft Win32_VideoController reference: https://learn.microsoft.com/windows/win32/cimwin32prov/win32-videocontroller
+ 
+ No upstream runtime binary, model weights, or model file is bundled in this source release.
++
++## v0.9.2 Grounding/Vision verification references (2026-08-13)
++- llama.cpp official server documentation was re-checked for OpenAI-compatible chat, multimodal input and schema-constrained JSON support.
++- Qwen3.6 official repository was re-checked for current llama.cpp text + vision support.
++- No llama.cpp/Qwen/OmniParser/UFO/CUA source code or model weights are vendored in v0.9.2; this revision remains project-local implementation code.
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/VALIDATION_v0.9.2_FA.md /mnt/data/wa092/docs/VALIDATION_v0.9.2_FA.md
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/docs/VALIDATION_v0.9.2_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/docs/VALIDATION_v0.9.2_FA.md	2026-08-13 12:13:41.322069662 +0000
+@@ -0,0 +1,59 @@
++# Validation v0.9.2
++
++تاریخ: 2026-08-13
++
++## محیط validation این بسته
++- Platform: Linux x86_64
++- Node runtime test host: v22.16.0
++- npm host: 10.9.2
++- Target release runtime همچنان Node 24.14.1 / npm 11.11.0 / Electron 43.2.0 است.
++
++## PASS
++- dependency exact pins
++- source hygiene
++- JS syntax
++- JSX parse
++- تمام regressionهای v0.2 تا v0.9.1
++- semantic UIA candidate ranking
++- password/offscreen/disabled filtering
++- Vision candidate allowlist filtering
++- crop geometry
++- Grounding session token/candidate binding
++- hashed Grounding Memory privacy
++- verified-action learning callback
++- Local AI Grounding Vision schema
++- post-action outcome fusion
++- UIA Action/ControlType compatibility
++
++## Regression
++`npm run check` کامل PASS شد.
++زنجیره اصلی شامل 35 test file/suite است.
++
++
++## Grounding scale benchmark
++روی dataset مصنوعی 1500 عنصر UIA و 30 اجرای ranking:
++- p50: 20.53 ms
++- p95: 35.13 ms
++- RSS: 101.3 MB
++- expected target rank: #1
++
++این benchmark فقط semantic/UIA ranking را اندازه می‌گیرد و latency مدل Vision داخل آن نیست.
++
++## Build / release checks
++- `npm run check:release-inputs` -> `LOCKFILE_REQUIRED` (رفتار fail-closed مورد انتظار)
++- `npm run build` -> `vite: not found` چون `node_modules` در محیط validation نصب نیست؛ این نتیجه به‌عنوان Build PASS ثبت نشده است.
++
++## Windows-only
++`npm run test:windows-grounding-uat` در محیط Linux به‌صورت صحیح:
++`SKIP (Windows only)`
++
++بنابراین موارد زیر هنوز باید روی Windows 10/11 واقعی تأیید شوند:
++- UIA semantic grounding روی برنامه‌های واقعی
++- DPI / multi-monitor crop mapping
++- WinForms controlled UAT
++- Qwen/llama.cpp Vision corroboration واقعی
++- post-action visual verifier واقعی
++- packaged Electron path
++
++## Release boundary
++نبود `package-lock.json` در این سورس همچنان Release رسمی را Fail-closed نگه می‌دارد تا lockfile واقعی با `npm run release:lock` روی محیط مناسب تولید و review شود.
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/ipc.cjs /mnt/data/wa092/electron/ipc.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/ipc.cjs	2026-08-13 10:43:02.000000000 +0000
++++ /mnt/data/wa092/electron/ipc.cjs	2026-08-13 12:11:11.946477947 +0000
+@@ -1,11 +1,23 @@
+-const { dialog, shell } = require('electron');
++const { dialog, shell, nativeImage } = require('electron');
+ const path = require('path');
++const fs = require('fs');
++const { deriveCropPlan } = require('./services/vision-crop-service.cjs');
++const { deterministicOutcome, fuseVisual } = require('./services/ui-outcome-verifier.cjs');
+ const { capabilitySummary } = require('./services/capability-registry.cjs');
+ const { registrySummary } = require('./services/skill-registry.cjs');
+ const { planGoal } = require('./services/goal-planner.cjs');
+ function trusted(event) { const url = String(event.senderFrame?.url || event.sender?.getURL?.() || ''); return url.startsWith('file://') || /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(url); }
+ function deny(){ return {ok:false,code:'UNTRUSTED_IPC'}; }
+-function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null, localAIService=null }) {
++
++function imageDataUrlForVision(file,{windowRect=null,candidateRects=[],maxDimension=2048}={}){
++  const stat=fs.statSync(file);if(!stat.isFile()||stat.size>40*1024*1024)throw Object.assign(new Error('Screenshot انتخابی بیش از سقف ورودی است.'),{code:'VISION_SOURCE_FILE_LIMIT'});
++  let image=nativeImage.createFromPath(file);if(image.isEmpty())throw Object.assign(new Error('تصویر انتخابی قابل خواندن نیست.'),{code:'VISION_IMAGE_DECODE_FAILED'});
++  const source=image.getSize();const plan=deriveCropPlan({windowRect,candidateRects,imageWidth:source.width,imageHeight:source.height});let applied=false;
++  if(plan.ok){image=image.crop(plan.rect);applied=true;}
++  let size=image.getSize();if(Math.max(size.width,size.height)>maxDimension){const scale=maxDimension/Math.max(size.width,size.height);image=image.resize({width:Math.max(1,Math.round(size.width*scale)),height:Math.max(1,Math.round(size.height*scale)),quality:'best'});size=image.getSize();}
++  let mime='image/png',buf=image.toPNG();if(buf.length>8*1024*1024){mime='image/jpeg';buf=image.toJPEG(92);}return{imageDataUrl:`data:${mime};base64,${buf.toString('base64')}`,meta:{applied,cropFraction:plan.ok?plan.cropFraction:1,mapping:plan.ok?plan.mapping.source:'unmapped-user-image',sourceSize:source,outputSize:size}};
++}
++function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null, localAIService=null, uiGroundingService=null }) {
+   const importTokens=new Map();
+   ipcMain.handle('wa:select-folder', async e => trusted(e) ? (await dialog.showOpenDialog({properties:['openDirectory']})).filePaths[0] || '' : '');
+   ipcMain.handle('wa:cycles', e => trusted(e) ? store.list(100) : deny());
+@@ -33,6 +45,10 @@
+   ipcMain.handle('wa:ai-runtime-restart', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return{ok:true,runtime:await localAIService.restartManagedRuntime()}}catch(error){return{ok:false,code:error.code||'AI_RUNTIME_RESTART_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-capability-probe', async (e,includeVision=false) => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.capabilityProbe({includeVision:Boolean(includeVision)})}catch(error){return{ok:false,code:error.code||'AI_CAPABILITY_PROBE_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-warmup', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.warmup()}catch(error){return{ok:false,code:error.code||'AI_WARMUP_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-ground-ui', async (e,intent='') => {if(!trusted(e))return deny();if(!uiGroundingService)return{ok:false,code:'UI_GROUNDING_UNAVAILABLE'};try{return await uiGroundingService.ground(intent,{maxNodes:700,maxWindows:80,limit:8})}catch(error){return{ok:false,code:error.code||'UI_GROUNDING_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-ground-ui-vision', async (e,sessionToken='') => {if(!trusted(e))return deny();if(!uiGroundingService||!localAIService)return{ok:false,code:'UI_GROUNDING_UNAVAILABLE'};try{const row=uiGroundingService.getSession(sessionToken);const r=await dialog.showOpenDialog({title:'Screenshot پنجره فعال را برای Vision corroboration انتخاب کنید',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true};const top=(row.result?.candidates||[]).slice(0,4);const img=imageDataUrlForVision(r.filePaths[0],{windowRect:row.map?.focusedWindow?.rect,candidateRects:top.map(x=>x.element?.rect).filter(Boolean)});const vision=await localAIService.analyzeUiGroundingData({imageDataUrl:img.imageDataUrl,intent:row.intent||'',candidates:top,crop:img.meta});const fused=uiGroundingService.applyVision(sessionToken,vision);return{...fused,vision:{summary:vision.summary,warnings:vision.warnings,model:vision.model,latencyMs:vision.latencyMs,crop:img.meta}};}catch(error){return{ok:false,code:error.code||'UI_GROUNDING_VISION_FAILED',message:error.message}}});
++  ipcMain.handle('wa:start-uia-grounded-action', async (e,input={}) => {if(!trusted(e))return deny();if(!uiGroundingService)return{ok:false,code:'UI_GROUNDING_UNAVAILABLE'};try{const ctx=uiGroundingService.actionContext(input.sessionToken,input.candidateId);if(Number(ctx.grounding.confidence||0)<0.35)return{ok:false,code:'UI_GROUNDING_CONFIDENCE_TOO_LOW',message:'Candidate برای Action حتی پس از انتخاب کاربر بیش از حد ضعیف است؛ UI Map را دوباره بسازید.'};const session=windowsActionSessionStore.create({action:input.action,selector:ctx.selector,value:input.value||'',sensitive:false},{context:{grounding:ctx.grounding}});if(!session.ok)return session;const r=session.redacted;const c=engine.create('windows-ui-action',{sessionToken:session.token,action:r.action,selector:r.selector,valueHash:r.valueHash||null,valueLength:r.valueLength||0},{source:'interactive-grounded-uia',budget:{maxIterations:4,maxWallTimeMs:10*60*1000}});return engine.run(c.id);}catch(error){return{ok:false,code:error.code||'UI_GROUNDED_ACTION_FAILED',message:error.message}}});
++  ipcMain.handle('wa:ai-verify-uia-cycle', async (e,cycleId='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const cycle=store.get(cycleId);const base=deterministicOutcome(cycle||{});if(!base.ok)return base;const r=await dialog.showOpenDialog({title:'Screenshot پس از Action را برای Visual verification انتخاب کنید',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{...base,cancelled:true};let windowRect=null,targetRect=cycle?.result?.execution?.after?.rect||cycle?.result?.execution?.before?.rect||null;try{const now=await uiGroundingService?.inspect?.({maxNodes:250});if(now?.supported&&Number(now?.window?.processId||0)===Number(cycle?.actionPlan?.target?.processId||0))windowRect=now.window?.rect||null;}catch{}const img=imageDataUrlForVision(r.filePaths[0],{windowRect,candidateRects:targetRect?[targetRect]:[]});const visual=await localAIService.verifyUiOutcomeData({imageDataUrl:img.imageDataUrl,action:base.action,target:base.target});return{...fuseVisual(base,visual),visionMeta:{model:visual.model,latencyMs:visual.latencyMs,crop:img.meta}};}catch(error){return{ok:false,code:error.code||'UI_VISUAL_VERIFY_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-ui-assist', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const c=engine.create('windows-ui-map',{maxNodes:500,maxWindows:80},{source:'ai-ui-assist',budget:{maxIterations:4,maxWallTimeMs:30000}});const done=await engine.run(c.id);const map=done?.result||null;const count=Number(map?.elements?.length||0);if(map?.supported&&count>=8)return{ok:true,schemaVersion:'workspace-ai-ui-assist-v1',source:'uia',reason:'UIA_SUFFICIENT',uia:map,vision:null,policy:{uiaFirst:true,automaticScreenshot:false}};const r=await dialog.showOpenDialog({title:'UIA کافی نبود؛ تصویر Screenshot را برای Vision انتخاب کنید',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true,source:'uia-insufficient',uia:map,policy:{uiaFirst:true,automaticScreenshot:false}};const vision=await localAIService.analyzeImageFile(r.filePaths[0]);return{ok:true,schemaVersion:'workspace-ai-ui-assist-v1',source:'vision-fallback',reason:map?.supported?'UIA_LOW_SIGNAL':'UIA_UNSUPPORTED',uia:map,vision,policy:{uiaFirst:true,automaticScreenshot:false}};}catch(error){return{ok:false,code:error.code||'AI_UI_ASSIST_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-plan', async (e,command='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.plan(command,{root});}catch(error){return{ok:false,code:error.code||'AI_PLAN_FAILED',message:error.message,retryAfterMs:error.retryAfterMs||null}}});
+   ipcMain.handle('wa:ai-start-mission', async (e,planToken='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const rec=localAIService.consumePlan(planToken,{root});const c=engine.create('mission',{root,command:'[LOCAL_AI_PLAN]',goalPlan:rec.goalPlan,planSource:'local-ai-token',aiCommandHash:rec.commandHash},{source:'local-ai-token',budget:{maxIterations:80,maxWallTimeMs:30*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'AI_MISSION_START_FAILED',message:error.message}}});
+@@ -62,7 +78,7 @@
+   ipcMain.handle('wa:recovery-act', async (e,id,action) => trusted(e) ? recoveryService.act(id,action) : deny());
+   ipcMain.handle('wa:resilience-status', e => trusted(e) ? (rootResilienceService?rootResilienceService.status():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
+   ipcMain.handle('wa:resilience-probe', async e => trusted(e) ? (rootResilienceService?rootResilienceService.probeNow():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
+-  ipcMain.handle('wa:cert-status', e => trusted(e) ? ({schemaVersion:'workspace-agent-cert-runtime-v1',at:new Date().toISOString(),platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal.verify(),localAI:localAIService?.status?.()||null}) : deny());
++  ipcMain.handle('wa:cert-status', e => trusted(e) ? ({schemaVersion:'workspace-agent-cert-runtime-v1',at:new Date().toISOString(),platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal.verify(),localAI:localAIService?.status?.()||null,uiGrounding:uiGroundingService?.status?.()||null}) : deny());
+   ipcMain.handle('wa:resource-pressure', e => trusted(e) ? (resourcePressureGuard?.snapshot?.()||{schemaVersion:'resource-pressure-v1',state:'unavailable'}) : deny());
+   ipcMain.handle('wa:watch-list', e => trusted(e) ? watcherService.configs() : deny());
+   ipcMain.handle('wa:watch-events', (e,limit=300) => trusted(e) ? watcherService.events(limit) : deny());
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/main.cjs /mnt/data/wa092/electron/main.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/main.cjs	2026-08-13 10:42:28.000000000 +0000
++++ /mnt/data/wa092/electron/main.cjs	2026-08-13 12:11:11.946654279 +0000
+@@ -21,6 +21,7 @@
+ const { LifecycleState } = require('./services/lifecycle-state.cjs');
+ const { ResourcePressureGuard } = require('./services/resource-pressure-guard.cjs');
+ const { LocalAIService } = require('./services/local-ai-service.cjs');
++const { UIGroundingService } = require('./services/ui-grounding-service.cjs');
+ const { CycleEngine } = require('./services/cycle-engine.cjs');
+ const { skillByCycleType } = require('./services/skill-registry.cjs');
+ const { scanCycle, healthCycle, duplicateCycle, duplicateReviewCycle, organizeCycle } = require('./services/file-cycles.cjs');
+@@ -28,25 +29,25 @@
+ const { persistentIndexScanCycle, persistentIndexMaintenanceCycle, indexedFileSearchCycle, indexedDuplicatesCycle } = require('./services/persistent-index-cycles.cjs');
+ const { registerIpc } = require('./ipc.cjs');
+ 
+-let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;
++let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;let uiGroundingService;
+ 
+ function certificationSmokeOutput(){const eq=process.argv.find(x=>String(x).startsWith('--cert-smoke-output='));if(eq)return String(eq).slice('--cert-smoke-output='.length);const i=process.argv.indexOf('--cert-smoke-output');return i>=0?String(process.argv[i+1]||''):'';}
+ function certificationUserData(){const eq=process.argv.find(x=>String(x).startsWith('--cert-user-data='));if(eq)return String(eq).slice('--cert-user-data='.length);const i=process.argv.indexOf('--cert-user-data');return i>=0?String(process.argv[i+1]||''):'';}
+ const certUserData=certificationUserData();if(certUserData){try{app.setPath('userData',path.resolve(certUserData));}catch{}}
+-function writeCertificationSmoke(file,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService}={}){if(!file)return null;const out=path.resolve(file);fs.mkdirSync(path.dirname(out),{recursive:true});const report={schemaVersion:'workspace-agent-packaged-smoke-v1',ok:true,at:new Date().toISOString(),appVersion:app.getVersion(),platform:process.platform,arch:process.arch,electron:process.versions.electron,node:process.versions.node,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal?.verify?.()||null,localAI:localAIService?.status?.()||null};fs.writeFileSync(out,JSON.stringify(report,null,2),'utf8');journal?.append('PACKAGED_CERT_SMOKE_WRITTEN',{payload:{file:out,ok:report.ok}});return report;}
++function writeCertificationSmoke(file,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService}={}){if(!file)return null;const out=path.resolve(file);fs.mkdirSync(path.dirname(out),{recursive:true});const report={schemaVersion:'workspace-agent-packaged-smoke-v1',ok:true,at:new Date().toISOString(),appVersion:app.getVersion(),platform:process.platform,arch:process.arch,electron:process.versions.electron,node:process.versions.node,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal?.verify?.()||null,localAI:localAIService?.status?.()||null,uiGrounding:uiGroundingService?.status?.()||null};fs.writeFileSync(out,JSON.stringify(report,null,2),'utf8');journal?.append('PACKAGED_CERT_SMOKE_WRITTEN',{payload:{file:out,ok:report.ok}});return report;}
+ 
+ function createWindow(){
+   mainWindow = new BrowserWindow({width:1540,height:980,minWidth:1120,minHeight:740,backgroundColor:'#0b1020',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+   const dev=process.env.VITE_DEV_SERVER_URL; if(dev) mainWindow.loadURL(dev); else mainWindow.loadFile(path.join(__dirname,'..','dist','index.html'));
+ }
+ app.whenReady().then(async()=>{
+-  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+-  engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
++  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
++  engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+   }});automationService.start();
+-  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});void localAIService.hardwareProfile({visionPreferred:localAIService.settings().allowVision}).catch(()=>{});void localAIService.autoStartManagedRuntime().catch(()=>{});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService});app.quit();return;}createWindow();
++  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService});void localAIService.hardwareProfile({visionPreferred:localAIService.settings().allowVision}).catch(()=>{});void localAIService.autoStartManagedRuntime().catch(()=>{});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService});app.quit();return;}createWindow();
+   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0) createWindow();});
+ });
+ app.on('before-quit',()=>{localAIService?.terminateRuntimeNow?.();automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();persistentFileIndex?.close();});
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/preload.cjs /mnt/data/wa092/electron/preload.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/preload.cjs	2026-08-13 10:43:04.000000000 +0000
++++ /mnt/data/wa092/electron/preload.cjs	2026-08-13 12:03:37.216167101 +0000
+@@ -1,7 +1,7 @@
+ const { contextBridge, ipcRenderer } = require('electron');
+ contextBridge.exposeInMainWorld('workspaceAgent', {
+   selectFolder: () => ipcRenderer.invoke('wa:select-folder'), cycles: () => ipcRenderer.invoke('wa:cycles'), capabilities: () => ipcRenderer.invoke('wa:capabilities'), skills: () => ipcRenderer.invoke('wa:skills'), indexStatus: root => ipcRenderer.invoke('wa:index-status',root), indexRoots: () => ipcRenderer.invoke('wa:index-roots'), indexHealth: deep => ipcRenderer.invoke('wa:index-health',deep), indexSearch: input => ipcRenderer.invoke('wa:index-search',input), indexErrors: (root,limit=200) => ipcRenderer.invoke('wa:index-errors',root,limit), snapshots: root => ipcRenderer.invoke('wa:snapshots',root), planGoal: command => ipcRenderer.invoke('wa:plan-goal',command),
+-  aiStatus:()=>ipcRenderer.invoke('wa:ai-status'), aiSettings:()=>ipcRenderer.invoke('wa:ai-settings'), aiSettingsUpdate:patch=>ipcRenderer.invoke('wa:ai-settings-update',patch), aiHealth:()=>ipcRenderer.invoke('wa:ai-health'), aiHardwareProfile:vision=>ipcRenderer.invoke('wa:ai-hardware-profile',vision), aiApplyHardwareAdvice:advice=>ipcRenderer.invoke('wa:ai-apply-hardware-advice',advice), aiRuntimeStatus:()=>ipcRenderer.invoke('wa:ai-runtime-status'), aiRuntimeSelection:()=>ipcRenderer.invoke('wa:ai-runtime-selection'), aiRuntimePickExecutable:()=>ipcRenderer.invoke('wa:ai-runtime-pick-executable'), aiRuntimePickModel:()=>ipcRenderer.invoke('wa:ai-runtime-pick-model'), aiRuntimeStart:()=>ipcRenderer.invoke('wa:ai-runtime-start'), aiRuntimeStop:()=>ipcRenderer.invoke('wa:ai-runtime-stop'), aiRuntimeRestart:()=>ipcRenderer.invoke('wa:ai-runtime-restart'), aiCapabilityProbe:vision=>ipcRenderer.invoke('wa:ai-capability-probe',vision), aiWarmup:()=>ipcRenderer.invoke('wa:ai-warmup'), aiUiAssist:()=>ipcRenderer.invoke('wa:ai-ui-assist'), aiPlan:(command,root)=>ipcRenderer.invoke('wa:ai-plan',command,root), aiStartMission:(token,root)=>ipcRenderer.invoke('wa:ai-start-mission',token,root), aiVisionFile:()=>ipcRenderer.invoke('wa:ai-vision-file'),
++  aiStatus:()=>ipcRenderer.invoke('wa:ai-status'), aiSettings:()=>ipcRenderer.invoke('wa:ai-settings'), aiSettingsUpdate:patch=>ipcRenderer.invoke('wa:ai-settings-update',patch), aiHealth:()=>ipcRenderer.invoke('wa:ai-health'), aiHardwareProfile:vision=>ipcRenderer.invoke('wa:ai-hardware-profile',vision), aiApplyHardwareAdvice:advice=>ipcRenderer.invoke('wa:ai-apply-hardware-advice',advice), aiRuntimeStatus:()=>ipcRenderer.invoke('wa:ai-runtime-status'), aiRuntimeSelection:()=>ipcRenderer.invoke('wa:ai-runtime-selection'), aiRuntimePickExecutable:()=>ipcRenderer.invoke('wa:ai-runtime-pick-executable'), aiRuntimePickModel:()=>ipcRenderer.invoke('wa:ai-runtime-pick-model'), aiRuntimeStart:()=>ipcRenderer.invoke('wa:ai-runtime-start'), aiRuntimeStop:()=>ipcRenderer.invoke('wa:ai-runtime-stop'), aiRuntimeRestart:()=>ipcRenderer.invoke('wa:ai-runtime-restart'), aiCapabilityProbe:vision=>ipcRenderer.invoke('wa:ai-capability-probe',vision), aiWarmup:()=>ipcRenderer.invoke('wa:ai-warmup'), aiUiAssist:()=>ipcRenderer.invoke('wa:ai-ui-assist'), aiGroundUi:intent=>ipcRenderer.invoke('wa:ai-ground-ui',intent), aiGroundUiVision:token=>ipcRenderer.invoke('wa:ai-ground-ui-vision',token), startGroundedUiaAction:input=>ipcRenderer.invoke('wa:start-uia-grounded-action',input), aiVerifyUiaCycle:id=>ipcRenderer.invoke('wa:ai-verify-uia-cycle',id), aiPlan:(command,root)=>ipcRenderer.invoke('wa:ai-plan',command,root), aiStartMission:(token,root)=>ipcRenderer.invoke('wa:ai-start-mission',token,root), aiVisionFile:()=>ipcRenderer.invoke('wa:ai-vision-file'),
+   startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
+   reviewList:root=>ipcRenderer.invoke('wa:review-list',root),reviewUpdate:(id,patch)=>ipcRenderer.invoke('wa:review-update',id,patch),reviewClear:root=>ipcRenderer.invoke('wa:review-clear',root),
+   zonesList:()=>ipcRenderer.invoke('wa:zones-list'),zonesAdd:input=>ipcRenderer.invoke('wa:zones-add',input),zonesRemove:id=>ipcRenderer.invoke('wa:zones-remove',id),storageTrend:root=>ipcRenderer.invoke('wa:storage-trend',root),
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/capability-registry.cjs /mnt/data/wa092/electron/services/capability-registry.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/capability-registry.cjs	2026-08-13 10:23:28.000000000 +0000
++++ /mnt/data/wa092/electron/services/capability-registry.cjs	2026-08-13 12:09:13.096308605 +0000
+@@ -1,6 +1,10 @@
+ const CAPABILITIES = Object.freeze([
+   { id:'windows-system-doctor', group:'windows', title:'Windows System Doctor', mode:'read-only', status:'active', detail:'OS/Build، RAM/CPU، Logical Disks، Startup inventory و Process memory snapshot با PowerShell/CIM' },
+   { id:'windows-uia-grounding', group:'windows', title:'Windows UIA Grounding', mode:'read-only', status:'beta', detail:'خواندن پنجره فعال و کنترل‌های UI از Microsoft UI Automation با RuntimeId/Password metadata' },
++  { id:'semantic-uia-grounding', group:'agent', title:'Semantic UIA Grounding', mode:'read-only-ranked-candidates', status:'beta', detail:'هدف زبان طبیعی → رتبه‌بندی deterministic کنترل‌های UIA با semantic/structural/uniqueness score؛ مدل اجازه ساخت Target جدید ندارد' },
++  { id:'vision-grounding-corroboration', group:'intelligence', title:'Vision Grounding Corroboration', mode:'user-selected-crop-advisory', status:'beta', detail:'Vision فقط Candidate IDهای UIA موجود را روی crop تصویر انتخاب‌شده توسط کاربر تأیید/تضعیف می‌کند؛ بدون coordinate یا auto screenshot' },
++  { id:'post-action-visual-verifier', group:'safety', title:'Post-action Visual Verifier', mode:'uia-verified-plus-optional-vision', status:'beta', detail:'UIA Verify همچنان مرجع اجرایی است؛ Screenshot انتخابی کاربر فقط corroboration پس از Action می‌دهد و اجرای جدیدی ایجاد نمی‌کند' },
++  { id:'verified-grounding-memory', group:'agent', title:'Verified Grounding Memory', mode:'hashed-success-only', status:'beta', detail:'فقط Actionهای تأییدشده با confidence کافی به‌صورت signature هش‌شده + intent class یاد گرفته می‌شوند؛ raw intent/label/screenshot ذخیره نمی‌شود' },
+   { id:'windows-uia-action', group:'windows', title:'Pinned Windows UIA Action', mode:'preview-confirm-pattern-verify', status:'beta', detail:'Selector یکتا → Preview → Confirmation → re-pin → Invoke/Value/Toggle/Expand/Focus → Verify؛ بدون coordinate click، SendKeys عمومی، Shell یا Password write' },
+   { id:'reusable-skill-registry', group:'agent', title:'Reusable Skill Registry', mode:'planner-policy', status:'active', detail:'Skill catalog صریح با cycleType، risk، confirmation policy و allowlist؛ الهام معماری از CUA Skill بدون اجرای آزاد shell' },
+   { id:'mission-skill-dag', group:'agent', title:'Mission Skill DAG', mode:'planner', status:'beta', detail:'فرمان → Goal Plan → Skill DAG → dependency gate → child cycles؛ هر Write همچنان از Confirmation عبور می‌کند' },
+@@ -56,5 +60,5 @@
+   { id:'local-ai-vision-advisory', group:'intelligence', title:'Local Vision Advisory', mode:'user-selected-image-read-only', status:'beta', detail:'تحلیل تصویر انتخاب‌شده توسط کاربر با VLM محلی؛ بدون capture پس‌زمینه، coordinate/action generation یا اجرای UI' },
+   { id:'semantic-vision-labeling', group:'intelligence', title:'Semantic Vision Labeling', mode:'analysis', status:'beta', detail:'Foundation محلی Vision در v0.9 فعال شده؛ grounding اجرایی همچنان از UIA/Policy مستقل عبور می‌کند' },
+ ]);
+-function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v9.0', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
++function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v9.2', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
+ module.exports = { CAPABILITIES, capabilitySummary };
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/grounding-memory-store.cjs /mnt/data/wa092/electron/services/grounding-memory-store.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/grounding-memory-store.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/electron/services/grounding-memory-store.cjs	2026-08-13 11:59:55.604498114 +0000
+@@ -0,0 +1,11 @@
++const fs=require('fs');const path=require('path');const crypto=require('crypto');
++function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=`${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,file);}
++class GroundingMemoryStore{
++ constructor(userData,{journal=null}={}){this.file=path.join(userData,'ui-grounding-memory.json');this.journal=journal;this.state=this.load();}
++ load(){try{const x=JSON.parse(fs.readFileSync(this.file,'utf8'));if(x?.schemaVersion==='workspace-ui-grounding-memory-v1')return x;}catch{}return{schemaVersion:'workspace-ui-grounding-memory-v1',updatedAt:null,rows:{}};}
++ key(intentClass,signature){return`${String(intentClass||'focus').slice(0,24)}:${String(signature||'').slice(0,64)}`;}
++ boost({intentClass,signature}={}){const x=this.state.rows[this.key(intentClass,signature)];if(!x||!x.attempts)return 0;const reliability=(x.success+1)/(x.attempts+2);const volume=Math.min(1,Math.log2(x.attempts+1)/5);return Math.max(0,Math.min(1,reliability*volume));}
++ recordVerified({intentClass,signature,action='focus'}={}){if(!signature)return null;const k=this.key(intentClass,signature),x=this.state.rows[k]||{attempts:0,success:0,lastVerifiedAt:null,actions:{}};x.attempts++;x.success++;x.lastVerifiedAt=new Date().toISOString();x.actions[action]=(x.actions[action]||0)+1;this.state.rows[k]=x;this.state.updatedAt=x.lastVerifiedAt;atomic(this.file,this.state);this.journal?.append('UI_GROUNDING_MEMORY_UPDATED',{payload:{intentClass:String(intentClass||'focus'),signature:String(signature).slice(0,16),action:String(action||'focus'),success:x.success,attempts:x.attempts}});return{intentClass,signature,success:x.success,attempts:x.attempts};}
++ summary(){const rows=Object.entries(this.state.rows).map(([key,v])=>({key,attempts:v.attempts||0,success:v.success||0,lastVerifiedAt:v.lastVerifiedAt||null,actions:v.actions||{}})).sort((a,b)=>b.attempts-a.attempts).slice(0,100);return{schemaVersion:this.state.schemaVersion,updatedAt:this.state.updatedAt,total:rows.length,rows};}
++}
++module.exports={GroundingMemoryStore};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-service.cjs /mnt/data/wa092/electron/services/local-ai-service.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/local-ai-service.cjs	2026-08-13 10:42:16.000000000 +0000
++++ /mnt/data/wa092/electron/services/local-ai-service.cjs	2026-08-13 12:01:07.103941039 +0000
+@@ -34,5 +34,9 @@
+  consumePlan(t,{root=''}={}){this.cleanupTokens();const rec=this.tokens.get(String(t||''));if(!rec)throw Object.assign(new Error('AI Plan منقضی یا نامعتبر است؛ Plan جدید بسازید.'),{code:'AI_PLAN_TOKEN_INVALID'});const resolved=this.validateWorkspaceRoot(root);if(resolved!==rec.root)throw Object.assign(new Error('Workspace از زمان ساخت AI Plan تغییر کرده است.'),{code:'AI_PLAN_ROOT_CHANGED'});this.tokens.delete(String(t));return rec;}
+  recordMissionOutcome(goalPlan,status){const ids=(goalPlan?.steps||[]).map(x=>x.skillId).filter(Boolean);if(ids.length)this.memory.record(ids,status);}
+  async analyzeImageFile(file){const cfg=this.settings();if(!cfg.enabled)throw Object.assign(new Error('Local AI غیرفعال است.'),{code:'AI_DISABLED'});if(!cfg.allowVision)throw Object.assign(new Error('Vision در تنظیمات Local AI غیرفعال است.'),{code:'AI_VISION_DISABLED'});const stat=fs.statSync(file);if(!stat.isFile()||stat.size>cfg.maxVisionBytes)throw Object.assign(new Error('فایل تصویر از سقف Vision بزرگ‌تر است.'),{code:'AI_VISION_FILE_LIMIT'});const ext=path.extname(file).toLowerCase();const mime=ext==='.png'?'image/png':ext==='.webp'?'image/webp':'image/jpeg';if(!['.png','.jpg','.jpeg','.webp'].includes(ext))throw Object.assign(new Error('فرمت تصویر Vision پشتیبانی نمی‌شود.'),{code:'AI_VISION_FORMAT_BLOCKED'});const b64=fs.readFileSync(file).toString('base64');const schema={type:'object',additionalProperties:false,required:['summary','warnings','elements'],properties:{summary:{type:'string',maxLength:800},warnings:{type:'array',maxItems:8,items:{type:'string',maxLength:260}},elements:{type:'array',maxItems:40,items:{type:'object',additionalProperties:false,required:['label','role','confidence'],properties:{label:{type:'string',maxLength:160},role:{type:'string',maxLength:80},confidence:{type:'number',minimum:0,maximum:1}}}}}};const prompt='Analyze this user-selected local screenshot/image. Identify visible UI or document elements at a high level. Do not output coordinates, click instructions, passwords, hidden text, or executable actions.';const ticket=this.guard.begin({promptChars:prompt.length,kind:'vision'});try{const out=await this.provider.visionJson({prompt,imageDataUrl:`data:${mime};base64,${b64}`,schema});this.guard.success(ticket,{latencyMs:out.latencyMs});const result={ok:true,schemaVersion:'workspace-ai-vision-v1',model:out.model,latencyMs:out.latencyMs,fileLabel:redactText(path.basename(file),260),summary:redactText(out.parsed?.summary||'',800),warnings:(out.parsed?.warnings||[]).slice(0,8).map(x=>redactText(x,260)),elements:(out.parsed?.elements||[]).slice(0,40).map(x=>({label:redactText(x.label||'',160),role:redactText(x.role||'',80),confidence:Math.max(0,Math.min(1,Number(x.confidence)||0))}))};this.journal?.append('AI_VISION_ANALYZED',{payload:{fileLabel:result.fileLabel,elements:result.elements.length,model:out.model,latencyMs:out.latencyMs}});return result;}catch(error){this.guard.failure(ticket,error);throw error;}}
++
++ validateVisionDataUrl(imageDataUrl){const cfg=this.settings();if(!cfg.enabled)throw Object.assign(new Error('Local AI غیرفعال است.'),{code:'AI_DISABLED'});if(!cfg.allowVision)throw Object.assign(new Error('Vision در تنظیمات Local AI غیرفعال است.'),{code:'AI_VISION_DISABLED'});const value=String(imageDataUrl||'');if(!/^data:image\/(png|jpeg|webp);base64,/i.test(value))throw Object.assign(new Error('Vision image payload نامعتبر است.'),{code:'AI_VISION_DATA_INVALID'});const approx=Math.ceil((value.length-value.indexOf(',')-1)*0.75);if(approx>cfg.maxVisionBytes)throw Object.assign(new Error('Vision crop از سقف مجاز بزرگ‌تر است.'),{code:'AI_VISION_FILE_LIMIT'});return value;}
++ async analyzeUiGroundingData({imageDataUrl,intent='',candidates=[],crop=null}={}){const data=this.validateVisionDataUrl(imageDataUrl);const allowed=(Array.isArray(candidates)?candidates:[]).slice(0,10).map(x=>({id:String(x.id||'').slice(0,60),label:redactText(x.element?.name||x.label||'',160),role:redactText(x.element?.controlType||x.role||'',80),automationIdPresent:Boolean(x.element?.automationId)})).filter(x=>x.id);if(!allowed.length)throw Object.assign(new Error('برای Vision Grounding باید Candidateهای UIA وجود داشته باشند.'),{code:'AI_GROUNDING_CANDIDATES_REQUIRED'});const ids=allowed.map(x=>x.id);const schema={type:'object',additionalProperties:false,required:['summary','warnings','matches'],properties:{summary:{type:'string',maxLength:500},warnings:{type:'array',maxItems:6,items:{type:'string',maxLength:240}},matches:{type:'array',maxItems:allowed.length,items:{type:'object',additionalProperties:false,required:['candidateId','confidence','evidence'],properties:{candidateId:{type:'string',enum:ids},confidence:{type:'number',minimum:0,maximum:1},evidence:{type:'string',maxLength:240}}}}}};const candidateText=allowed.map(x=>`${x.id} | label=${x.label||'(blank)'} | role=${x.role||'(unknown)'} | automationId=${x.automationIdPresent?'present':'absent'}`).join('\n');const prompt=`This is a user-selected screenshot crop used only to corroborate Windows UI Automation candidates. Intent (redacted): ${redactText(intent,600)}\nAllowed candidate IDs:\n${candidateText}\nOnly match IDs from this list. Do not invent targets, coordinates, click instructions, actions, hidden text, passwords, or shell commands. If visual evidence is weak, return no match or low confidence.`;const ticket=this.guard.begin({promptChars:prompt.length,kind:'vision-grounding'});try{const out=await this.provider.visionJson({prompt,imageDataUrl:data,schema});this.guard.success(ticket,{latencyMs:out.latencyMs});const valid=new Set(ids);const result={ok:true,schemaVersion:'workspace-ai-ui-grounding-vision-v1',model:out.model,latencyMs:out.latencyMs,summary:redactText(out.parsed?.summary||'',500),warnings:(out.parsed?.warnings||[]).slice(0,6).map(x=>redactText(x,240)),matches:(out.parsed?.matches||[]).filter(x=>valid.has(String(x.candidateId||''))).slice(0,allowed.length).map(x=>({candidateId:String(x.candidateId),confidence:Math.max(0,Math.min(1,Number(x.confidence)||0)),evidence:redactText(x.evidence||'',240)})),crop:crop?{applied:Boolean(crop.applied),cropFraction:Number(crop.cropFraction||0),mapping:String(crop.mapping||'').slice(0,80)}:null};this.journal?.append('AI_UI_GROUNDING_VISION',{payload:{matches:result.matches.length,model:out.model,latencyMs:out.latencyMs,cropApplied:Boolean(crop?.applied)}});return result;}catch(error){this.guard.failure(ticket,error);throw error;}}
++ async verifyUiOutcomeData({imageDataUrl,action='',target={}}={}){const data=this.validateVisionDataUrl(imageDataUrl);const schema={type:'object',additionalProperties:false,required:['result','confidence','evidence','warnings'],properties:{result:{type:'string',enum:['confirmed','not-confirmed','uncertain']},confidence:{type:'number',minimum:0,maximum:1},evidence:{type:'string',maxLength:500},warnings:{type:'array',maxItems:6,items:{type:'string',maxLength:240}}}};const prompt=`Visually verify an ALREADY EXECUTED Windows UI Automation action. Action: ${redactText(action,40)}. Target visible label: ${redactText(target?.name||'',160)}. Target role: ${redactText(target?.controlType||'',80)}. Judge only visible evidence in this user-selected post-action screenshot crop. Do not propose clicks, coordinates, new actions, shell commands, or hidden-state assumptions. Return uncertain when the visual result cannot be established.`;const ticket=this.guard.begin({promptChars:prompt.length,kind:'vision-verify'});try{const out=await this.provider.visionJson({prompt,imageDataUrl:data,schema});this.guard.success(ticket,{latencyMs:out.latencyMs});const parsed=out.parsed||{};const result={ok:true,schemaVersion:'workspace-ai-ui-outcome-vision-v1',model:out.model,latencyMs:out.latencyMs,result:['confirmed','not-confirmed','uncertain'].includes(parsed.result)?parsed.result:'uncertain',confidence:Math.max(0,Math.min(1,Number(parsed.confidence)||0)),evidence:redactText(parsed.evidence||'',500),warnings:(parsed.warnings||[]).slice(0,6).map(x=>redactText(x,240))};this.journal?.append('AI_UI_OUTCOME_VISION',{payload:{result:result.result,confidence:result.confidence,model:out.model,latencyMs:out.latencyMs}});return result;}catch(error){this.guard.failure(ticket,error);throw error;}}
+ }
+ module.exports={LocalAIService};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-grounding-core.cjs /mnt/data/wa092/electron/services/ui-grounding-core.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-grounding-core.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/electron/services/ui-grounding-core.cjs	2026-08-13 11:59:55.603779946 +0000
+@@ -0,0 +1,67 @@
++const crypto=require('crypto');
++const {normalizeSelector,selectorSpecificity}=require('./windows-action-policy.cjs');
++
++const GROUNDING_SCHEMA_VERSION='workspace-ui-grounding-v1';
++const ROLE_HINTS=Object.freeze({
++  activate:['button','menuitem','hyperlink','tabitem','listitem'],
++  toggle:['checkbox','radiobutton','togglebutton'],
++  input:['edit','document','combobox'],
++  expand:['combobox','treeitem','menuitem'],
++  focus:['edit','document','listitem','treeitem','tabitem','button']
++});
++function clamp(v,min=0,max=1){const n=Number(v);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):min;}
++function norm(v=''){return String(v||'').toLowerCase().replace(/^controltype\./,'').replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\u200f\u202a-\u202e]/g,' ').replace(/[^\p{L}\p{N}._-]+/gu,' ').replace(/\s+/g,' ').trim();}
++function toks(v=''){return new Set(norm(v).split(' ').filter(x=>x.length>1));}
++function overlap(a,b){let n=0;for(const x of a)if(b.has(x))n++;return n;}
++function jaccard(a,b){if(!a.size&&!b.size)return 0;const inter=overlap(a,b);return inter/Math.max(1,a.size+b.size-inter);}
++function hash(v){return crypto.createHash('sha256').update(String(v||'')).digest('hex');}
++function roleName(e={}){return norm(e.controlType||'').replace(/^controltype\./,'');}
++function inferIntentClass(intent=''){
++  const q=norm(intent);
++  if(/toggle|check|uncheck|enable|disable|روشن|خاموش|تیک|علامت/.test(q))return'toggle';
++  if(/type|enter|write|input|fill|جستجو|جست|بنویس|وارد|پر کن/.test(q))return'input';
++  if(/expand|open menu|dropdown|باز کن|گسترش|منو/.test(q))return'expand';
++  if(/click|press|choose|select|activate|اجرا|کلیک|انتخاب|بزن/.test(q))return'activate';
++  return'focus';
++}
++function candidateSignature(e={}){
++  const raw=[Number(e.processId||0),norm(e.frameworkId),roleName(e),norm(e.automationId),norm(e.name),norm(e.className)].join('|');
++  return hash(raw).slice(0,32);
++}
++function semanticScore(intent,e={}){
++  const q=norm(intent),qt=toks(q);const fields=[e.name,e.automationId,e.className,e.controlType].map(norm).filter(Boolean);const combined=fields.join(' '),et=toks(combined);
++  let s=jaccard(qt,et)*0.52;
++  if(q&&fields.some(x=>x===q))s+=0.32;
++  else if(q&&fields.some(x=>x.includes(q)||q.includes(x)))s+=0.20;
++  const words=[...qt];if(words.length){const hits=words.filter(w=>combined.includes(w)).length;s+=Math.min(0.18,hits/words.length*0.18);}
++  return clamp(s);
++}
++function structuralScore(intent,e={}){
++  let s=0;const role=roleName(e),intentClass=inferIntentClass(intent),hints=ROLE_HINTS[intentClass]||[];
++  if(e.isEnabled)s+=0.20;if(!e.isOffscreen)s+=0.16;if(e.automationId)s+=0.20;if(e.name)s+=0.12;if(e.className)s+=0.06;if(e.frameworkId)s+=0.04;
++  if(hints.some(h=>role.includes(h)))s+=0.22;
++  if(e.isPassword)s-=0.60;
++  return clamp(s);
++}
++function elementSelector(e={},windowEl={}){
++  return normalizeSelector({processId:e.processId||windowEl.processId,windowName:windowEl.name||e.windowName||'',windowClassName:windowEl.className||e.windowClassName||'',automationId:e.automationId||'',name:e.name||'',className:e.className||'',controlType:e.controlType||'',frameworkId:e.frameworkId||''});
++}
++function rankUiaCandidates(intent,map={}, {limit=8,memory=null}={}){
++  const rows=Array.isArray(map.elements)?map.elements:[];const win=map.focusedWindow||map.window||{};const labels=new Map();for(const e of rows){const key=`${norm(e.name)}|${roleName(e)}`;labels.set(key,(labels.get(key)||0)+1);}
++  const intentClass=inferIntentClass(intent);const ranked=[];
++  for(let i=0;i<rows.length;i++){
++    const e=rows[i];if(!e||e.isPassword||!e.isEnabled||e.isOffscreen)continue;const selector=elementSelector(e,win);const spec=selectorSpecificity(selector);if(spec<5)continue;
++    const sem=semanticScore(intent,e),struct=structuralScore(intent,e);const key=`${norm(e.name)}|${roleName(e)}`;const uniqueness=1/Math.max(1,labels.get(key)||1);const signature=candidateSignature(e);const learned=clamp(memory?.boost?.({intentClass,signature})||0,0,1);
++    const confidence=clamp(0.05+sem*0.56+struct*0.24+uniqueness*0.08+learned*0.07);
++    ranked.push({id:`uia-${i+1}`,index:i,signature,intentClass,confidence:Number(confidence.toFixed(4)),semanticScore:Number(sem.toFixed(4)),structuralScore:Number(struct.toFixed(4)),uniqueness:Number(uniqueness.toFixed(4)),memoryBoost:Number(learned.toFixed(4)),selector,element:{name:String(e.name||'').slice(0,300),automationId:String(e.automationId||'').slice(0,300),className:String(e.className||'').slice(0,200),controlType:String(e.controlType||'').slice(0,120),frameworkId:String(e.frameworkId||'').slice(0,80),processId:Number(e.processId||0),runtimeId:Array.isArray(e.runtimeId)?e.runtimeId.slice(0,32):[],rect:e.rect||null,isEnabled:Boolean(e.isEnabled),isOffscreen:Boolean(e.isOffscreen),isPassword:Boolean(e.isPassword)}});
++  }
++  ranked.sort((a,b)=>b.confidence-a.confidence||b.semanticScore-a.semanticScore||b.structuralScore-a.structuralScore||a.id.localeCompare(b.id));
++  const top=ranked.slice(0,Math.max(1,Math.min(20,Number(limit)||8)));const gap=top.length>1?top[0].confidence-top[1].confidence:top[0]?.confidence||0;const topConfidence=top[0]?.confidence||0;
++  const quality=topConfidence>=0.78&&gap>=0.10?'high':topConfidence>=0.58&&gap>=0.05?'medium':'low';
++  return{schemaVersion:GROUNDING_SCHEMA_VERSION,intentClass,candidates:top,topConfidence:Number(topConfidence.toFixed(4)),topGap:Number(gap.toFixed(4)),quality,needsVision:quality==='low'||topConfidence<0.72||gap<0.06};
++}
++function fuseVisionMatches(base={},vision={}){
++  const matches=new Map((vision?.matches||[]).map(x=>[String(x.candidateId||''),x]));const rows=(base.candidates||[]).map(c=>{const v=matches.get(c.id);const vc=v?clamp(v.confidence):0;const corroborated=Boolean(v&&vc>=0.45);const fused=clamp(c.confidence*0.72+vc*0.25+(corroborated?0.03:0));return{...c,vision:{matched:Boolean(v),confidence:Number(vc.toFixed(4)),evidence:String(v?.evidence||'').slice(0,240)},fusedConfidence:Number(fused.toFixed(4))};}).sort((a,b)=>b.fusedConfidence-a.fusedConfidence||b.confidence-a.confidence);
++  const top=rows[0]||null,gap=rows.length>1?(top?.fusedConfidence||0)-rows[1].fusedConfidence:(top?.fusedConfidence||0);const quality=(top?.fusedConfidence||0)>=0.80&&gap>=0.08?'high':(top?.fusedConfidence||0)>=0.62&&gap>=0.04?'medium':'low';return{...base,schemaVersion:'workspace-ui-grounding-fused-v1',candidates:rows,topConfidence:Number((top?.fusedConfidence||0).toFixed(4)),topGap:Number(gap.toFixed(4)),quality,needsVision:false,visionUsed:true};
++}
++module.exports={GROUNDING_SCHEMA_VERSION,ROLE_HINTS,clamp,norm,toks,inferIntentClass,candidateSignature,semanticScore,structuralScore,elementSelector,rankUiaCandidates,fuseVisionMatches};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-grounding-service.cjs /mnt/data/wa092/electron/services/ui-grounding-service.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-grounding-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/electron/services/ui-grounding-service.cjs	2026-08-13 12:08:42.490283453 +0000
+@@ -0,0 +1,18 @@
++const crypto=require('crypto');
++const {inspectWindowsUi,listTopLevelWindows}=require('./windows-uia.cjs');
++const {rankUiaCandidates,fuseVisionMatches}=require('./ui-grounding-core.cjs');
++const {GroundingMemoryStore}=require('./grounding-memory-store.cjs');
++const {UIGroundingSessionStore}=require('./ui-grounding-session-store.cjs');
++function hashText(v){return crypto.createHash('sha256').update(String(v||''),'utf8').digest('hex');}
++function cleanIntent(v){return String(v||'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,600);}
++class UIGroundingService{
++ constructor(userData,{journal=null,inspect=inspectWindowsUi,listWindows=listTopLevelWindows,memory=null,sessions=null}={}){this.journal=journal;this.inspect=inspect;this.listWindows=listWindows;this.memory=memory||new GroundingMemoryStore(userData,{journal});this.sessions=sessions||new UIGroundingSessionStore();}
++ async ground(intent,{maxNodes=700,maxWindows=80,limit=8}={}){const clean=cleanIntent(intent);if(clean.length<2)throw Object.assign(new Error('برای Grounding باید هدف UI را توضیح دهید.'),{code:'UI_GROUNDING_INTENT_REQUIRED'});const [focused,windows]=await Promise.all([this.inspect({maxNodes}),this.listWindows({maxWindows})]);if(!focused?.supported)return{ok:false,code:'UI_GROUNDING_WINDOWS_ONLY',platform:focused?.platform||process.platform,policy:{uiaFirst:true,visionCanOnlyCorroborate:true,coordinateActions:false}};const map={schemaVersion:'windows-uia-map-v1',supported:true,platform:'win32',focusedWindow:focused.window,focusedElement:focused.focus,elements:focused.elements||[],totalDescendants:Number(focused.totalDescendants||0),elementsTruncated:Boolean(focused.truncated),windows:windows?.windows||[],totalWindows:Number(windows?.total||0)};const ranked=rankUiaCandidates(clean,map,{limit,memory:this.memory});const row=this.sessions.create({intent:clean,intentHash:hashText(clean),intentClass:ranked.intentClass,map,result:ranked});this.journal?.append('UI_GROUNDING_CREATED',{payload:{intentHash:row.intentHash.slice(0,16),intentClass:ranked.intentClass,candidates:ranked.candidates.length,quality:ranked.quality,needsVision:ranked.needsVision,totalDescendants:map.totalDescendants}});return{ok:true,schemaVersion:'workspace-ui-grounding-session-v1',sessionToken:row.token,expiresAt:new Date(row.expiresAt).toISOString(),result:ranked,focusedWindow:map.focusedWindow,policy:{uiaFirst:true,visionCanOnlyCorroborate:true,visionCannotCreateTargets:true,coordinateActions:false,automaticScreenshot:false,userSelectedImageOnly:true}};}
++ getSession(token){const row=this.sessions.get(token);if(!row)throw Object.assign(new Error('Grounding session منقضی یا نامعتبر است.'),{code:'UI_GROUNDING_SESSION_INVALID'});return row;}
++ applyVision(token,vision){const row=this.getSession(token);const fused=fuseVisionMatches(row.result,vision);this.sessions.update(token,{result:fused,visionMeta:{model:vision?.model||null,latencyMs:vision?.latencyMs||null,summary:String(vision?.summary||'').slice(0,500)}});this.journal?.append('UI_GROUNDING_VISION_FUSED',{payload:{intentHash:row.intentHash.slice(0,16),quality:fused.quality,topConfidence:fused.topConfidence,matches:(vision?.matches||[]).length}});return{ok:true,sessionToken:row.token,expiresAt:new Date(row.expiresAt).toISOString(),result:fused,policy:{visionCanOnlyCorroborate:true,visionCannotCreateTargets:true}};}
++ candidate(token,candidateId){const x=this.sessions.candidate(token,candidateId);if(!x)throw Object.assign(new Error('Candidate یا Grounding session معتبر نیست.'),{code:'UI_GROUNDING_CANDIDATE_INVALID'});return x;}
++ actionContext(token,candidateId){const {row,candidate}=this.candidate(token,candidateId);return{selector:candidate.selector,grounding:{sessionToken:row.token,intentHash:row.intentHash,intentClass:row.intentClass,candidateId:candidate.id,signature:candidate.signature,confidence:Number(candidate.fusedConfidence??candidate.confidence??0),visionConfidence:Number(candidate.vision?.confidence||0)}};}
++ recordVerifiedAction(context={},action='focus'){const g=context?.grounding;if(!g?.signature)return null;if(Number(g.confidence||0)<0.58&&Number(g.visionConfidence||0)<0.70){this.journal?.append('UI_GROUNDING_MEMORY_SKIPPED',{payload:{reason:'LOW_GROUNDING_CONFIDENCE',confidence:Number(g.confidence||0),visionConfidence:Number(g.visionConfidence||0),action}});return null;}const out=this.memory.recordVerified({intentClass:g.intentClass,signature:g.signature,action});this.journal?.append('UI_GROUNDING_ACTION_VERIFIED',{payload:{intentHash:String(g.intentHash||'').slice(0,16),candidateId:String(g.candidateId||''),signature:String(g.signature||'').slice(0,16),confidence:Number(g.confidence||0),action}});return out;}
++ status(){return{schemaVersion:'workspace-ui-grounding-status-v1',memory:this.memory.summary(),sessions:this.sessions.rows?.size||0,policy:{rawIntentStored:false,rawLabelsStoredInMemory:false,visionCreatesTargets:false,automaticScreenshot:false}};}
++}
++module.exports={UIGroundingService,cleanIntent,hashText};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-grounding-session-store.cjs /mnt/data/wa092/electron/services/ui-grounding-session-store.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-grounding-session-store.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/electron/services/ui-grounding-session-store.cjs	2026-08-13 11:59:55.605840540 +0000
+@@ -0,0 +1,11 @@
++const crypto=require('crypto');
++class UIGroundingSessionStore{
++ constructor({ttlMs=10*60*1000,maxEntries=32}={}){this.ttlMs=Math.max(60_000,Number(ttlMs||0));this.maxEntries=Math.max(8,Number(maxEntries||0));this.rows=new Map();}
++ purge(){const now=Date.now();for(const[k,v]of this.rows)if(v.expiresAt<=now)this.rows.delete(k);while(this.rows.size>this.maxEntries)this.rows.delete(this.rows.keys().next().value);}
++ create(data={}){this.purge();const token=`ground-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`,row={...data,token,createdAt:Date.now(),expiresAt:Date.now()+this.ttlMs};this.rows.set(token,row);return row;}
++ get(token){this.purge();return this.rows.get(String(token||''))||null;}
++ update(token,patch={}){const row=this.get(token);if(!row)return null;Object.assign(row,patch);return row;}
++ candidate(token,candidateId){const row=this.get(token);if(!row)return null;const c=(row.result?.candidates||[]).find(x=>x.id===String(candidateId||''));return c?{row,candidate:c}:null;}
++ forget(token){return this.rows.delete(String(token||''));}
++}
++module.exports={UIGroundingSessionStore};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-outcome-verifier.cjs /mnt/data/wa092/electron/services/ui-outcome-verifier.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/ui-outcome-verifier.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/electron/services/ui-outcome-verifier.cjs	2026-08-13 12:00:30.567763902 +0000
+@@ -0,0 +1,4 @@
++function clean(v,max=300){return String(v||'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,max);}
++function deterministicOutcome(cycle={}){if(String(cycle.type||'')!=='windows-ui-action')return{ok:false,code:'UI_VERIFY_CYCLE_TYPE_INVALID'};const ex=cycle.result?.execution||cycle.result;const verification=ex?.verification||null;if(cycle.status!=='completed'||!ex?.ok||verification?.ok!==true)return{ok:false,code:'UI_VERIFY_ACTION_NOT_VERIFIED',status:cycle.status||null,verification};const plan=cycle.actionPlan||cycle.result?.plan||{};return{ok:true,schemaVersion:'workspace-ui-outcome-v1',cycleId:cycle.id,action:clean(plan.action,40),target:{name:clean(plan.target?.name,180),controlType:clean(plan.target?.controlType,80),frameworkId:clean(plan.target?.frameworkId,80)},deterministic:{verified:true,mode:clean(verification?.mode,80),detail:clean(verification?.detail,240)},visual:null};}
++function fuseVisual(base={},visual={}){if(!base.ok)return base;const state=['confirmed','not-confirmed','uncertain'].includes(visual?.result)?visual.result:'uncertain';const confidence=Math.max(0,Math.min(1,Number(visual?.confidence)||0));return{...base,schemaVersion:'workspace-ui-outcome-fused-v1',visual:{result:state,confidence,evidence:clean(visual?.evidence,500),warnings:Array.isArray(visual?.warnings)?visual.warnings.slice(0,8).map(x=>clean(x,240)):[]},overall:state==='not-confirmed'&&confidence>=0.75?'needs-review':state==='confirmed'&&confidence>=0.65?'corroborated':'deterministic-only'};}
++module.exports={deterministicOutcome,fuseVisual};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/vision-crop-service.cjs /mnt/data/wa092/electron/services/vision-crop-service.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/vision-crop-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/electron/services/vision-crop-service.cjs	2026-08-13 11:59:55.605202762 +0000
+@@ -0,0 +1,10 @@
++function finiteRect(r){if(!r)return null;const left=Number(r.left),top=Number(r.top),width=Number(r.width),height=Number(r.height);if(![left,top,width,height].every(Number.isFinite)||width<=0||height<=0)return null;return{left,top,width,height};}
++function unionRects(rects=[]){const rs=rects.map(finiteRect).filter(Boolean);if(!rs.length)return null;const left=Math.min(...rs.map(r=>r.left)),top=Math.min(...rs.map(r=>r.top)),right=Math.max(...rs.map(r=>r.left+r.width)),bottom=Math.max(...rs.map(r=>r.top+r.height));return{left,top,width:right-left,height:bottom-top};}
++function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
++function deriveCropPlan({windowRect,candidateRects=[],imageWidth,imageHeight,padding=48,maxFraction=0.72}={}){
++ const w=finiteRect(windowRect);const iw=Math.trunc(Number(imageWidth)||0),ih=Math.trunc(Number(imageHeight)||0);if(!w||iw<8||ih<8)return{ok:false,code:'VISION_CROP_MAPPING_UNAVAILABLE'};const u=unionRects(candidateRects);if(!u)return{ok:false,code:'VISION_CROP_TARGET_UNAVAILABLE'};
++ const sx=iw/w.width,sy=ih/w.height;let x=(u.left-w.left)*sx-padding,y=(u.top-w.top)*sy-padding,width=u.width*sx+padding*2,height=u.height*sy+padding*2;x=clamp(Math.floor(x),0,iw-1);y=clamp(Math.floor(y),0,ih-1);width=clamp(Math.ceil(width),1,iw-x);height=clamp(Math.ceil(height),1,ih-y);
++ const frac=(width*height)/(iw*ih);if(frac>maxFraction){const cx=x+width/2,cy=y+height/2,targetArea=iw*ih*maxFraction,ratio=width/Math.max(1,height),nw=Math.sqrt(targetArea*ratio),nh=targetArea/Math.max(1,nw);width=clamp(Math.round(nw),1,iw);height=clamp(Math.round(nh),1,ih);x=clamp(Math.round(cx-width/2),0,iw-width);y=clamp(Math.round(cy-height/2),0,ih-height);}
++ return{ok:true,schemaVersion:'workspace-vision-crop-v1',rect:{x,y,width,height},mapping:{scaleX:Number(sx.toFixed(4)),scaleY:Number(sy.toFixed(4)),source:'focused-window-relative'},sourceSize:{width:iw,height:ih},cropFraction:Number(((width*height)/(iw*ih)).toFixed(4))};
++}
++module.exports={finiteRect,unionRects,deriveCropPlan};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/windows-action-policy.cjs /mnt/data/wa092/electron/services/windows-action-policy.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/windows-action-policy.cjs	2026-08-13 06:51:15.000000000 +0000
++++ /mnt/data/wa092/electron/services/windows-action-policy.cjs	2026-08-13 12:08:42.490097977 +0000
+@@ -40,6 +40,7 @@
+   const text=[target.name,target.automationId,target.className,target.windowName].map(x=>String(x||'').toLowerCase()).join(' ');
+   return BLOCKED_TARGET_TERMS.filter(term=>text.includes(term.toLowerCase()));
+ }
++function allowedActionsForControlType(value=''){const t=cleanControlType(value);const out=['focus'];if(/^(Button|MenuItem|Hyperlink)$/.test(t))out.push('invoke');if(/^(CheckBox|RadioButton|ToggleButton)$/.test(t))out.push('toggle');if(/^(ComboBox|TreeItem)$/.test(t))out.push('expand','collapse');if(/^(Edit|Document)$/.test(t))out.push('setValue');return [...new Set(out)];}
+ function validateActionRequest(input={}){
+   const action=cleanText(input.action,40);
+   if(!ALLOWED_ACTIONS.includes(action))return{ok:false,code:'UIA_ACTION_NOT_ALLOWED',message:'Action خارج از allowlist امن UI Automation است.'};
+@@ -62,6 +63,7 @@
+ function buildActionPlan(request,target={}){
+   const validated=validateActionRequest(request);if(!validated.ok)return validated;
+   const identity=targetIdentity(target);const blockedTerms=blockedTermsForTarget(identity);
++  const compatibleActions=allowedActionsForControlType(identity.controlType);if(!compatibleActions.includes(validated.action))return{ok:false,code:'UIA_ACTION_CONTROL_MISMATCH',message:'Action انتخاب‌شده با ControlType هدف سازگار نیست.',allowedActions:compatibleActions,controlType:identity.controlType};
+   if(identity.isPassword)return{ok:false,code:'UIA_PASSWORD_CONTROL_BLOCKED',message:'کنترل Password برای Value/Invoke خودکار مجاز نیست.'};
+   if(!identity.isEnabled)return{ok:false,code:'UIA_TARGET_DISABLED',message:'کنترل هدف Disabled است.'};
+   if(identity.isOffscreen&&validated.action!=='focus')return{ok:false,code:'UIA_TARGET_OFFSCREEN',message:'کنترل هدف Offscreen است؛ ابتدا باید به شکل کنترل‌شده Visible شود.'};
+@@ -80,4 +82,4 @@
+   const v=validateActionRequest(input);if(!v.ok)return v;
+   return{ok:true,action:v.action,selector:v.selector,risk:v.risk,valueLength:v.action==='setValue'?v.value.length:0,valueHash:v.action==='setValue'?hash(v.value):null};
+ }
+-module.exports={ACTION_SCHEMA_VERSION,ALLOWED_ACTIONS,ACTION_RISK,BLOCKED_TARGET_TERMS,hash,normalizeSelector,selectorSpecificity,blockedTermsForTarget,validateActionRequest,targetIdentity,buildActionPlan,verifyTargetPinned,redactedRequest};
++module.exports={ACTION_SCHEMA_VERSION,ALLOWED_ACTIONS,ACTION_RISK,BLOCKED_TARGET_TERMS,hash,normalizeSelector,selectorSpecificity,blockedTermsForTarget,allowedActionsForControlType,validateActionRequest,targetIdentity,buildActionPlan,verifyTargetPinned,redactedRequest};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/windows-action-session-store.cjs /mnt/data/wa092/electron/services/windows-action-session-store.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/windows-action-session-store.cjs	2026-08-13 06:52:52.000000000 +0000
++++ /mnt/data/wa092/electron/services/windows-action-session-store.cjs	2026-08-13 12:08:42.490370182 +0000
+@@ -1,12 +1,13 @@
+ const crypto=require('crypto');
+ const {validateActionRequest,redactedRequest}=require('./windows-action-policy.cjs');
++function safeContext(input={}){const g=input?.grounding||null;if(!g)return null;return{grounding:{sessionToken:String(g.sessionToken||'').slice(0,120),intentHash:String(g.intentHash||'').slice(0,64),intentClass:String(g.intentClass||'focus').slice(0,24),candidateId:String(g.candidateId||'').slice(0,80),signature:String(g.signature||'').slice(0,64),confidence:Math.max(0,Math.min(1,Number(g.confidence)||0)),visionConfidence:Math.max(0,Math.min(1,Number(g.visionConfidence)||0))}};}
+ class WindowsActionSessionStore{
+   constructor({ttlMs=10*60*1000,maxEntries=64}={}){this.ttlMs=Math.max(30_000,Number(ttlMs||0));this.maxEntries=Math.max(8,Number(maxEntries||0));this.rows=new Map();}
+   _purge(){const t=Date.now();for(const [k,v] of this.rows)if(v.expiresAt<=t)this.rows.delete(k);while(this.rows.size>this.maxEntries)this.rows.delete(this.rows.keys().next().value);}
+-  create(request={}){this._purge();const valid=validateActionRequest(request);if(!valid.ok)return valid;const redacted=redactedRequest(request);const token=`uia-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;const row={token,request:{action:valid.action,selector:valid.selector,value:valid.value,sensitive:false},createdAt:Date.now(),expiresAt:Date.now()+this.ttlMs};this.rows.set(token,row);return{ok:true,token,expiresAt:new Date(row.expiresAt).toISOString(),redacted};}
++  create(request={},options={}){this._purge();const valid=validateActionRequest(request);if(!valid.ok)return valid;const redacted=redactedRequest(request);const token=`uia-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;const context=safeContext(options.context);const row={token,request:{action:valid.action,selector:valid.selector,value:valid.value,sensitive:false,context},createdAt:Date.now(),expiresAt:Date.now()+this.ttlMs};this.rows.set(token,row);return{ok:true,token,expiresAt:new Date(row.expiresAt).toISOString(),redacted,context};}
+   get(token){this._purge();const row=this.rows.get(String(token||''));return row?row.request:null;}
+   consume(token){this._purge();const key=String(token||'');const row=this.rows.get(key)||null;this.rows.delete(key);return row?.request||null;}
+   forget(token){return this.rows.delete(String(token||''));}
+   size(){this._purge();return this.rows.size;}
+ }
+-module.exports={WindowsActionSessionStore};
++module.exports={WindowsActionSessionStore,safeContext};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/workspace-cycles.cjs /mnt/data/wa092/electron/services/workspace-cycles.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/electron/services/workspace-cycles.cjs	2026-08-13 10:22:29.000000000 +0000
++++ /mnt/data/wa092/electron/services/workspace-cycles.cjs	2026-08-13 12:01:42.041500887 +0000
+@@ -175,7 +175,7 @@
+ }
+ 
+ 
+-function windowsUiActionCycle({sessionStore,prepareAction=prepareWindowsUiAction,executeAction=executePinnedWindowsUiAction}){
++function windowsUiActionCycle({sessionStore,prepareAction=prepareWindowsUiAction,executeAction=executePinnedWindowsUiAction,onVerified=null}){
+   return{async next(cycle){
+     const token=cycle.input.sessionToken||'';
+     if(!cycle.steps.length){
+@@ -198,8 +198,9 @@
+       if(!request){return{status:'failed',steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write','failed','اجرای UI Automation Pattern','Session منقضی شد؛ هیچ Action اجرا نشد'):s.id==='verify'?step('verify','verify','failed','Verify-after-action','Preview جدید لازم است'):s),evidence:[...cycle.evidence,evidence('WINDOWS_UIA_ACTION_SESSION_EXPIRED',{safeAbort:true})]};}
+       if(cycle.actionPlan?.valueHash&&hash(request.value||'')!==cycle.actionPlan.valueHash){return{status:'failed',steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write','failed','اجرای UI Automation Pattern','Value با Preview تطبیق ندارد'):s.id==='verify'?step('verify','verify','failed','Verify-after-action','Action اجرا نشد'):s),evidence:[...cycle.evidence,evidence('WINDOWS_UIA_ACTION_VALUE_CHANGED',{safeAbort:true})]};}
+       const out=await executeAction(cycle.actionPlan,request.value||'');
+-      const ok=Boolean(out.ok&&out.verification?.ok);
+-      return{status:ok?'completed':'failed',result:{supported:true,phase:'executed',plan:cycle.actionPlan,execution:out},steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write',out.code==='UIA_ACTION_VERIFIED'?'completed':'failed','اجرای UI Automation Pattern',out.code||'unknown'):s.id==='verify'?step('verify','verify',ok?'completed':'failed','Verify-after-action',out.verification?.detail||out.message||out.code||'ناموفق'):s),evidence:[...cycle.evidence,evidence(ok?'WINDOWS_UIA_ACTION_VERIFIED':'WINDOWS_UIA_ACTION_SAFE_ABORT',{ok,code:out.code,action:cycle.actionPlan?.action,planHash:cycle.actionPlan?.planHash,verificationMode:out.verification?.mode||null,safeAbort:!ok})]};
++      const ok=Boolean(out.ok&&out.verification?.ok);let learned=null;
++      if(ok&&onVerified){try{learned=await onVerified({cycle,plan:cycle.actionPlan,execution:out,context:request.context||null});}catch{learned=null;}}
++      return{status:ok?'completed':'failed',result:{supported:true,phase:'executed',plan:cycle.actionPlan,execution:out,groundingLearned:Boolean(learned)},steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write',out.code==='UIA_ACTION_VERIFIED'?'completed':'failed','اجرای UI Automation Pattern',out.code||'unknown'):s.id==='verify'?step('verify','verify',ok?'completed':'failed','Verify-after-action',out.verification?.detail||out.message||out.code||'ناموفق'):s),evidence:[...cycle.evidence,evidence(ok?'WINDOWS_UIA_ACTION_VERIFIED':'WINDOWS_UIA_ACTION_SAFE_ABORT',{ok,code:out.code,action:cycle.actionPlan?.action,planHash:cycle.actionPlan?.planHash,verificationMode:out.verification?.mode||null,safeAbort:!ok,groundingLearned:Boolean(learned)})]};
+     }
+     return{status:cycle.status};
+   },async onEnd(cycle){sessionStore.forget(cycle.input.sessionToken||'');const ex=cycle.result?.execution;return{summary:cycle.status==='completed'&&cycle.result?.phase==='executed'?`UIA Action «${cycle.actionPlan?.action||'-'}» اجرا و با ${ex?.verification?.mode||'verification'} بررسی شد.`:cycle.status==='completed'&&!cycle.result?.supported?'UI Automation Action فقط روی Windows runtime فعال است.':cycle.status==='cancelled'?'UIA Action توسط کاربر لغو شد؛ هیچ Action اجرا نشد.':'UIA Action متوقف شد؛ در خطای Pin/Verify اجرای آزاد یا Retry کور انجام نشد.',quality:cycle.status==='completed'?(cycle.actionPlan?.action==='invoke'?'execution-verified':'verified'):cycle.status==='cancelled'?'cancelled':'failed',nextCycleSuggestions:['windows-ui-map']};}};
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/package.json /mnt/data/wa092/package.json
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/package.json	2026-08-13 10:47:04.000000000 +0000
++++ /mnt/data/wa092/package.json	2026-08-13 12:11:13.241552903 +0000
+@@ -1,16 +1,16 @@
+ {
+   "name": "windows-workspace-agent",
+-  "version": "0.9.1",
++  "version": "0.9.2",
+   "private": true,
+-  "description": "Cycle-driven Windows workspace agent with crash-resilient indexing, Windows safety foundations, and a managed loopback-only llama.cpp local AI runtime with hardware advisory and capability probing.",
++  "description": "Cycle-driven Windows workspace agent with crash-resilient indexing, managed local AI, UIA-first semantic grounding, constrained vision corroboration, and verified-action skill learning.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -46,7 +46,10 @@
+     "test:local-ai-server": "powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1",
+     "test:local-ai-uat": "node tests/local-ai-server-v090.uat.cjs",
+     "test:ai-runtime": "node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs",
+-    "test:windows-local-ai-runtime-uat": "node tests/windows-local-ai-runtime-v091.uat.cjs"
++    "test:windows-local-ai-runtime-uat": "node tests/windows-local-ai-runtime-v091.uat.cjs",
++    "test:grounding": "node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs",
++    "test:windows-grounding-uat": "node tests/windows-intelligent-grounding-v092.uat.cjs",
++    "test:grounding-scale": "node tests/ui-grounding-scale-v092.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/src/App.jsx /mnt/data/wa092/src/App.jsx
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/src/App.jsx	2026-08-13 10:44:05.000000000 +0000
++++ /mnt/data/wa092/src/App.jsx	2026-08-13 12:04:51.820106777 +0000
+@@ -3,9 +3,10 @@
+ const api=window.workspaceAgent;
+ const fmt=n=>new Intl.NumberFormat('fa-IR').format(n||0);
+ const bytes=n=>{if(!n)return'۰ B';const u=['B','KB','MB','GB','TB'];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${new Intl.NumberFormat('fa-IR',{maximumFractionDigits:1}).format(v)} ${u[i]}`};
++const actionsForRole=c=>{const t=String(c?.element?.controlType||'');const a=['focus'];if(/Button|MenuItem|Hyperlink|ListItem|TabItem/.test(t))a.push('invoke');if(/CheckBox|RadioButton|ToggleButton/.test(t))a.push('toggle');if(/ComboBox|TreeItem|MenuItem/.test(t))a.push('expand','collapse');if(/Edit|Document|ComboBox/.test(t))a.push('setValue');return [...new Set(a)]};
+ const tabs={home:'مرکز فرمان',system:'Windows System',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+- const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null);
++ const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null);
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -36,17 +37,21 @@
+  async function probeAICapabilities(includeVision=false){setAiError('');setBusy(true);try{const r=await api.aiCapabilityProbe(includeVision);setAiCapabilities(r);if(!r?.ok)setAiError(r?.message||r?.code||'Capability probe ناموفق بود.')}finally{setBusy(false)}}
+  async function warmupAI(){setAiError('');setBusy(true);try{const r=await api.aiWarmup();if(!r?.ok)setAiError(r?.message||r?.code||'Warmup ناموفق بود.');else setAiHealth({ok:true,code:'AI_WARMED',latencyMs:r.latencyMs,models:[r.schema?.model].filter(Boolean)})}finally{setBusy(false)}}
+  async function runAIUiAssist(){setAiError('');setAiUiAssist(null);setBusy(true);try{const r=await api.aiUiAssist();if(r?.cancelled){setAiUiAssist(r);return}setAiUiAssist(r);if(!r?.ok)setAiError(r?.message||r?.code||'UI Assist ناموفق بود.')}finally{setBusy(false)}}
++ async function groundUiIntent(){setAiError('');setUiGrounding(null);setUiVisualVerify(null);if(!uiGroundIntent.trim())return;setBusy(true);try{const r=await api.aiGroundUi(uiGroundIntent);setUiGrounding(r);if(r?.ok&&r.result?.candidates?.[0]){const a=actionsForRole(r.result.candidates[0]);setGroundAction(a.includes('invoke')?'invoke':a[0]||'focus')}if(!r?.ok)setAiError(r?.message||r?.code||'Semantic UI Grounding ناموفق بود.')}finally{setBusy(false)}}
++ async function groundUiWithVision(){if(!uiGrounding?.sessionToken)return;setAiError('');setBusy(true);try{const r=await api.aiGroundUiVision(uiGrounding.sessionToken);if(r?.cancelled)return;setUiGrounding(x=>({...x,...r}));if(!r?.ok)setAiError(r?.message||r?.code||'Vision corroboration ناموفق بود.')}finally{setBusy(false)}}
++ async function startGroundedAction(candidate){if(!uiGrounding?.sessionToken||!candidate)return;setAiError('');setBusy(true);try{const allowed=actionsForRole(candidate);const action=allowed.includes(groundAction)?groundAction:(allowed[0]||'focus');const c=await api.startGroundedUiaAction({sessionToken:uiGrounding.sessionToken,candidateId:candidate.id,action,value:action==='setValue'?groundValue:''});if(c?.id){setCycle(c);setGroundAction(action);await refresh();await refreshJournal()}else setAiError(c?.message||c?.code||'Grounded Action Preview ساخته نشد.')}finally{setBusy(false)}}
++ async function verifyCurrentUiaVisual(){if(!cycle?.id||cycle?.type!=='windows-ui-action')return;setAiError('');setBusy(true);try{const r=await api.aiVerifyUiaCycle(cycle.id);if(r?.cancelled)return;setUiVisualVerify(r);if(!r?.ok)setAiError(r?.message||r?.code||'Visual verification ناموفق بود.')}finally{setBusy(false)}}
+  async function dismissReview(item,status='dismissed'){await api.reviewUpdate(item.id,{status});await refreshReviews();setSelectedReview(x=>x.filter(id=>id!==item.id))}
+  async function auditZone(z){setActiveZone(z);setZoneReport(null);await run('managed-zone-audit',{root:z.root,zoneId:z.id})}
+  const pending=useMemo(()=>reviewItems.filter(x=>x.status==='pending'),[reviewItems]);
+  const rootTabs=['home','mission','ai','health','intelligence','review','zones','drive','index','search','cleanup','files','duplicates','snapshots','automation','watch','pdf'];
+- return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.1</span></header>
++ return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.2</span></header>
+  {rootTabs.includes(tab)&&<section className="picker"><div><b>Workspace</b><span>{root||'پوشه‌ای انتخاب نشده'}</span></div><button onClick={pick}>انتخاب پوشه</button></section>}
+  {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/><Task title="Local AI" sub="Qwen / llama.cpp · Plan-only" on={()=>setTab('ai')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
+  {tab==='system'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('windows-system')} disabled={busy}>اجرای Windows System Doctor</button><span>Read-only؛ Startup Advisor فقط اولویت Review می‌دهد و Registry/Process را تغییر نمی‌دهد.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{system&&<SystemReport data={system}/>}</>}
+  {tab==='uia'&&<><div className="toolbar"><button className="primary large" onClick={()=>{setUiaError('');run('windows-ui-map')}} disabled={busy}>خواندن UI پنجره فعال</button><span>Grounding خواندنی + Action کنترل‌شده با Preview/Confirm/Pin/Verify؛ بدون coordinate click، SendKeys عمومی یا Password write.</span></div>{uiaError&&<div className="panel action-error"><b>Action متوقف شد</b><p>{uiaError}</p></div>}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{uiaMap&&<UiaReport data={uiaMap} onAction={startUiaAction} busy={busy}/>}</>}
+  {tab==='mission'&&<><div className="panel"><h3>فرمان فارسی</h3><textarea className="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="مثلاً: این پوشه رو هوشمند بررسی کن، پیشنهادها رو برای Review آماده کن و چیزی رو خودکار تغییر نده"/><div className="actions"><button onClick={plan} disabled={!command}>فقط ساخت Plan</button><button className="primary" onClick={mission} disabled={!root||!command||busy}>اجرای Mission</button></div>{goal&&<div className="preview-box"><b>{goal.summary}</b><p>Confidence: {Math.round(goal.confidence*100)}%</p>{goal.notes?.map((n,i)=><small key={i}>{n}</small>)}{goal.steps.map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'نیازمند تأیید':'Read-only/Local'}</small></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+- {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>External loopback endpoint یا Managed llama-server؛ مدل هیچ Tool اجرایی مستقیم دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>AI</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Runtime</span><b>{aiRuntime?.managed?`${aiRuntime.state} · ${aiRuntime.pid||'-'}`:'External / manual'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback · no raw prompt · no background screenshot</b></div></>}</div><div className="panel"><h3>Hardware Advisor</h3><p>RAM/CPU و روی Windows اطلاعات WMI GPU خوانده می‌شود. VRAM WMI فقط سیگنال کم‌اعتماد است و Fit تضمین نمی‌شود.</p><div className="actions"><button onClick={probeAIHardware} disabled={busy}>Probe Hardware</button>{aiHardware?.advice&&<button onClick={async()=>{const r=await api.aiApplyHardwareAdvice(aiHardware.advice);if(r?.ok){setAiSettings(r.settings);await refreshAI()}}}>اعمال تنظیمات Runtime پیشنهادی</button>}</div>{aiHardware&&<><div className="meter"><span>RAM</span><b>{bytes(aiHardware.memory?.totalBytes)}</b></div><div className="meter"><span>CPU</span><b>{aiHardware.cpu?.logicalCores||'-'} threads</b></div><div className="meter"><span>GPU</span><b>{(aiHardware.gpus||[]).map(g=>g.name).join(' · ')||'نامشخص'}</b></div><div className="meter"><span>Suggested</span><b>{aiHardware.advice?.modelFamily} · ctx {fmt(aiHardware.advice?.contextSize)}</b></div><small>{aiHardware.advice?.note}</small></>}</div><div className="panel wide"><h3>Managed llama.cpp Runtime</h3><p>Agent فقط فایل <code>llama-server</code> و مدل <code>.gguf</code> انتخاب‌شده توسط کاربر را با آرگومان‌های allowlisted اجرا می‌کند. Host همیشه 127.0.0.1 و Web UI خاموش است.</p>{aiSettings&&<div className="formgrid"><label><span>Managed Runtime</span><input type="checkbox" checked={Boolean(aiSettings.managedRuntime)} onChange={e=>setAiSettings({...aiSettings,managedRuntime:e.target.checked})}/></label><label><span>Start with Agent</span><input type="checkbox" checked={Boolean(aiSettings.runtimeStartOnLaunch)} onChange={e=>setAiSettings({...aiSettings,runtimeStartOnLaunch:e.target.checked})}/></label><div className="inline"><input value={aiSettings.runtimeExecutablePath||''} readOnly placeholder="llama-server.exe"/><button onClick={pickAIRuntimeExe}>انتخاب Runtime</button></div><div className="inline"><input value={aiSettings.runtimeModelPath||''} readOnly placeholder="model.gguf"/><button onClick={pickAIModel}>انتخاب GGUF</button></div><label><span>Port</span><input type="number" value={aiSettings.runtimePort||8080} onChange={e=>setAiSettings({...aiSettings,runtimePort:Number(e.target.value)})}/></label><label><span>Context</span><input type="number" value={aiSettings.runtimeContextSize||8192} onChange={e=>setAiSettings({...aiSettings,runtimeContextSize:Number(e.target.value)})}/></label><label><span>CPU Threads (0=auto)</span><input type="number" value={aiSettings.runtimeThreads||0} onChange={e=>setAiSettings({...aiSettings,runtimeThreads:Number(e.target.value)})}/></label><label><span>GPU Layers</span><select value={String(aiSettings.runtimeGpuLayers||'auto')} onChange={e=>setAiSettings({...aiSettings,runtimeGpuLayers:e.target.value})}><option value="auto">auto</option><option value="all">all</option><option value="0">CPU only</option></select></label><div className="actions"><button onClick={saveAI}>ذخیره تنظیمات</button><button className="primary" disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('start')}>Start</button><button disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('restart')}>Restart</button><button disabled={busy} onClick={()=>runtimeAction('stop')}>Stop</button></div></div>}{aiSelection&&<p>{aiSelection.ok?`Model ${aiSelection.modelFile} · ${bytes(aiSelection.modelBytes)} · RAM ratio ${Math.round((aiSelection.ramRatio||0)*100)}%`:`Selection: ${aiSelection.error?.code||'ناقص'}`} {aiSelection.warning||''}</p>}{aiRuntime?.logs?.length>0&&<details><summary>آخرین Runtime Logهای حافظه‌ای</summary><pre className="preview-box">{aiRuntime.logs.slice(-12).map(x=>`${x.kind}: ${x.text}`).join('\n')}</pre></details>}</div><div className="panel"><h3>Provider + Capability</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id / managed alias"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health</button><button onClick={warmupAI}>Warmup</button><button onClick={()=>probeAICapabilities(false)}>Probe JSON</button><button disabled={!aiSettings.allowVision} onClick={()=>probeAICapabilities(true)}>Probe Vision</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}{aiCapabilities&&<div className="preview-box"><b>Capability Probe: {aiCapabilities.ok?'PASS':'CHECK'}</b><small>Schema JSON: {aiCapabilities.schemaJson?.ok?'OK':'NO'} · Vision advertised: {aiCapabilities.vision?.supported?'YES':'NO'} · Vision tested: {aiCapabilities.vision?.tested?(aiCapabilities.vision?.ok?'PASS':'FAIL'):'NO'}</small><small>Context: {fmt(aiCapabilities.props?.contextSize||0)} · Slots: {fmt(aiCapabilities.props?.totalSlots||0)} · Build: {aiCapabilities.props?.buildInfo||'-'}</small></div>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIUiAssist}>UIA-first / Vision fallback</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}{aiUiAssist?.ok&&<div className="panel wide"><h3>UI Assist</h3><p>Source: <b>{aiUiAssist.source}</b> · {aiUiAssist.reason}</p><small>Policy: UIA first · هیچ Screenshot خودکاری گرفته نمی‌شود.</small>{aiUiAssist.source==='uia'?<p>{fmt(aiUiAssist.uia?.elements?.length)} کنترل از UI Automation کافی بود؛ Vision فراخوانی نشد.</p>:<p>{aiUiAssist.vision?.summary}</p>}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}\n {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
++ {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>External loopback endpoint یا Managed llama-server؛ مدل هیچ Tool اجرایی مستقیم دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>AI</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Runtime</span><b>{aiRuntime?.managed?`${aiRuntime.state} · ${aiRuntime.pid||'-'}`:'External / manual'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback · no raw prompt · no background screenshot</b></div></>}</div><div className="panel"><h3>Hardware Advisor</h3><p>RAM/CPU و روی Windows اطلاعات WMI GPU خوانده می‌شود. VRAM WMI فقط سیگنال کم‌اعتماد است و Fit تضمین نمی‌شود.</p><div className="actions"><button onClick={probeAIHardware} disabled={busy}>Probe Hardware</button>{aiHardware?.advice&&<button onClick={async()=>{const r=await api.aiApplyHardwareAdvice(aiHardware.advice);if(r?.ok){setAiSettings(r.settings);await refreshAI()}}}>اعمال تنظیمات Runtime پیشنهادی</button>}</div>{aiHardware&&<><div className="meter"><span>RAM</span><b>{bytes(aiHardware.memory?.totalBytes)}</b></div><div className="meter"><span>CPU</span><b>{aiHardware.cpu?.logicalCores||'-'} threads</b></div><div className="meter"><span>GPU</span><b>{(aiHardware.gpus||[]).map(g=>g.name).join(' · ')||'نامشخص'}</b></div><div className="meter"><span>Suggested</span><b>{aiHardware.advice?.modelFamily} · ctx {fmt(aiHardware.advice?.contextSize)}</b></div><small>{aiHardware.advice?.note}</small></>}</div><div className="panel wide"><h3>Managed llama.cpp Runtime</h3><p>Agent فقط فایل <code>llama-server</code> و مدل <code>.gguf</code> انتخاب‌شده توسط کاربر را با آرگومان‌های allowlisted اجرا می‌کند. Host همیشه 127.0.0.1 و Web UI خاموش است.</p>{aiSettings&&<div className="formgrid"><label><span>Managed Runtime</span><input type="checkbox" checked={Boolean(aiSettings.managedRuntime)} onChange={e=>setAiSettings({...aiSettings,managedRuntime:e.target.checked})}/></label><label><span>Start with Agent</span><input type="checkbox" checked={Boolean(aiSettings.runtimeStartOnLaunch)} onChange={e=>setAiSettings({...aiSettings,runtimeStartOnLaunch:e.target.checked})}/></label><div className="inline"><input value={aiSettings.runtimeExecutablePath||''} readOnly placeholder="llama-server.exe"/><button onClick={pickAIRuntimeExe}>انتخاب Runtime</button></div><div className="inline"><input value={aiSettings.runtimeModelPath||''} readOnly placeholder="model.gguf"/><button onClick={pickAIModel}>انتخاب GGUF</button></div><label><span>Port</span><input type="number" value={aiSettings.runtimePort||8080} onChange={e=>setAiSettings({...aiSettings,runtimePort:Number(e.target.value)})}/></label><label><span>Context</span><input type="number" value={aiSettings.runtimeContextSize||8192} onChange={e=>setAiSettings({...aiSettings,runtimeContextSize:Number(e.target.value)})}/></label><label><span>CPU Threads (0=auto)</span><input type="number" value={aiSettings.runtimeThreads||0} onChange={e=>setAiSettings({...aiSettings,runtimeThreads:Number(e.target.value)})}/></label><label><span>GPU Layers</span><select value={String(aiSettings.runtimeGpuLayers||'auto')} onChange={e=>setAiSettings({...aiSettings,runtimeGpuLayers:e.target.value})}><option value="auto">auto</option><option value="all">all</option><option value="0">CPU only</option></select></label><div className="actions"><button onClick={saveAI}>ذخیره تنظیمات</button><button className="primary" disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('start')}>Start</button><button disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('restart')}>Restart</button><button disabled={busy} onClick={()=>runtimeAction('stop')}>Stop</button></div></div>}{aiSelection&&<p>{aiSelection.ok?`Model ${aiSelection.modelFile} · ${bytes(aiSelection.modelBytes)} · RAM ratio ${Math.round((aiSelection.ramRatio||0)*100)}%`:`Selection: ${aiSelection.error?.code||'ناقص'}`} {aiSelection.warning||''}</p>}{aiRuntime?.logs?.length>0&&<details><summary>آخرین Runtime Logهای حافظه‌ای</summary><pre className="preview-box">{aiRuntime.logs.slice(-12).map(x=>`${x.kind}: ${x.text}`).join('\n')}</pre></details>}</div><div className="panel"><h3>Provider + Capability</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id / managed alias"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health</button><button onClick={warmupAI}>Warmup</button><button onClick={()=>probeAICapabilities(false)}>Probe JSON</button><button disabled={!aiSettings.allowVision} onClick={()=>probeAICapabilities(true)}>Probe Vision</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}{aiCapabilities&&<div className="preview-box"><b>Capability Probe: {aiCapabilities.ok?'PASS':'CHECK'}</b><small>Schema JSON: {aiCapabilities.schemaJson?.ok?'OK':'NO'} · Vision advertised: {aiCapabilities.vision?.supported?'YES':'NO'} · Vision tested: {aiCapabilities.vision?.tested?(aiCapabilities.vision?.ok?'PASS':'FAIL'):'NO'}</small><small>Context: {fmt(aiCapabilities.props?.contextSize||0)} · Slots: {fmt(aiCapabilities.props?.totalSlots||0)} · Build: {aiCapabilities.props?.buildInfo||'-'}</small></div>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIUiAssist}>UIA-first / Vision fallback</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}{aiUiAssist?.ok&&<div className="panel wide"><h3>UI Assist</h3><p>Source: <b>{aiUiAssist.source}</b> · {aiUiAssist.reason}</p><small>Policy: UIA first · هیچ Screenshot خودکاری گرفته نمی‌شود.</small>{aiUiAssist.source==='uia'?<p>{fmt(aiUiAssist.uia?.elements?.length)} کنترل از UI Automation کافی بود؛ Vision فراخوانی نشد.</p>:<p>{aiUiAssist.vision?.summary}</p>}</div>}<div className="panel wide"><h3>Intelligent UI Grounding</h3><p>هدف را با زبان طبیعی بگو. UIA Candidate می‌سازد؛ Vision فقط همان Candidateها را تأیید/رد می‌کند و Target یا coordinate جدید نمی‌سازد.</p><div className="formgrid"><input value={uiGroundIntent} onChange={e=>setUiGroundIntent(e.target.value)} placeholder="مثلاً: دکمه ذخیره تنظیمات را پیدا کن"/><div className="actions"><button className="primary" disabled={busy||!uiGroundIntent.trim()} onClick={groundUiIntent}>Ground با UIA</button><button disabled={busy||!uiGrounding?.ok||!aiSettings?.allowVision} onClick={groundUiWithVision}>Vision corroboration</button></div></div>{uiGrounding?.ok&&<><div className="mini-stats"><b>{Math.round((uiGrounding.result?.topConfidence||0)*100)}%</b><span>Top confidence</span><b>{uiGrounding.result?.quality||'-'}</b><span>Quality</span><b>{uiGrounding.result?.visionUsed?'YES':'NO'}</b><span>Vision fused</span></div><div className="formgrid"><label><span>Action فقط با انتخاب کاربر</span><select value={groundAction} onChange={e=>setGroundAction(e.target.value)}><option value="focus">focus</option><option value="invoke">invoke</option><option value="toggle">toggle</option><option value="expand">expand</option><option value="collapse">collapse</option><option value="setValue">setValue</option></select></label>{groundAction==='setValue'&&<input value={groundValue} maxLength={2048} onChange={e=>setGroundValue(e.target.value)} placeholder="مقدار غیرحساس"/>}</div>{(uiGrounding.result?.candidates||[]).map((c,i)=><div className="uia-row" key={c.id}><div><b>#{i+1} · {c.element?.name||'(بدون Name)'}</b><small>{c.element?.controlType} · semantic {Math.round((c.semanticScore||0)*100)}% · {c.vision?.matched?`vision ${Math.round((c.vision.confidence||0)*100)}%`:'UIA only'}</small></div><div className="uia-actions"><span>{Math.round(((c.fusedConfidence??c.confidence)||0)*100)}%</span><button disabled={busy||!actionsForRole(c).includes(groundAction)} onClick={()=>startGroundedAction(c)}>Preview همین Candidate</button></div></div>)}</>}{cycle?.type==='windows-ui-action'&&cycle?.status==='completed'&&<div className="preview-box"><b>Post-action verification</b><small>UIA verification قبلاً انجام شده؛ این مرحله فقط corroboration تصویری روی Screenshot انتخابی است.</small><button disabled={busy||!aiSettings?.allowVision} onClick={verifyCurrentUiaVisual}>Visual Verify آخرین UI Action</button>{uiVisualVerify?.ok&&<small>نتیجه: {uiVisualVerify.visual?.result||'deterministic'} · {Math.round((uiVisualVerify.visual?.confidence||0)*100)}% · overall {uiVisualVerify.overall||'-'}</small>}</div>}</div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}\n {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
+  {tab==='intelligence'&&<><div className="grid4"><Task title="Workspace Intelligence" sub="Project / Destination / Rename" on={()=>run('workspace-intelligence')}/><Task title="Similar Photos" sub="dHash perceptual · Read-only" on={()=>run('similar-images')}/><Task title="Similar Texts" sub="SimHash content · Read-only" on={()=>run('similar-texts')}/><Task title="Build Review Queue" sub="Confidence ≥ 72% · Local only" on={async()=>{await run('review-queue-build');setTab('review')}}/><Task title="PDF Intelligence" sub="Metadata / Base text · No OCR" on={()=>run('pdf-intelligence')}/></div><div className="panel"><h3>Policy</h3><p>Intelligence فقط پیشنهاد می‌سازد. اعمال پیشنهاد فقط از Review Queue و پس از انتخاب، Preview و تأیید کاربر امکان‌پذیر است.</p></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{intel&&<IntelligenceReport data={intel}/>} {similarImages&&<SimilarityReport title="عکس‌های مشابه" data={similarImages} kind="image"/>} {similarTexts&&<SimilarityReport title="متن‌های مشابه" data={similarTexts} kind="text"/>}</>}
+  {tab==='review'&&<><div className="toolbar"><button className="primary" onClick={()=>run('review-queue-build')} disabled={!root||busy}>بازسازی Review Queue</button><button onClick={()=>setSelectedReview(pending.filter(x=>x.confidence>=.9).map(x=>x.id))} disabled={!pending.length}>انتخاب High Confidence</button><button onClick={()=>setSelectedReview(pending.map(x=>x.id))} disabled={!pending.length}>انتخاب همه Pending</button><button className="primary" onClick={()=>run('recommendation-apply',{itemIds:selectedReview})} disabled={!selectedReview.length||busy}>Preview اجرای {fmt(selectedReview.length)} پیشنهاد</button><button onClick={async()=>{await api.reviewClear(root);await refreshReviews()}} disabled={!root}>پاک‌سازی Dismissed/Reverted از صف</button></div><div className="panel"><div className="panel-title"><div><h3>Recommendation Review Queue</h3><p>Move و Rename یک فایل در زمان Preview با هم ترکیب می‌شوند. Collision Guard و Staging فعال است.</p></div><div className="mini-stats"><b>{fmt(pending.length)}</b><span>Pending</span><b>{fmt(reviewItems.filter(x=>x.status==='applied').length)}</b><span>Applied</span></div></div>{reviewItems.map(x=><div className={`review-row ${x.status}`} key={x.id}><label><input type="checkbox" disabled={x.status!=='pending'} checked={selectedReview.includes(x.id)} onChange={e=>setSelectedReview(s=>e.target.checked?[...new Set([...s,x.id])]:s.filter(id=>id!==x.id))}/><span><b>{x.actionType==='move'?'Move':'Rename'} · {x.status}</b><button className="linkish" onClick={()=>api.showItem(x.source)}>{x.source}</button><small>→ {x.actionType==='move'?x.suggestedFolder:x.suggestedName}</small></span></label><Confidence value={x.confidence}/><p>{(x.evidence||[]).join(' · ')}</p><div className="actions">{x.status==='pending'&&<button onClick={()=>dismissReview(x)}>Dismiss</button>}{x.status==='dismissed'&&<button onClick={()=>dismissReview(x,'pending')}>برگرداندن به Pending</button>}</div></div>)}{!reviewItems.length&&<p>صف خالی است. ابتدا Workspace Intelligence را اجرا و سپس Review Queue را بسازید.</p>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+  {tab==='zones'&&<><div className="toolbar"><button className="primary" disabled={!root} onClick={async()=>{await api.zonesAdd({root,title:'Workspace سفارشی',type:'custom'});await refreshZones()}}>افزودن Workspace فعلی به Managed Zones</button><span>Downloads / Desktop / Documents به‌صورت Built-in شناخته می‌شوند.</span></div><div className="panel"><h3>Managed Zones</h3>{zones.map(z=><div className="zone-row" key={z.id}><div><b>{z.title}</b><small>{z.type} · {z.root}</small></div><div className="actions"><button onClick={()=>api.openPath(z.root)}>باز کردن</button><button className="primary" onClick={()=>auditZone(z)} disabled={busy}>Audit</button>{!z.builtIn&&<button className="danger" onClick={async()=>{await api.zonesRemove(z.id);await refreshZones()}}>حذف Zone</button>}</div></div>)}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{zoneReport&&<ZoneReport data={zoneReport} zone={activeZone}/>}</>}
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/local-ai-grounding-vision-v092.test.cjs /mnt/data/wa092/tests/local-ai-grounding-vision-v092.test.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/local-ai-grounding-vision-v092.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/tests/local-ai-grounding-vision-v092.test.cjs	2026-08-13 12:05:53.946280212 +0000
+@@ -0,0 +1,5 @@
++const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');
++const {LocalAIService}=require('../electron/services/local-ai-service.cjs');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-ai-ground-'));const svc=new LocalAIService(dir);svc.updateSettings({enabled:true,allowVision:true,model:'mock-model',baseUrl:'http://127.0.0.1:8080/v1'});let calls=0;svc.provider.visionJson=async({prompt,schema})=>{calls++;if(calls===1)return{model:'mock',latencyMs:3,parsed:{summary:'one match',warnings:[],matches:[{candidateId:'uia-1',confidence:.92,evidence:'visible label'},{candidateId:'evil',confidence:1,evidence:'invented'}]}};return{model:'mock',latencyMs:4,parsed:{result:'confirmed',confidence:.84,evidence:'visible state changed',warnings:[]}}};
++const data='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=';
++(async()=>{const g=await svc.analyzeUiGroundingData({imageDataUrl:data,intent:'save settings',candidates:[{id:'uia-1',element:{name:'Save',controlType:'Button',automationId:'save'}}],crop:{applied:true,cropFraction:.1,mapping:'focused-window-relative'}});assert.equal(g.matches.length,1);assert.equal(g.matches[0].candidateId,'uia-1');const v=await svc.verifyUiOutcomeData({imageDataUrl:data,action:'invoke',target:{name:'Save',controlType:'Button'}});assert.equal(v.result,'confirmed');assert.equal(calls,2);console.log('local-ai-grounding-vision-v092.test.cjs PASS',{matches:g.matches.length,verify:v.result});fs.rmSync(dir,{recursive:true,force:true});})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounded-action-v092.test.cjs /mnt/data/wa092/tests/ui-grounded-action-v092.test.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounded-action-v092.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/tests/ui-grounded-action-v092.test.cjs	2026-08-13 12:05:53.945530342 +0000
+@@ -0,0 +1,11 @@
++const assert=require('assert');
++const {WindowsActionSessionStore}=require('../electron/services/windows-action-session-store.cjs');
++const {windowsUiActionCycle}=require('../electron/services/workspace-cycles.cjs');
++const {buildActionPlan}=require('../electron/services/windows-action-policy.cjs');
++const store=new WindowsActionSessionStore({ttlMs:60000});
++const selector={processId:7,windowName:'App',windowClassName:'Win',automationId:'save',name:'Save',className:'Button',controlType:'Button',frameworkId:'Win32'};
++const context={grounding:{sessionToken:'g1',intentHash:'a'.repeat(64),intentClass:'activate',candidateId:'uia-1',signature:'b'.repeat(32),confidence:.91}};
++const session=store.create({action:'invoke',selector,value:'',sensitive:false},{context});assert(session.ok);let learned=null;
++const target={...selector,runtimeId:[1,2,3],isEnabled:true,isOffscreen:false,isPassword:false};
++const handler=windowsUiActionCycle({sessionStore:store,prepareAction:async req=>{const b=buildActionPlan(req,target);return{supported:true,ok:true,plan:b.plan,target,value:b.value}},executeAction:async()=>({ok:true,code:'UIA_ACTION_VERIFIED',verification:{ok:true,mode:'invoke-returned',detail:'verified'},before:target,after:target}),onVerified:async x=>{learned=x;return{success:1}}});
++(async()=>{let cycle={id:'c1',type:'windows-ui-action',status:'running',input:{sessionToken:session.token},steps:[],evidence:[]};const p=await handler.next(cycle);assert.equal(p.status,'waiting-confirmation');const steps=p.steps.map(x=>x.id==='confirm'?{...x,status:'approved'}:x);cycle={...cycle,...p,status:'running',steps};const done=await handler.next(cycle);assert.equal(done.status,'completed');assert.equal(done.result.groundingLearned,true);assert(learned?.context?.grounding?.signature);assert.equal(learned.plan.action,'invoke');console.log('ui-grounded-action-v092.test.cjs PASS',{groundingLearned:done.result.groundingLearned});})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounding-core-v092.test.cjs /mnt/data/wa092/tests/ui-grounding-core-v092.test.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounding-core-v092.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/tests/ui-grounding-core-v092.test.cjs	2026-08-13 12:12:32.315189717 +0000
+@@ -0,0 +1,24 @@
++const assert=require('assert');
++const {rankUiaCandidates,fuseVisionMatches,inferIntentClass}=require('../electron/services/ui-grounding-core.cjs');
++const {deriveCropPlan}=require('../electron/services/vision-crop-service.cjs');
++const {deterministicOutcome,fuseVisual}=require('../electron/services/ui-outcome-verifier.cjs');
++const {buildActionPlan}=require('../electron/services/windows-action-policy.cjs');
++const map={focusedWindow:{name:'Settings',className:'Window',processId:44,rect:{left:100,top:50,width:1000,height:700}},elements:[
++ {name:'Cancel',automationId:'cancelBtn',className:'Button',controlType:'ControlType.Button',frameworkId:'Win32',processId:44,isEnabled:true,isOffscreen:false,isPassword:false,rect:{left:720,top:650,width:100,height:32}},
++ {name:'Save settings',automationId:'saveSettings',className:'Button',controlType:'ControlType.Button',frameworkId:'Win32',processId:44,isEnabled:true,isOffscreen:false,isPassword:false,rect:{left:830,top:650,width:130,height:32}},
++ {name:'Search',automationId:'query',className:'Edit',controlType:'ControlType.Edit',frameworkId:'Win32',processId:44,isEnabled:true,isOffscreen:false,isPassword:false,rect:{left:150,top:90,width:380,height:36}},
++ {name:'Secret',automationId:'pwd',className:'Edit',controlType:'ControlType.Edit',frameworkId:'Win32',processId:44,isEnabled:true,isOffscreen:false,isPassword:true,rect:{left:150,top:150,width:380,height:36}}
++]};
++const r=rankUiaCandidates('دکمه Save settings را انتخاب کن',map,{limit:4});
++assert.equal(r.candidates[0].element.automationId,'saveSettings');
++assert.equal(r.candidates.some(x=>x.element.automationId==='pwd'),false);
++assert.equal(inferIntentClass('روی دکمه کلیک کن'),'activate');
++const mismatch=buildActionPlan({action:'setValue',selector:{automationId:'saveSettings'},value:'x'},{name:'Save settings',automationId:'saveSettings',className:'Button',controlType:'ControlType.Button',frameworkId:'Win32',processId:44,isEnabled:true,isOffscreen:false,isPassword:false,rect:{left:830,top:650,width:130,height:32}});
++assert.equal(mismatch.ok,false);assert.equal(mismatch.code,'UIA_ACTION_CONTROL_MISMATCH');assert.equal(mismatch.allowedActions.includes('setValue'),false);
++const fused=fuseVisionMatches(r,{matches:[{candidateId:r.candidates[0].id,confidence:.94,evidence:'visible Save settings button'}]});
++assert.equal(fused.visionUsed,true);assert(fused.candidates[0].fusedConfidence>=r.candidates[0].confidence);
++const crop=deriveCropPlan({windowRect:map.focusedWindow.rect,candidateRects:[r.candidates[0].element.rect],imageWidth:1000,imageHeight:700});
++assert.equal(crop.ok,true);assert(crop.cropFraction<.72);assert(crop.rect.width>0&&crop.rect.height>0);
++const base=deterministicOutcome({id:'c1',type:'windows-ui-action',status:'completed',actionPlan:{action:'invoke',target:{name:'Save settings',controlType:'Button'}},result:{execution:{ok:true,verification:{ok:true,mode:'invoke-returned',detail:'InvokePattern returned without exception'}}}});
++assert.equal(base.ok,true);const vis=fuseVisual(base,{result:'confirmed',confidence:.88,evidence:'dialog closed',warnings:[]});assert.equal(vis.overall,'corroborated');
++console.log('ui-grounding-core-v092.test.cjs PASS',{top:r.candidates[0].element.name,confidence:r.topConfidence,crop:crop.cropFraction});
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounding-scale-v092.cjs /mnt/data/wa092/tests/ui-grounding-scale-v092.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounding-scale-v092.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/tests/ui-grounding-scale-v092.cjs	2026-08-13 12:11:12.120884925 +0000
+@@ -0,0 +1,2 @@
++const {performance}=require('perf_hooks');const {rankUiaCandidates}=require('../electron/services/ui-grounding-core.cjs');
++const elements=[];for(let i=0;i<1500;i++)elements.push({name:i===1499?'Save production settings':`Row ${i}`,automationId:`ctl-${i}`,className:i===1499?'Button':'TextBlock',controlType:i===1499?'ControlType.Button':'ControlType.Text',frameworkId:'Win32',processId:77,isEnabled:true,isOffscreen:false,isPassword:false,rect:{left:(i%20)*40,top:Math.floor(i/20)*20,width:38,height:18}});const map={focusedWindow:{name:'Settings',className:'Main',processId:77,rect:{left:0,top:0,width:1000,height:800}},elements};const times=[];let out;for(let i=0;i<30;i++){const t=performance.now();out=rankUiaCandidates('Save production settings',map,{limit:8});times.push(performance.now()-t)}times.sort((a,b)=>a-b);if(out.candidates[0]?.element?.automationId!=='ctl-1499')throw new Error('target ranking failed');const p50=times[Math.floor(times.length*.5)],p95=times[Math.floor(times.length*.95)];console.log('ui-grounding-scale-v092',{elements:1500,p50Ms:Number(p50.toFixed(2)),p95Ms:Number(p95.toFixed(2)),top:out.candidates[0].element.name,rssMB:Number((process.memoryUsage().rss/1024/1024).toFixed(1))});
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounding-service-v092.test.cjs /mnt/data/wa092/tests/ui-grounding-service-v092.test.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/ui-grounding-service-v092.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/tests/ui-grounding-service-v092.test.cjs	2026-08-13 12:05:53.944816370 +0000
+@@ -0,0 +1,7 @@
++const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');
++const {UIGroundingService}=require('../electron/services/ui-grounding-service.cjs');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-ground-'));
++const inspect=async()=>({supported:true,window:{name:'Project Alpha',className:'MainWin',processId:9,rect:{left:0,top:0,width:900,height:600}},focus:{name:'Save',processId:9},elements:[{name:'Save Project Alpha',automationId:'saveBtn',className:'Button',controlType:'ControlType.Button',frameworkId:'Win32',processId:9,isEnabled:true,isOffscreen:false,isPassword:false,rect:{left:700,top:520,width:120,height:32}},{name:'Close',automationId:'closeBtn',className:'Button',controlType:'ControlType.Button',frameworkId:'Win32',processId:9,isEnabled:true,isOffscreen:false,isPassword:false,rect:{left:830,top:20,width:40,height:30}}],totalDescendants:2,truncated:false});
++const listWindows=async()=>({supported:true,windows:[{name:'Project Alpha',className:'MainWin',processId:9}],total:1,truncated:false});
++const svc=new UIGroundingService(dir,{inspect,listWindows});
++(async()=>{const a=await svc.ground('Save Project Alpha now',{limit:4});assert(a.ok);assert(a.sessionToken);assert.equal(a.result.candidates[0].element.automationId,'saveBtn');const ctx=svc.actionContext(a.sessionToken,a.result.candidates[0].id);assert.equal(ctx.selector.automationId,'saveBtn');assert(ctx.grounding.signature);const learned=svc.recordVerifiedAction({grounding:ctx.grounding},'invoke');assert.equal(learned.success,1);const memoryFile=path.join(dir,'ui-grounding-memory.json');const raw=fs.readFileSync(memoryFile,'utf8');assert(!raw.includes('Project Alpha'));assert(!raw.includes('Save Project Alpha'));const b=await svc.ground('Save Project Alpha now',{limit:4});assert(b.result.candidates[0].memoryBoost>0);const v=svc.applyVision(b.sessionToken,{matches:[{candidateId:b.result.candidates[0].id,confidence:.9,evidence:'button visible'}],model:'mock',latencyMs:2});assert(v.ok&&v.result.visionUsed);console.log('ui-grounding-service-v092.test.cjs PASS',{memoryBoost:b.result.candidates[0].memoryBoost,quality:v.result.quality});fs.rmSync(dir,{recursive:true,force:true});})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/windows-intelligent-grounding-v092.uat.cjs /mnt/data/wa092/tests/windows-intelligent-grounding-v092.uat.cjs
+--- /mnt/data/wa091/windows-workspace-agent-v0.9.1-real-local-ai-runtime/tests/windows-intelligent-grounding-v092.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa092/tests/windows-intelligent-grounding-v092.uat.cjs	2026-08-13 12:07:48.170974412 +0000
+@@ -0,0 +1,16 @@
++const fs=require('fs');const os=require('os');const path=require('path');const assert=require('assert');const {spawn}=require('child_process');
++const {UIGroundingService}=require('../electron/services/ui-grounding-service.cjs');
++const {prepareWindowsUiAction,executePinnedWindowsUiAction}=require('../electron/services/windows-uia-actions.cjs');
++const {deriveCropPlan}=require('../electron/services/vision-crop-service.cjs');
++const {LocalAIService}=require('../electron/services/local-ai-service.cjs');
++if(process.platform!=='win32'){console.log('windows-intelligent-grounding-v092.uat.cjs SKIP (Windows only)');process.exit(0)}
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-v092-'));const ready=path.join(tmp,'ready.txt');const shot=path.join(tmp,'window.png');const crop=path.join(tmp,'crop.png');
++const ps=path.join(tmp,'fixture.ps1');fs.writeFileSync(ps,`$ErrorActionPreference='Stop'\nAdd-Type -AssemblyName System.Windows.Forms\nAdd-Type -AssemblyName System.Drawing\n$form=New-Object System.Windows.Forms.Form\n$form.Text='Workspace Agent Grounding Fixture'\n$form.Name='GroundingFixture'\n$form.Width=760;$form.Height=460;$form.StartPosition='CenterScreen';$form.TopMost=$true\n$label=New-Object System.Windows.Forms.Label;$label.Text='Not saved';$label.Name='statusLabel';$label.Left=40;$label.Top=40;$label.Width=300\n$button=New-Object System.Windows.Forms.Button;$button.Text='Save settings';$button.Name='saveSettings';$button.Left=520;$button.Top=330;$button.Width=150;$button.Height=40\n$button.Add_Click({$label.Text='Saved successfully'})\n$form.Controls.Add($label);$form.Controls.Add($button)\n$form.Add_Shown({Set-Content -LiteralPath '${ready.replace(/'/g,"''")}' -Value ([string]$PID);$form.Activate()})\n[void]$form.ShowDialog()\n`,'utf8');
++const child=spawn('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',ps],{stdio:'ignore',windowsHide:true});
++function sleep(ms){return new Promise(r=>setTimeout(r,ms))}async function waitReady(){for(let i=0;i<80;i++){if(fs.existsSync(ready))return Number(fs.readFileSync(ready,'utf8').trim());await sleep(100)}throw new Error('fixture startup timeout')}
++async function screenshotWindow(pid,file){const script=`$ErrorActionPreference='Stop';Add-Type -AssemblyName UIAutomationClient;Add-Type -AssemblyName UIAutomationTypes;Add-Type -AssemblyName System.Drawing;$root=[System.Windows.Automation.AutomationElement]::RootElement;$wins=$root.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition);$w=$null;for($i=0;$i -lt $wins.Count;$i++){if($wins.Item($i).Current.ProcessId -eq ${pid}){$w=$wins.Item($i);break}};if($null -eq $w){throw 'window not found'};$r=$w.Current.BoundingRectangle;$bmp=New-Object System.Drawing.Bitmap ([int]$r.Width),([int]$r.Height);$g=[System.Drawing.Graphics]::FromImage($bmp);$g.CopyFromScreen([int]$r.Left,[int]$r.Top,0,0,$bmp.Size);$bmp.Save('${file.replace(/'/g,"''")}',[System.Drawing.Imaging.ImageFormat]::Png);$g.Dispose();$bmp.Dispose();[ordered]@{left=$r.Left;top=$r.Top;width=$r.Width;height=$r.Height}|ConvertTo-Json -Compress`;
++ return new Promise((resolve,reject)=>{const p=spawn('powershell.exe',['-NoProfile','-Command',script],{windowsHide:true});let out='',err='';p.stdout.on('data',d=>out+=d);p.stderr.on('data',d=>err+=d);p.on('exit',c=>c===0?resolve(JSON.parse(out.trim())):reject(new Error(err||`screenshot exit ${c}`)));});}
++async function cropWithPowerShell(src,dst,rect){const script=`Add-Type -AssemblyName System.Drawing;$img=[System.Drawing.Image]::FromFile('${src.replace(/'/g,"''")}');$r=New-Object System.Drawing.Rectangle ${rect.x},${rect.y},${rect.width},${rect.height};$bmp=New-Object System.Drawing.Bitmap $r.Width,$r.Height;$g=[System.Drawing.Graphics]::FromImage($bmp);$g.DrawImage($img,0,0,$r,[System.Drawing.GraphicsUnit]::Pixel);$bmp.Save('${dst.replace(/'/g,"''")}',[System.Drawing.Imaging.ImageFormat]::Png);$g.Dispose();$bmp.Dispose();$img.Dispose()`;return new Promise((resolve,reject)=>{const p=spawn('powershell.exe',['-NoProfile','-Command',script],{windowsHide:true});let err='';p.stderr.on('data',d=>err+=d);p.on('exit',c=>c===0?resolve():reject(new Error(err||`crop exit ${c}`)));});}
++(async()=>{let pid;try{pid=await waitReady();await sleep(400);const svc=new UIGroundingService(tmp);const grounded=await svc.ground('Save settings button',{limit:6});assert(grounded.ok);const top=grounded.result.candidates[0];assert(/save/i.test(top.element.name));const ctx=svc.actionContext(grounded.sessionToken,top.id);const prepared=await prepareWindowsUiAction({action:'invoke',selector:ctx.selector});assert(prepared.ok);const executed=await executePinnedWindowsUiAction(prepared.plan,'');assert(executed.ok&&executed.verification?.ok);svc.recordVerifiedAction({grounding:ctx.grounding},'invoke');await sleep(200);const map=svc.getSession(grounded.sessionToken).map;const wr=await screenshotWindow(pid,shot);const stat=fs.statSync(shot);assert(stat.size>0);const plan=deriveCropPlan({windowRect:map.focusedWindow.rect,candidateRects:[top.element.rect],imageWidth:Math.round(wr.width),imageHeight:Math.round(wr.height)});assert(plan.ok);await cropWithPowerShell(shot,crop,plan.rect);assert(fs.statSync(crop).size>0);
++ let vision='SKIP';if(process.env.WA_LOCAL_AI_BASE_URL&&process.env.WA_LOCAL_AI_MODEL){const ai=new LocalAIService(tmp);ai.updateSettings({enabled:true,allowVision:true,baseUrl:process.env.WA_LOCAL_AI_BASE_URL,model:process.env.WA_LOCAL_AI_MODEL});const data=`data:image/png;base64,${fs.readFileSync(crop).toString('base64')}`;const v=await ai.analyzeUiGroundingData({imageDataUrl:data,intent:'Save settings button',candidates:[top],crop:{applied:true,cropFraction:plan.cropFraction,mapping:plan.mapping.source}});vision=v.matches.length?'PASS':'CHECK';}
++ console.log('windows-intelligent-grounding-v092.uat.cjs PASS',{pid,top:top.element.name,confidence:grounded.result.topConfidence,cropFraction:plan.cropFraction,vision});}finally{try{if(pid)process.kill(pid)}catch{}try{child.kill()}catch{}fs.rmSync(tmp,{recursive:true,force:true});}})().catch(e=>{console.error(e);try{child.kill()}catch{}process.exit(1)});

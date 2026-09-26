@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "workspace-agent-release-readiness-v0.8.4",
+  "version": "0.8.4",
+  "sourceRegression": "PASS",
+  "sourceHygiene": "PASS",
+  "lifecycleCrashDetection": "PASS",
+  "resourcePressurePolicy": "PASS",
+  "multiRootIsolation": "PASS",
+  "certificationHarnessSource": "READY",
+  "packageLock": "PENDING",
+  "windows10Uat": "PENDING",
+  "windows11Uat": "PENDING",
+  "physicalSuspendResume": "PENDING",
+  "physicalRemovableDrive": "PENDING",
+  "twoPhysicalVolumes": "PENDING",
+  "packagedWorkerSmoke": "PENDING_WINDOWS_BUILD",
+  "packagedAppSmoke": "PENDING_WINDOWS_BUILD",
+  "nsis": "PENDING",
+  "portable": "PENDING",
+  "authenticode": "PENDING",
+  "actualHardPowerLoss": "PENDING_MANUAL"
+}

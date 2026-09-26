@@ -1,0 +1,13 @@
+const fs=require('fs');const path=require('path');
+function arg(name){const p=`--${name}=`;const v=process.argv.find(x=>x.startsWith(p));return v?v.slice(p.length):''}
+function insideOrSame(base,target){const rel=path.relative(path.resolve(base),path.resolve(target));return rel===''||(!rel.startsWith('..'+path.sep)&&rel!=='..'&&!path.isAbsolute(rel))}
+function nearestExistingProjectedReal(target){target=path.resolve(target);const tail=[];let cur=target;while(!fs.existsSync(cur)){const parent=path.dirname(cur);if(parent===cur)throw new Error('PATH_EXISTING_ANCESTOR_NOT_FOUND');tail.unshift(path.basename(cur));cur=parent}const st=fs.lstatSync(cur);if(st.isSymbolicLink()&&cur===target){const e=new Error('TARGET_REPARSE_OR_SYMLINK_FORBIDDEN');e.code='TARGET_REPARSE_OR_SYMLINK_FORBIDDEN';throw e}let real=(fs.realpathSync.native?fs.realpathSync.native(cur):fs.realpathSync(cur));for(const seg of tail)real=path.join(real,seg);return path.resolve(real)}
+function evaluateExecutionRoot({sourceRoot,target,allowInsideExact=''}){const errors=[];if(!sourceRoot||!target)return{ok:false,errors:['PATH_ARGUMENT_REQUIRED']};const srcLex=path.resolve(sourceRoot),targetLex=path.resolve(target),allowLex=allowInsideExact?path.resolve(allowInsideExact):'';let srcReal='',targetReal='',allowReal='';try{srcReal=nearestExistingProjectedReal(srcLex);targetReal=nearestExistingProjectedReal(targetLex);if(allowLex)allowReal=nearestExistingProjectedReal(allowLex)}catch(e){errors.push(String(e.code||e.message||'PATH_REALPATH_FAILED'))}
+  const lexicalOverlap=insideOrSame(srcLex,targetLex)||insideOrSame(targetLex,srcLex);const realOverlap=srcReal&&targetReal&&(insideOrSame(srcReal,targetReal)||insideOrSame(targetReal,srcReal));const allowed=Boolean(allowLex&&targetLex===allowLex&&allowReal&&targetReal===allowReal&&insideOrSame(srcReal,targetReal));
+  if((lexicalOverlap||realOverlap)&&!allowed)errors.push('EXECUTION_ROOT_SOURCE_OVERLAP_FORBIDDEN');
+  if(targetLex===srcLex||targetReal===srcReal)errors.push('EXECUTION_ROOT_SOURCE_ROOT_FORBIDDEN');
+  return{ok:errors.length===0,errors,sourceLexical:srcLex,targetLexical:targetLexicalSafe(targetLex),sourceReal:srcReal,targetReal,allowedInsideExact:allowed?allowLex:null,lexicalOverlap,realOverlap};
+}
+function targetLexicalSafe(v){return v}
+function main(){const r=evaluateExecutionRoot({sourceRoot:arg('source-root'),target:arg('target'),allowInsideExact:arg('allow-inside-exact')});console.log(JSON.stringify(r,null,2));if(!r.ok)process.exit(1)}
+if(require.main===module)main();module.exports={insideOrSame,nearestExistingProjectedReal,evaluateExecutionRoot};

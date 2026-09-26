@@ -1,0 +1,199 @@
+{
+  "name": "windows-workspace-agent",
+  "version": "1.0.0-rc1",
+  "private": true,
+  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit19 certification-chain closure: fail-closed Handoff reparse/symlink policy, promotion-time leaf evidence reverification, self-contained final certification bundle, and explicit dependency registry provenance; retains cert-kit18 final evidence provenance, cert-kit17 execution recovery/resume, cert-kit16 Windows execution hardening, cert-kit15 release identity, cert-kit14 runtime provenance/journal retention, and cert-kit13 NTFS/transactional restore hardening.",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "build": "vite build --base=./",
+    "desktop": "npm run build && electron .",
+    "build:win": "npm run build && npm run pack:win",
+    "check:syntax": "node scripts/check-source-syntax.cjs",
+    "test": "node scripts/run-source-tests.cjs",
+    "check": "npm run check:dependency-pins && npm run check:stable-certification-policy && npm run check:rc1-source && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+    "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+    "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+    "test:windows-uia-uat": "node tests/windows-uia-action.uat.cjs",
+    "test:index": "node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/index-freshness-guard-rc1.test.cjs",
+    "test:index-scale": "node --expose-gc tests/persistent-index-scale-v080.cjs",
+    "test:windows-index-uat": "node tests/persistent-index-windows.uat.cjs",
+    "build:win:installer": "npm run build && electron-builder --win nsis --x64",
+    "build:win:portable": "npm run build && electron-builder --win portable --x64",
+    "test:hardening": "node tests/production-hardening-v081.test.cjs",
+    "test:index-crash": "node tests/persistent-index-crash-v081.test.cjs",
+    "test:windows-production-uat": "node tests/windows-production-v081.uat.cjs",
+    "release:win": "powershell -ExecutionPolicy Bypass -File scripts/windows-release.ps1",
+    "check:dependency-pins": "node scripts/verify-release-inputs.cjs --pins-only",
+    "check:release-inputs": "node scripts/verify-release-inputs.cjs",
+    "release:lock": "powershell -ExecutionPolicy Bypass -File scripts/generate-lockfile.ps1",
+    "test:windows-paths": "node tests/windows-path-hardening-v082.test.cjs",
+    "test:windows-verification-uat": "node tests/windows-verification-v082.uat.cjs",
+    "pack:win": "electron-builder --win nsis portable --x64",
+    "pack:win:dir": "electron-builder --win dir --x64",
+    "build:win:dir": "npm run build && npm run pack:win:dir",
+    "test:packaged-worker": "node tests/packaged-worker-smoke-v082.cjs",
+    "check:source-hygiene": "node scripts/verify-source-hygiene.cjs",
+    "test:system-resilience": "node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs",
+    "test:windows-system-resilience-uat": "node tests/windows-system-resilience-v083.uat.cjs",
+    "test:windows-scale-resilience-uat": "node tests/windows-scale-resilience-v083.uat.cjs",
+    "test:windows-removable-uat": "node tests/windows-removable-drive-v083.uat.cjs",
+    "test:cert-core": "node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs",
+    "test:packaged-app": "node tests/packaged-app-smoke-v084.cjs",
+    "test:windows-multiroot-uat": "node tests/windows-multiroot-v084.uat.cjs",
+    "certify:windows": "powershell -ExecutionPolicy Bypass -File scripts/windows-certification-v097.ps1",
+    "test:ai": "node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs",
+    "test:local-ai-server": "powershell -ExecutionPolicy Bypass -File scripts/local-ai-smoke.ps1",
+    "test:local-ai-uat": "node tests/local-ai-server-v090.uat.cjs",
+    "test:ai-runtime": "node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs",
+    "test:windows-local-ai-runtime-uat": "node tests/windows-local-ai-runtime-v091.uat.cjs",
+    "test:grounding": "node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs",
+    "test:windows-grounding-uat": "node tests/windows-intelligent-grounding-v092.uat.cjs",
+    "test:grounding-scale": "node tests/ui-grounding-scale-v092.cjs",
+    "test:grounding-v093": "node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs",
+    "test:windows-grounding-v093-uat": "node tests/windows-production-grounding-v093.uat.cjs",
+    "test:explorer": "node tests/file-explorer-skill-pack-v094.test.cjs",
+    "test:windows-explorer-uat": "node tests/windows-file-explorer-v094.uat.cjs",
+    "test:explorer-batch": "node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs",
+    "test:windows-explorer-v095-uat": "node tests/windows-file-explorer-v095.uat.cjs",
+    "test:explorer-production": "node tests/file-explorer-production-v096.test.cjs && node tests/explorer-batch-schema-v096.test.cjs",
+    "test:windows-explorer-v096-uat": "node tests/windows-file-explorer-v096.uat.cjs",
+    "test:certification-core": "node tests/certification-core-v097.test.cjs && node tests/source-tree-fingerprint-v097.test.cjs",
+    "test:windows-certification-v097-uat": "node tests/windows-certification-v097.uat.cjs",
+    "test:windows-scale-v097-uat": "node tests/windows-scale-v097.uat.cjs",
+    "fingerprint:source": "node scripts/source-tree-fingerprint.cjs",
+    "certify:windows:v097": "powershell -ExecutionPolicy Bypass -File scripts/windows-certification-v097.ps1",
+    "verify:manual-evidence": "node scripts/verify-manual-evidence-v097.cjs",
+    "lock:provenance": "node scripts/lockfile-provenance.cjs",
+    "test:rc-v098": "node tests/version-update-guard-v098.test.cjs && node tests/rc-self-check-v098.test.cjs && node tests/state-backup-v098.test.cjs && node tests/diagnostics-v098.test.cjs && node tests/update-preflight-v098.test.cjs",
+    "update:prepare": "node scripts/prepare-update-v098.cjs",
+    "check:rc1-source": "node scripts/verify-rc1-source.cjs",
+    "manifest:rc1-source": "node scripts/rc1-source-manifest.cjs",
+    "test:rc1": "node tests/rc1-upgrade-gate.test.cjs && node tests/rc1-source-contract.test.cjs",
+    "release:win:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-release.ps1 -RunScaleUat",
+    "verify:manual-evidence:rc1": "node scripts/verify-manual-evidence-rc1.cjs",
+    "certify:envelope:rc1": "node scripts/rc1-certification-envelope.cjs",
+    "certify:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-certify.ps1",
+    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs && node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/windows-native-edge-hardening-rc1.test.cjs && node tests/certification-evidence-integrity-rc1.test.cjs && node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/runtime-trust-boundary-rc1.test.cjs && node tests/journal-durability-rc1.test.cjs && node tests/durable-state-rc1.test.cjs && node tests/hash-cache-freshness-rc1.test.cjs && node tests/ntfs-metadata-fidelity-rc1.test.cjs && node tests/state-restore-transactional-rc1.test.cjs && node tests/local-ai-runtime-provenance-rc1.test.cjs && node tests/journal-retention-anchor-rc1.test.cjs && node tests/source-fingerprint-lockfile-invariance-rc1.test.cjs && node tests/release-identity-chain-rc1.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs && node tests/rc1-execution-recovery-resume.test.cjs && node tests/rc1-execution-recovery-contract.test.cjs && node tests/rc1-phase-readiness.test.cjs && node tests/rc1-execution-expected-incomplete-gate.test.cjs && node tests/rc1-final-evidence-provenance-contract.test.cjs && node tests/rc1-handoff-reparse-failclosed.test.cjs && node tests/dependency-source-provenance-rc1.test.cjs && node tests/rc1-promotion-leaf-reverification.test.cjs && node tests/rc1-final-bundle-contract.test.cjs && node tests/rc1-final-bundle-e2e.test.cjs && node tests/stable-certification-policy-rc1.test.cjs && node tests/manual-evidence-strength-rc1.test.cjs && node tests/rc1-staged-handoff-import-rc1.test.cjs && node tests/rc1-handoff-pointer-semantics-rc1.test.cjs && node tests/rc1-execution-root-realpath-guard.test.cjs",
+    "verify:release-manifest:rc1": "node scripts/verify-release-manifest-rc1.cjs",
+    "finalize:rc1": "node scripts/rc1-finalize.cjs",
+    "test:concurrency": "node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs",
+    "test:external-mutation": "node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs",
+    "test:windows-native-edge-rc1-uat": "node tests/windows-native-edge-rc1.uat.cjs",
+    "verify:cert-evidence:rc1": "node scripts/certification-evidence-bundle.cjs --verify",
+    "certify:execution:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-execution.ps1",
+    "handoff:rc1": "node scripts/rc1-execution-handoff.cjs",
+    "manual:prefill:rc1": "node scripts/prefill-manual-evidence-rc1.cjs",
+    "stable:decision:rc1": "node scripts/rc1-stable-readiness.cjs",
+    "test:rc1-execution": "node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs && node tests/rc1-execution-recovery-resume.test.cjs && node tests/rc1-execution-recovery-contract.test.cjs && node tests/rc1-phase-readiness.test.cjs && node tests/rc1-execution-expected-incomplete-gate.test.cjs && node tests/rc1-handoff-reparse-failclosed.test.cjs && node tests/rc1-promotion-leaf-reverification.test.cjs && node tests/rc1-final-bundle-contract.test.cjs && node tests/rc1-final-bundle-e2e.test.cjs",
+    "test:runtime-trust-integrity": "node tests/runtime-trust-boundary-rc1.test.cjs && node tests/local-ai-runtime-provenance-rc1.test.cjs && node tests/journal-durability-rc1.test.cjs && node tests/journal-retention-anchor-rc1.test.cjs && node tests/durable-state-rc1.test.cjs && node tests/hash-cache-freshness-rc1.test.cjs && node tests/ntfs-metadata-fidelity-rc1.test.cjs && node tests/state-restore-transactional-rc1.test.cjs",
+    "test:ntfs-metadata": "node tests/ntfs-metadata-fidelity-rc1.test.cjs",
+    "test:state-restore": "node tests/state-restore-transactional-rc1.test.cjs",
+    "test:windows-ntfs-metadata-rc1-uat": "node tests/windows-ntfs-metadata-rc1.uat.cjs",
+    "test:windows-local-ai-provenance-rc1-uat": "node tests/windows-local-ai-provenance-rc1.uat.cjs",
+    "release:identity": "node scripts/release-identity.cjs",
+    "test:release-identity": "node tests/source-fingerprint-lockfile-invariance-rc1.test.cjs && node tests/release-identity-chain-rc1.test.cjs",
+    "doctor:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-doctor.ps1",
+    "recover:execution:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-execution.ps1 -Mode Recover",
+    "resume:execution:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-execution.ps1 -Mode Resume",
+    "test:dependency-provenance": "node tests/dependency-source-provenance-rc1.test.cjs",
+    "final:bundle:rc1": "node scripts/rc1-final-bundle.cjs",
+    "check:stable-certification-policy": "node scripts/stable-certification-policy.cjs",
+    "test:stable-policy": "node tests/stable-certification-policy-rc1.test.cjs && node tests/manual-evidence-strength-rc1.test.cjs",
+    "test:windows-safe-handoff-transport-rc1-uat": "node tests/windows-safe-handoff-transport-rc1.uat.cjs"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.0.5",
+    "concurrently": "10.0.4",
+    "cross-env": "10.1.0",
+    "electron": "43.2.0",
+    "electron-builder": "26.15.3",
+    "typescript": "6.0.3",
+    "vite": "8.2.1",
+    "wait-on": "9.1.0"
+  },
+  "build": {
+    "appId": "com.workspaceagent.windows",
+    "productName": "Workspace Agent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Workspace-Agent-Setup-${version}-${arch}.${ext}"
+    },
+    "asarUnpack": [
+      "electron/services/hash-worker.cjs",
+      "electron/services/windows-path-utils.cjs"
+    ],
+    "compression": "normal",
+    "portable": {
+      "artifactName": "Workspace-Agent-Portable-${version}-${arch}.${ext}"
+    }
+  },
+  "engines": {
+    "node": "24.14.1",
+    "npm": "11.11.0"
+  },
+  "packageManager": "npm@11.11.0",
+  "workspaceAgentRelease": {
+    "channel": "rc",
+    "featureFreeze": true,
+    "baselineVersion": "0.9.8",
+    "dataEpoch": 1,
+    "releaseCandidate": "rc1",
+    "coreFeatureAdditionsAllowed": false,
+    "toolingRevision": "cert-kit21",
+    "dependencySourcePolicy": {
+      "schemaVersion": "workspace-agent-dependency-source-policy-v1",
+      "mode": "allowlist",
+      "allowedRegistryOrigins": [
+        "https://registry.npmjs.org"
+      ],
+      "allowedResolvedProtocols": [
+        "https:"
+      ],
+      "forbidLinks": true,
+      "forbidGit": true,
+      "forbidFile": true,
+      "requireIntegrityForRegistryArtifacts": true
+    },
+    "stableCertificationPolicy": {
+      "schemaVersion": "workspace-agent-stable-certification-policy-v1",
+      "mode": "fail-closed",
+      "requireAuthenticode": true,
+      "requireArtifacts": true,
+      "requireDualWindows": true,
+      "requireManualEvidence": true,
+      "requireFinalBundle": true,
+      "requiredScaleMatrix": [
+        100000,
+        1000000
+      ],
+      "requireHashBoundAttachmentForManualPass": true,
+      "requiredManualEvidenceKeys": [
+        "physicalUsbDisconnectReconnect",
+        "actualDiskFullRecovery",
+        "realAclReadOnlyRecovery",
+        "uncleanShutdownPowerLoss",
+        "realUpgradeFrom0_9_8"
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "workspace-agent-manual-evidence-v097-v1",
+  "version": "0.9.7",
+  "operator": "",
+  "machine": "",
+  "createdAt": "",
+  "evidence": {
+    "physicalUsbDisconnectReconnect": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
+    "actualDiskFullRecovery": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
+    "realAclReadOnlyRecovery": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
+    "uncleanShutdownPowerLoss": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""}
+  }
+}

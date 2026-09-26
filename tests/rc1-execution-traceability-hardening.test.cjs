@@ -1,0 +1,13 @@
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const ps=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');
+assert(ps.includes("if(-not $ExecutionId){$ExecutionId=[string]$p.executionId};Assert-ExecutionId $ExecutionId"),'PrepareEvidence must derive and validate the Primary executionId');
+assert(ps.includes("if([string]$p.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'}"),'PrepareEvidence must bind requested ID to handoff');
+assert(ps.includes("if(-not $ExecutionId){$ExecutionId=[string]$primaryPointer.executionId};Assert-ExecutionId $ExecutionId"),'Peer must validate handoff-derived executionId before path use');
+assert(ps.includes("$ExecutionId=[string]$bootPointer.executionId;Assert-ExecutionId $ExecutionId|Out-Null;$exec=Join-Path"),'Finalize must validate handoff-derived executionId before path use');
+assert(ps.indexOf("$ExecutionId=[string]$bootPointer.executionId;Assert-ExecutionId") < ps.indexOf("$exec=Join-Path $rootAbs $ExecutionId",ps.indexOf("$ExecutionId=[string]$bootPointer.executionId")),'Finalize validation must happen before Join-Path');
+assert(ps.includes("Move-Item -LiteralPath $tmp -Destination $p -Force"),'latest state must be atomically replaced');
+assert(ps.includes("previousStateSha256=$previousStateSha256"),'state history must chain transitions');
+console.log('rc1-execution-traceability-hardening PASS');

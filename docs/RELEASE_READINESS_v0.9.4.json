@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "workspace-release-readiness-v1",
+  "version": "0.9.4",
+  "coreSource": "READY",
+  "legacyRegression": "PASS",
+  "fileExplorerSkillPack": "PASS_SOURCE_LEVEL",
+  "fileExplorerWriteSafety": "PASS_SOURCE_LEVEL",
+  "copyRecovery": "PASS_SOURCE_LEVEL",
+  "windowsExplorerUat": "PENDING_WINDOWS",
+  "windows10Uat": "PENDING",
+  "windows11Uat": "PENDING",
+  "packageLock": "PENDING",
+  "nsisBuild": "PENDING",
+  "portableBuild": "PENDING",
+  "authenticode": "PENDING",
+  "notes": [
+    "Explorer Write skills are interactive-only and cannot be emitted by Local AI/Mission.",
+    "Recursive directory copy is intentionally deferred in v0.9.4.",
+    "Windows Shell dispatch requires real Electron/Windows UAT before certification."
+  ]
+}

@@ -1,0 +1,1132 @@
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/README_FA.md ./README_FA.md
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/README_FA.md	2026-08-14 18:54:57.000000000 +0000
++++ ./README_FA.md	2026-08-15 04:24:40.466623994 +0000
+@@ -50,7 +50,7 @@
+ 
+ جزئیات در `docs/RC1_ACCEPTANCE_MODEL_FA.md` و `docs/RELEASE_READINESS_v1.0.0-rc1.json` است.
+ 
+-## RC1 Windows Certification Kit — cert-kit2
++## RC1 Windows Certification Kit — cert-kit3
+ 
+ Core همچنان Feature Freeze است، اما Certification tooling سخت‌گیرانه‌تر شده است. Final PASS اکنون به هر دو خانواده Windows 10 و Windows 11، هر دو Scale واقعی 100k و 1M، clean-room artifact build، lockfile binding و Manual Evidence شامل upgrade واقعی از v0.9.8 نیاز دارد.
+ 
+@@ -69,3 +69,17 @@
+ ```
+ 
+ بدون Report خانواده دوم Windows، Envelope عمداً `INCOMPLETE` می‌ماند و PASS نهایی صادر نمی‌شود. جزئیات در `docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md` و `docs/RC1_CERTIFICATION_ENVELOPE_FA.md` است.
++
++## cert-kit3 — Production Resilience Hardening
++
++این revision همچنان `1.0.0-rc1` و Feature-Frozen است؛ قابلیت اصلی جدیدی به محصول اضافه نشده، اما چند خطای correctness و recovery که می‌توانستند در عملیات طولانی فایل رخ دهند بسته شده‌اند:
++
++- زمان انتظار برای Confirm/Pause دیگر از بودجه active runtime چرخه کم نمی‌شود.
++- Retention هیچ Cycle فعال یا Transaction قابل Recovery را حذف نمی‌کند.
++- Undo برای Rename/Organize/Quarantine/Maintenance در صورت اشغال‌شدن مقصد، نتیجه موفق جعلی یا نام جایگزین نمی‌دهد؛ exact restore یا failure صریح.
++- Recovery کپی قبل از حذف مقصد SHA-256 واقعی منبع/مقصد را بررسی می‌کند و mismatch را دست‌نخورده نگه می‌دارد.
++- Auto rollbackها فقط وقتی `rolled-back` ثبت می‌شوند که پاک‌سازی واقعاً کامل شده باشد؛ در غیر این صورت `rollback-failed` ثبت می‌شود.
++- Advanced Batch بعد از تأیید، checkpointها را در UI به‌صورت خودکار ادامه می‌دهد؛ Pause و Cancel در مرز امن chunk حفظ شده‌اند و دیگر برای هزاران chunk به هزاران کلیک Resume نیاز نیست.
++- برچسب نسخه در UI با `v1.0.0-rc1` هماهنگ شده است.
++
++این hardening جای Windows Certification واقعی را نمی‌گیرد؛ Gateهای Windows 10/11، NTFS دو Volume، Scale 100k/1M، installer/portable و upgrade واقعی همچنان باید روی Release Lane اجرا شوند.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md ./docs/CHANGELOG_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/CHANGELOG_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md	2026-08-15 04:27:22.022623994 +0000
+@@ -0,0 +1,51 @@
++# Changelog — v1.0.0-rc1 / cert-kit3 Production Resilience Hardening
++
++تاریخ: 2026-08-15
++
++این revision تحت Feature Freeze انجام شده است. هدف افزودن capability اصلی جدید نیست؛ هدف بستن خطاهای correctness، rollback/recovery و usability در عملیات فایل طولانی قبل از Windows Certification است.
++
++## اصلاحات Cycle Engine
++
++- active runtime از wall-clock واقعی جدا شد؛ زمان انتظار در `waiting-confirmation`، `paused` و فاصله بین Resumeها دیگر بودجه `maxWallTimeMs` را نمی‌سوزاند.
++- checkpoint زمان فعال در restart به‌صورت محافظه‌کارانه reconcile می‌شود و downtime برنامه به active runtime اضافه نمی‌شود.
++- `rollback-failed` به‌عنوان وضعیت صریح Cycle ثبت می‌شود؛ rollback ناقص دیگر با `failed` عمومی مخلوط نمی‌شود و پس از رفع conflict امکان Retry وجود دارد.
++
++## اصلاحات Retention
++
++- `CycleStore.prune()` چرخه‌های `created/running/waiting-confirmation/paused/interrupted` را حذف نمی‌کند.
++- `TransactionStore.prune()` فقط transactionهای terminal (`completed/rolled-back/abandoned`) را retention-prune می‌کند؛ transaction قابل Recovery حفظ می‌شود.
++
++## Exact Undo / Rollback Truthfulness
++
++- Rename Undo قبل از هر جابه‌جایی، اشغال‌بودن مقصد اصلی را بررسی می‌کند؛ در conflict فایل به temp پنهان منتقل و stranded نمی‌شود.
++- Organize، Quarantine و Maintenance دیگر در conflict با نام جایگزین مانند `(2)` «موفق» گزارش نمی‌شوند؛ exact restore یا failure صریح.
++- Recommendation batch، Explorer copy/move و سایر auto-rollbackها فقط وقتی `rolled-back` ثبت می‌شوند که cleanup واقعاً کامل باشد؛ در غیر این صورت `rollback-failed` و evidence مربوط ثبت می‌شود.
++
++## Copy Recovery Safety
++
++- Recovery مسیر Copy برای resume/rollback با SHA-256 واقعی منبع، stage و destination bind شد.
++- مقصد هم‌اندازه ولی با محتوای متفاوت دیگر به‌عنوان copy معتبر تلقی نمی‌شود.
++- در `RECOVERY_COPY_CONTENT_MISMATCH` مقصد دست‌نخورده می‌ماند و transaction به `recovery-failed` می‌رود.
++
++## Advanced Batch UX
++
++- backend checkpoint semantics حفظ شده تا عملیات قابل Resume و crash-safe بماند.
++- UI پس از تأیید کاربر checkpointهای عادی را خودکار pump می‌کند؛ برای Batch بزرگ دیگر به Resume دستی پس از هر chunk نیاز نیست.
++- Pause و Cancel به‌صورت serialized و در مرز امن chunk درخواست می‌شوند؛ blockerهای واقعی storage/root/permission همچنان auto-resume نمی‌شوند.
++- progress پس از هر chunk در UI به‌روزرسانی می‌شود.
++
++## Version Consistency
++
++- برچسب اصلی UI و File Explorer از `v0.9.4/v0.9.6` به `v1.0.0-rc1` اصلاح شد.
++- `workspaceAgentRelease.toolingRevision` از `cert-kit2` به `cert-kit3` ارتقا یافت تا Reportهای Certification به fingerprint صحیح این source bind شوند.
++
++## Regression Evidence
++
++- Source tests: `61/61 PASS`
++- Recursive JS syntax: `185 files PASS`
++- JSX parse/type syntax gate: PASS
++- Source hygiene: PASS
++- Dependency pin gate: PASS
++- RC1 source contract: PASS
++
++Windows 10/11 certification، package-lock رسمی، `npm ci` رسمی، NTFS dual-volume، scale 100k/1M، NSIS/Portable و upgrade واقعی از v0.9.8 همچنان PENDING هستند و در این محیط PASS اعلام نشده‌اند.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit3.txt ./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit3.txt
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit3.txt	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit3.txt	2026-08-15 04:27:22.046623994 +0000
+@@ -0,0 +1,331 @@
++./.node-version
++./.npmrc
++./.nvmrc
++./README_FA.md
++./docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md
++./docs/ARCHITECTURE_FA.md
++./docs/CERTIFICATION_MODEL_v0.8.4_FA.md
++./docs/CHANGELOG_v0.4_FA.md
++./docs/CHANGELOG_v0.5_FA.md
++./docs/CHANGELOG_v0.6_FA.md
++./docs/CHANGELOG_v0.7.1_FA.md
++./docs/CHANGELOG_v0.7.2_FA.md
++./docs/CHANGELOG_v0.7_FA.md
++./docs/CHANGELOG_v0.8.0_FA.md
++./docs/CHANGELOG_v0.8.1_FA.md
++./docs/CHANGELOG_v0.8.2_FA.md
++./docs/CHANGELOG_v0.8.3_FA.md
++./docs/CHANGELOG_v0.8.4_FA.md
++./docs/CHANGELOG_v0.9.0_FA.md
++./docs/CHANGELOG_v0.9.1_FA.md
++./docs/CHANGELOG_v0.9.2_FA.md
++./docs/CHANGELOG_v0.9.3_FA.md
++./docs/CHANGELOG_v0.9.4_FA.md
++./docs/CHANGELOG_v0.9.5_FA.md
++./docs/CHANGELOG_v0.9.6_FA.md
++./docs/CHANGELOG_v0.9.7_FA.md
++./docs/CHANGELOG_v0.9.8_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit2_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
++./docs/CHANGELOG_v1.0.0-rc1_FA.md
++./docs/DIFF_v0.7.1.txt
++./docs/DIFF_v0.7.2.txt
++./docs/DIFF_v0.8.0.txt
++./docs/DIFF_v0.8.1.txt
++./docs/DIFF_v0.8.2.txt
++./docs/DIFF_v0.8.3.txt
++./docs/DIFF_v0.8.4.txt
++./docs/DIFF_v0.9.0.txt
++./docs/DIFF_v0.9.1.txt
++./docs/DIFF_v0.9.2.txt
++./docs/DIFF_v0.9.3.txt
++./docs/DIFF_v0.9.4.txt
++./docs/DIFF_v0.9.5.txt
++./docs/DIFF_v0.9.6.txt
++./docs/DIFF_v0.9.7.txt
++./docs/DIFF_v0.9.8.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit1.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit2.txt
++./docs/DIFF_v1.0.0-rc1.txt
++./docs/FILE_EXPLORER_PRODUCTION_HARDENING_v0.9.6_FA.md
++./docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md
++./docs/FILE_INVENTORY_v0.8.2.txt
++./docs/FILE_INVENTORY_v0.8.3.txt
++./docs/FILE_INVENTORY_v0.8.4.txt
++./docs/FILE_INVENTORY_v0.9.0.txt
++./docs/FILE_INVENTORY_v0.9.1.txt
++./docs/FILE_INVENTORY_v0.9.2.txt
++./docs/FILE_INVENTORY_v0.9.3.txt
++./docs/FILE_INVENTORY_v0.9.4.txt
++./docs/FILE_INVENTORY_v0.9.5.txt
++./docs/FILE_INVENTORY_v0.9.6.txt
++./docs/FILE_INVENTORY_v0.9.7.txt
++./docs/FILE_INVENTORY_v0.9.8.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit2.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1.txt
++./docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md
++./docs/LOCAL_AI_MODEL_v0.9_FA.md
++./docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md
++./docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json
++./docs/MANUAL_CERTIFICATION_EVIDENCE_v0.9.7.template.json
++./docs/PERSISTENT_INDEX_MODEL_FA.md
++./docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md
++./docs/PRODUCTION_HARDENING_v0.8.1_FA.md
++./docs/RC1_ACCEPTANCE_MODEL_FA.md
++./docs/RC1_CERTIFICATION_ENVELOPE_FA.md
++./docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
++./docs/RC_READINESS_MODEL_v0.9.8_FA.md
++./docs/RECOVERY_MODEL_FA.md
++./docs/RELEASE_READINESS_v0.8.2.json
++./docs/RELEASE_READINESS_v0.8.3.json
++./docs/RELEASE_READINESS_v0.8.4.json
++./docs/RELEASE_READINESS_v0.9.0.json
++./docs/RELEASE_READINESS_v0.9.1.json
++./docs/RELEASE_READINESS_v0.9.2.json
++./docs/RELEASE_READINESS_v0.9.3.json
++./docs/RELEASE_READINESS_v0.9.4.json
++./docs/RELEASE_READINESS_v0.9.5.json
++./docs/RELEASE_READINESS_v0.9.6.json
++./docs/RELEASE_READINESS_v0.9.7.json
++./docs/RELEASE_READINESS_v0.9.8.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit2.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit3-resilience-hardening.json
++./docs/RELEASE_READINESS_v1.0.0-rc1.json
++./docs/ROADMAP_FA.md
++./docs/SOURCE_REUSE_AUDIT_FA.md
++./docs/SYSTEM_RESILIENCE_MODEL_v0.8.3_FA.md
++./docs/UPSTREAM_INTEGRATION_FA.md
++./docs/UPSTREAM_PROVENANCE.md
++./docs/VALIDATION_v0.4_FA.md
++./docs/VALIDATION_v0.5_FA.md
++./docs/VALIDATION_v0.6_FA.md
++./docs/VALIDATION_v0.7.1_FA.md
++./docs/VALIDATION_v0.7.2_FA.md
++./docs/VALIDATION_v0.7_FA.md
++./docs/VALIDATION_v0.8.0_FA.md
++./docs/VALIDATION_v0.8.1_FA.md
++./docs/VALIDATION_v0.8.2_FA.md
++./docs/VALIDATION_v0.8.3_FA.md
++./docs/VALIDATION_v0.8.4_FA.md
++./docs/VALIDATION_v0.9.0_FA.md
++./docs/VALIDATION_v0.9.1_FA.md
++./docs/VALIDATION_v0.9.2_FA.md
++./docs/VALIDATION_v0.9.3_FA.md
++./docs/VALIDATION_v0.9.4_FA.md
++./docs/VALIDATION_v0.9.5_FA.md
++./docs/VALIDATION_v0.9.6_FA.md
++./docs/VALIDATION_v0.9.7_FA.md
++./docs/VALIDATION_v0.9.8_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit2_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
++./docs/VALIDATION_v1.0.0-rc1_FA.md
++./docs/WINDOWS_CERTIFICATION_MODEL_v0.9.7_FA.md
++./docs/WINDOWS_FILE_EXPLORER_PRODUCTION_UAT_v0.9.6_FA.md
++./docs/WINDOWS_PATH_RELEASE_MODEL_v0.8.2_FA.md
++./docs/WINDOWS_RELEASE_CHECKLIST_FA.md
++./docs/WINDOWS_SYSTEM_UAT_v0.8.3_FA.md
++./docs/WINDOWS_UIA_ACTION_MODEL_FA.md
++./docs/deferred/corel-bridge.cjs.txt
++./electron/ipc.cjs
++./electron/main.cjs
++./electron/preload.cjs
++./electron/services/ai-call-guard.cjs
++./electron/services/ai-planner.cjs
++./electron/services/ai-redaction.cjs
++./electron/services/automation-conditions.cjs
++./electron/services/automation-service.cjs
++./electron/services/automation-store.cjs
++./electron/services/capability-registry.cjs
++./electron/services/certification-core.cjs
++./electron/services/configuration-service.cjs
++./electron/services/cycle-engine.cjs
++./electron/services/cycle-store.cjs
++./electron/services/diagnostic-redaction.cjs
++./electron/services/diagnostics-bundle-service.cjs
++./electron/services/drive-audit.cjs
++./electron/services/duplicate-finder.cjs
++./electron/services/event-journal.cjs
++./electron/services/explorer-batch-cycles.cjs
++./electron/services/explorer-batch-service.cjs
++./electron/services/explorer-batch-store.cjs
++./electron/services/explorer-storage-guard.cjs
++./electron/services/file-analyzer.cjs
++./electron/services/file-cycles.cjs
++./electron/services/file-explorer-cycles.cjs
++./electron/services/file-explorer-service.cjs
++./electron/services/file-indexer.cjs
++./electron/services/file-insights.cjs
++./electron/services/file-search.cjs
++./electron/services/file-watcher-service.cjs
++./electron/services/fingerprint-store.cjs
++./electron/services/goal-planner.cjs
++./electron/services/grounding-memory-store.cjs
++./electron/services/hardware-profile-service.cjs
++./electron/services/hash-worker-pool.cjs
++./electron/services/hash-worker.cjs
++./electron/services/image-similarity.cjs
++./electron/services/indexed-duplicate-finder.cjs
++./electron/services/lifecycle-state.cjs
++./electron/services/local-ai-config-store.cjs
++./electron/services/local-ai-runtime-manager.cjs
++./electron/services/local-ai-service.cjs
++./electron/services/local-openai-provider.cjs
++./electron/services/maintenance.cjs
++./electron/services/managed-zone-audit.cjs
++./electron/services/managed-zone-store.cjs
++./electron/services/mission-compiler.cjs
++./electron/services/office-text-extractor.cjs
++./electron/services/organizer.cjs
++./electron/services/path-policy.cjs
++./electron/services/pdf-text-extractor.cjs
++./electron/services/persistent-file-index.cjs
++./electron/services/persistent-index-cycles.cjs
++./electron/services/quarantine.cjs
++./electron/services/rc-self-check-service.cjs
++./electron/services/recommendation-applier.cjs
++./electron/services/recovery-service.cjs
++./electron/services/renamer.cjs
++./electron/services/resource-pressure-guard.cjs
++./electron/services/review-queue-store.cjs
++./electron/services/root-resilience-service.cjs
++./electron/services/similarity-core.cjs
++./electron/services/skill-memory-store.cjs
++./electron/services/skill-registry.cjs
++./electron/services/skill-retriever.cjs
++./electron/services/snapshot-store.cjs
++./electron/services/startup-advisor.cjs
++./electron/services/state-backup-service.cjs
++./electron/services/storage-trend-store.cjs
++./electron/services/system-resilience-controller.cjs
++./electron/services/text-similarity.cjs
++./electron/services/transaction-store.cjs
++./electron/services/ui-grounding-core.cjs
++./electron/services/ui-grounding-layout.cjs
++./electron/services/ui-grounding-service.cjs
++./electron/services/ui-grounding-session-store.cjs
++./electron/services/ui-outcome-verifier.cjs
++./electron/services/version-update-guard.cjs
++./electron/services/vision-crop-service.cjs
++./electron/services/windows-action-policy.cjs
++./electron/services/windows-action-session-store.cjs
++./electron/services/windows-inspector.cjs
++./electron/services/windows-path-utils.cjs
++./electron/services/windows-uia-actions.cjs
++./electron/services/windows-uia.cjs
++./electron/services/windows-volume-probe.cjs
++./electron/services/workspace-cycles.cjs
++./electron/services/workspace-intelligence.cjs
++./index.html
++./package.json
++./scripts/check-source-syntax.cjs
++./scripts/generate-lockfile.ps1
++./scripts/local-ai-smoke.ps1
++./scripts/lockfile-provenance.cjs
++./scripts/prepare-update-v098.cjs
++./scripts/rc1-certification-envelope.cjs
++./scripts/rc1-source-manifest.cjs
++./scripts/run-source-tests.cjs
++./scripts/source-tree-fingerprint.cjs
++./scripts/verify-manual-evidence-rc1.cjs
++./scripts/verify-manual-evidence-v097.cjs
++./scripts/verify-rc1-source.cjs
++./scripts/verify-release-inputs.cjs
++./scripts/verify-source-hygiene.cjs
++./scripts/windows-certification-v097.ps1
++./scripts/windows-certification.ps1
++./scripts/windows-rc1-certify.ps1
++./scripts/windows-release.ps1
++./src/App.jsx
++./src/components/CycleTimeline.jsx
++./src/main.jsx
++./src/styles/app.css
++./tests/ai-mission-v090.test.cjs
++./tests/automation-v04.test.cjs
++./tests/certification-core-v097.test.cjs
++./tests/cycle-engine.test.cjs
++./tests/cycle-rollback-truthfulness-rc1.test.cjs
++./tests/cycle-root-guard-v083.test.cjs
++./tests/diagnostics-v098.test.cjs
++./tests/explorer-batch-recovery-v095.test.cjs
++./tests/explorer-batch-schema-v096.test.cjs
++./tests/file-cycles.integration.test.cjs
++./tests/file-explorer-batch-v095.test.cjs
++./tests/file-explorer-production-v096.test.cjs
++./tests/file-explorer-skill-pack-v094.test.cjs
++./tests/file-guardian.test.cjs
++./tests/fixtures/lifecycle-crash-child-v084.cjs
++./tests/fixtures/persistent-index-crash-child-v081.cjs
++./tests/lifecycle-resource-v084.test.cjs
++./tests/local-ai-capability-v091.test.cjs
++./tests/local-ai-foundation-v090.test.cjs
++./tests/local-ai-grounding-vision-v092.test.cjs
++./tests/local-ai-guard-v090.test.cjs
++./tests/local-ai-server-v090.uat.cjs
++./tests/manual-evidence-rc1.test.cjs
++./tests/manual-evidence-v097.test.cjs
++./tests/mission.integration.test.cjs
++./tests/multi-index-isolation-v084.test.cjs
++./tests/multi-root-isolation-v084.test.cjs
++./tests/office-extractor-v05.test.cjs
++./tests/packaged-app-smoke-v084.cjs
++./tests/packaged-worker-smoke-v082.cjs
++./tests/persistent-index-crash-v081.test.cjs
++./tests/persistent-index-cycles-v080.test.cjs
++./tests/persistent-index-scale-v080.cjs
++./tests/persistent-index-v080.test.cjs
++./tests/persistent-index-windows.uat.cjs
++./tests/product-resilience-hardening-vrc1.test.cjs
++./tests/production-hardening-v07.test.cjs
++./tests/production-hardening-v081.test.cjs
++./tests/rc-self-check-v098.test.cjs
++./tests/rc1-certification-envelope.test.cjs
++./tests/rc1-certification-kit-contract.test.cjs
++./tests/rc1-release-matrix-contract.test.cjs
++./tests/rc1-source-contract.test.cjs
++./tests/rc1-upgrade-gate.test.cjs
++./tests/real-local-ai-runtime-v091.test.cjs
++./tests/resource-cycle-integration-v084.test.cjs
++./tests/root-interruption-v083.test.cjs
++./tests/scale-benchmark-v07.cjs
++./tests/semantic-cycles-v05.test.cjs
++./tests/semantic-intelligence-v05.test.cjs
++./tests/source-tree-fingerprint-generated-vrc1.test.cjs
++./tests/source-tree-fingerprint-v097.test.cjs
++./tests/state-backup-v098.test.cjs
++./tests/system-resilience-v083.test.cjs
++./tests/ui-batch-auto-progress-rc1.test.cjs
++./tests/ui-grounded-action-v092.test.cjs
++./tests/ui-grounding-core-v092.test.cjs
++./tests/ui-grounding-layout-v093.test.cjs
++./tests/ui-grounding-recovery-v093.test.cjs
++./tests/ui-grounding-scale-v092.cjs
++./tests/ui-grounding-service-v092.test.cjs
++./tests/update-preflight-v098.test.cjs
++./tests/upstream-foundation-v071.test.cjs
++./tests/version-update-guard-v098.test.cjs
++./tests/vision-crop-v093.test.cjs
++./tests/windows-agent-v03.test.cjs
++./tests/windows-agent-v06.test.cjs
++./tests/windows-certification-v097.uat.cjs
++./tests/windows-file-explorer-v094.uat.cjs
++./tests/windows-file-explorer-v095.uat.cjs
++./tests/windows-file-explorer-v096.uat.cjs
++./tests/windows-intelligent-grounding-v092.uat.cjs
++./tests/windows-local-ai-runtime-v091.uat.cjs
++./tests/windows-multiroot-v084.uat.cjs
++./tests/windows-path-hardening-v082.test.cjs
++./tests/windows-production-grounding-v093.uat.cjs
++./tests/windows-production-v081.uat.cjs
++./tests/windows-removable-drive-v083.uat.cjs
++./tests/windows-scale-resilience-v083.uat.cjs
++./tests/windows-scale-v097.uat.cjs
++./tests/windows-system-resilience-v083.uat.cjs
++./tests/windows-uia-action-v072.test.cjs
++./tests/windows-uia-action.uat.cjs
++./tests/windows-verification-v082.uat.cjs
++./tests/windows-volume-probe-v083.test.cjs
++./vite.config.js
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RC1_ACCEPTANCE_MODEL_FA.md ./docs/RC1_ACCEPTANCE_MODEL_FA.md
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-14 18:54:49.000000000 +0000
++++ ./docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-15 04:24:40.188891982 +0000
+@@ -1,4 +1,4 @@
+-# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit2
++# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit3
+ 
+ ## قرارداد ثابت RC
+ 
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md ./docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-14 18:54:49.000000000 +0000
++++ ./docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-15 04:24:41.632244555 +0000
+@@ -1,8 +1,11 @@
+-# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit2
++# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit3
+ 
+ این کیت قابلیت جدیدی به Core اضافه نمی‌کند. هدف، تبدیل Source Candidate فریز‌شده به شواهد Release قابل ممیزی است.
+ 
+-## تفاوت مهم cert-kit2
++## تفاوت مهم cert-kit3
++
++cert-kit3 علاوه بر ماتریس Certification نسخه قبل، Source Candidate را با hardening چرخه/transaction/recovery و UX کنترل‌شده Batch bind می‌کند. هر Report باید `toolingRevision=cert-kit3` و fingerprint همین سورس را داشته باشد؛ Reportهای cert-kit2 peer معتبر این revision نیستند.
++
+ 
+ Final PASS دیگر با یک Windows و یک Scale Run ممکن نیست. برای Release نهایی باید:
+ 
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit3-resilience-hardening.json ./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit3-resilience-hardening.json
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit3-resilience-hardening.json	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit3-resilience-hardening.json	2026-08-15 04:27:22.035017440 +0000
+@@ -0,0 +1,39 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-rc1-cert-kit3-v1",
++  "version": "1.0.0-rc1",
++  "toolingRevision": "cert-kit3",
++  "featureFreeze": true,
++  "coreFeatureAdditions": false,
++  "productionResilienceBugFixes": true,
++  "sourceValidation": "PASS_61_OF_61",
++  "recursiveSyntax": "PASS_185_FILES",
++  "jsxGate": "PASS",
++  "sourceHygiene": "PASS",
++  "dependencyPins": "PASS",
++  "rc1SourceContract": "PASS",
++  "activeRuntimeAccounting": "SOURCE_TESTED",
++  "activeCycleRetention": "SOURCE_TESTED",
++  "recoverableTransactionRetention": "SOURCE_TESTED",
++  "exactUndoConflictSemantics": "SOURCE_TESTED",
++  "copyRecoverySha256Guard": "SOURCE_TESTED",
++  "truthfulRollbackFailedState": "SOURCE_TESTED",
++  "batchAutoContinueSafeBoundary": "SOURCE_TESTED_UI_CONTRACT",
++  "dualWindowsMatrix": "READY_SOURCE_TESTED",
++  "scale100kAnd1mMatrix": "READY_SOURCE_TESTED",
++  "manualUpgradeEvidence": "READY_SOURCE_TESTED",
++  "cleanRoomArtifactCertification": "READY_SOURCE_TESTED",
++  "lockfileBinding": "READY_SOURCE_TESTED",
++  "packageLock": "PENDING_ONLINE_RELEASE_LANE",
++  "npmCi": "PENDING_ONLINE_RELEASE_LANE",
++  "windows10Certification": "PENDING_WINDOWS",
++  "windows11Certification": "PENDING_WINDOWS",
++  "twoDistinctNtfsVolumes": "PENDING_WINDOWS",
++  "scale100k": "PENDING_WINDOWS",
++  "scale1m": "PENDING_WINDOWS",
++  "winUnpacked": "PENDING_WINDOWS_BUILD",
++  "nsis": "PENDING_WINDOWS_BUILD",
++  "portable": "PENDING_WINDOWS_BUILD",
++  "realUpgradeFrom0_9_8": "PENDING_MANUAL_WINDOWS_EVIDENCE",
++  "authenticode": "PENDING_CERTIFICATE_POLICY",
++  "finalDualWindowsEnvelope": "PENDING_TWO_OS_REPORTS"
++}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RELEASE_READINESS_v1.0.0-rc1.json ./docs/RELEASE_READINESS_v1.0.0-rc1.json
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-14 16:33:51.000000000 +0000
++++ ./docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-15 04:27:22.038623994 +0000
+@@ -1,14 +1,20 @@
+ {
+-  "schemaVersion": "workspace-agent-release-readiness-v1",
++  "schemaVersion": "workspace-agent-release-readiness-v2",
+   "version": "1.0.0-rc1",
+   "channel": "rc",
++  "toolingRevision": "cert-kit3",
+   "featureFreeze": true,
+   "baselineVersion": "0.9.8",
+   "dataEpoch": 1,
+-  "sourceContract": "READY",
++  "sourceContract": "PASS",
++  "regression": "PASS_61_OF_61",
++  "syntax": "PASS_185_FILES",
++  "jsx": "PASS",
++  "sourceHygiene": "PASS",
++  "dependencyPins": "PASS",
++  "resilienceHardening": "SOURCE_TESTED",
+   "upgradeGuard_0_9_8_to_rc1": "SOURCE_TESTED",
+   "downgradeGuard_rc1_to_0_9_8": "SOURCE_TESTED",
+-  "regression": "PASS_53_OF_53",
+   "packageLock": "PENDING_REGISTRY_ENVIRONMENT",
+   "npmCi": "PENDING_REGISTRY_ENVIRONMENT",
+   "windows10Certification": "PENDING_WINDOWS",
+@@ -19,11 +25,8 @@
+   "winUnpackedSmoke": "PENDING_WINDOWS_BUILD",
+   "nsis": "PENDING_WINDOWS_BUILD",
+   "portable": "PENDING_WINDOWS_BUILD",
++  "realUpgradeFrom0_9_8": "PENDING_MANUAL_WINDOWS_EVIDENCE",
+   "authenticode": "PENDING_CERTIFICATE",
+-  "sourceHygiene": "PASS",
+-  "syntax": "PASS",
+-  "jsx": "PASS",
+-  "rcSourceGate": "PASS",
+   "currentValidationRuntime": {
+     "platform": "non-Windows",
+     "node": "22.16.0",
+@@ -34,6 +37,5 @@
+     "npm": "11.11.0"
+   },
+   "releaseInputGate": "LOCKFILE_REQUIRED",
+-  "strictWindowsUat": "INCOMPLETE_EXIT_3",
+-  "localBuild": "DEPENDENCIES_NOT_INSTALLED_VITE_NOT_FOUND"
++  "strictWindowsUat": "PENDING_WINDOWS"
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/ROADMAP_FA.md ./docs/ROADMAP_FA.md
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/ROADMAP_FA.md	2026-08-14 18:54:49.000000000 +0000
++++ ./docs/ROADMAP_FA.md	2026-08-15 04:24:40.470623994 +0000
+@@ -4,7 +4,7 @@
+ 
+ تا Stable فقط این دسته تغییرات مجازند: bug fix، security hardening، migration compatibility، Windows certification، reproducible build، installer/portable/signing fixes.
+ 
+-## وضعیت بعد از cert-kit2
++## وضعیت بعد از cert-kit3
+ 
+ Source-side خلأهای مهم Certification بسته شده‌اند:
+ 
+@@ -20,8 +20,8 @@
+ 
+ 1. تولید package-lock روی Release Lane pin شده؛
+ 2. `npm ci` واقعی؛
+-3. Run کامل cert-kit2 روی Windows 10؛
+-4. Run کامل cert-kit2 روی Windows 11 با Peer Report؛
++3. Run کامل cert-kit3 روی Windows 10؛
++4. Run کامل cert-kit3 روی Windows 11 با Peer Report؛
+ 5. PASS واقعی 100k و 1M؛
+ 6. NSIS/Portable و packaged smoke؛
+ 7. upgrade واقعی از v0.9.8؛
+@@ -31,3 +31,17 @@
+ ## بعد از Stable
+ 
+ Skill Pack بعدی می‌تواند CorelDRAW باشد. تا قبل از بسته‌شدن Stable، capability اصلی جدید به Core اضافه نمی‌شود.
++
++## Production hardening افزوده‌شده در cert-kit3
++
++پیش از ورود به Windows Certification یک دور audit محصولی روی مسیرهای طولانی و Recovery انجام شد. موارد زیر اکنون source-tested هستند:
++
++- active-runtime accounting برای Cycleهای Pause/Resume؛
++- retention محافظه‌کارانه برای cycle/transactionهای non-terminal؛
++- exact undo conflict semantics بدون alternate-name success؛
++- SHA-256 guard برای copy recovery rollback؛
++- truthful `rollback-failed` state برای rollback ناقص؛
++- auto-continue کنترل‌شده Advanced Batch در UI با Pause/Cancel روی checkpoint؛
++- حذف version labelهای قدیمی UI.
++
++Gate بعدی همچنان اجرای همین Source Fingerprint روی Windows 10 و Windows 11 است، نه افزودن Feature جدید.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/VALIDATION_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md ./docs/VALIDATION_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/docs/VALIDATION_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ ./docs/VALIDATION_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md	2026-08-15 04:27:22.026623994 +0000
+@@ -0,0 +1,35 @@
++# Validation — v1.0.0-rc1 / cert-kit3 Resilience Hardening
++
++## Source-side gates
++
++| Gate | نتیجه |
++|---|---|
++| `npm run check:rc1-source` | PASS |
++| `npm run check:source-hygiene` | PASS |
++| `npm run check:syntax` | PASS — 185 فایل JS/CJS/MJS |
++| `npm run check:jsx` | PASS |
++| `npm run check:dependency-pins` | PASS — 10 dependency/runtime pin |
++| `npm test` | PASS — 61/61 |
++
++## Regressionهای جدید
++
++`product-resilience-hardening-vrc1.test.cjs` موارد active-time accounting، retention، exact undo و hash-safe recovery را پوشش می‌دهد.
++
++`cycle-rollback-truthfulness-rc1.test.cjs` تضمین می‌کند rollback ناقص `rollback-failed` ثبت شود و پس از رفع conflict قابل Retry باشد.
++
++`ui-batch-auto-progress-rc1.test.cjs` قرارداد Auto Continue، Safe-boundary Pause/Cancel و هماهنگی version labelهای RC را بررسی می‌کند. JSX نیز جداگانه با TypeScript syntax gate parse شده است.
++
++## محدودیت اعتبار این Validation
++
++این گزارش فقط Source-side است. محیط فعلی Windows Release Lane رسمی نیست و `package-lock.json` رسمی موجود نیست. بنابراین موارد زیر عمداً PASS اعلام نشده‌اند:
++
++- Windows 10 certification
++- Windows 11 certification و dual-OS envelope
++- دو Volume واقعی NTFS
++- 100k و 1M scale UAT واقعی
++- `npm ci` با Node 24.14.1 / npm 11.11.0
++- win-unpacked / NSIS / Portable smoke
++- upgrade واقعی v0.9.8 → v1.0.0-rc1
++- Authenticode
++
++Fingerprint نهایی Source در manifest بیرونی artifact ثبت می‌شود تا self-referential hash ایجاد نشود.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/cycle-engine.cjs ./electron/services/cycle-engine.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/cycle-engine.cjs	2026-08-14 04:25:10.000000000 +0000
++++ ./electron/services/cycle-engine.cjs	2026-08-15 04:25:23.039213453 +0000
+@@ -1,10 +1,13 @@
+ const crypto = require('crypto');
+ 
+ const SCHEMA_VERSION = 'workspace-cycle-v4';
+-const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'rolled-back', 'interrupted']);
++const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'rolled-back', 'rollback-failed', 'interrupted']);
+ function now() { return new Date().toISOString(); }
+ function id(prefix = 'cycle') { return `${prefix}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`; }
+ function clone(v) { return JSON.parse(JSON.stringify(v)); }
++function finiteMs(v){const n=Number(v);return Number.isFinite(n)&&n>=0?n:0;}
++function activeElapsedMs(cycle,atMs=Date.now()){const meta=cycle?.meta||{};const accumulated=finiteMs(meta.activeElapsedMs);const started=Date.parse(meta.runStartedAt||'');return accumulated+(Number.isFinite(started)?Math.max(0,atMs-started):0);}
++function closeRunSegment(cycle,atMs=Date.now()){cycle.meta=cycle.meta||{};const started=Date.parse(cycle.meta.runStartedAt||'');if(Number.isFinite(started))cycle.meta.activeElapsedMs=finiteMs(cycle.meta.activeElapsedMs)+Math.max(0,atMs-started);else cycle.meta.activeElapsedMs=finiteMs(cycle.meta.activeElapsedMs);cycle.meta.runStartedAt=null;return cycle;}
+ 
+ class CycleEngine {
+   constructor({ store, maxIterations = 16, maxWallTimeMs = 30 * 60 * 1000, journal = null, beforeRun = null } = {}) {
+@@ -46,12 +49,12 @@
+     const handler = this.handlers.get(cycle.type);
+     if (!handler) throw new Error(`No handler for ${cycle.type}`);
+     if(this.beforeRun){let gate;try{gate=await this.beforeRun(cycle,{...context,phase:'run'});}catch(error){gate={ok:false,code:error.code||'CYCLE_PREFLIGHT_FAILED',message:error.message}}if(gate?.ok===false){cycle.status='failed';cycle.evidence.push({at:now(),level:'error',code:gate.code||'CYCLE_PREFLIGHT_BLOCKED',text:gate.message||'Cycle preflight عملیات را متوقف کرد.',details:gate.details||gate.state||null});this.store.save(cycle);this.journal?.append('CYCLE_PREFLIGHT_BLOCKED',{cycleId:cycle.id,payload:{type:cycle.type,code:gate.code||'CYCLE_PREFLIGHT_BLOCKED'}});return this.finalize(cycle,context);}}
+-    cycle.status = 'running'; cycle.updatedAt = now(); cycle.meta = cycle.meta || {}; cycle.meta.runStartedAt = cycle.meta.runStartedAt || now(); this.store.save(cycle); this.journal?.append('CYCLE_RUNNING',{cycleId:cycle.id,payload:{type:cycle.type,iteration:cycle.iteration,budget:cycle.budget}});
++    cycle.status = 'running'; cycle.updatedAt = now(); cycle.meta = cycle.meta || {}; cycle.meta.activeElapsedMs = finiteMs(cycle.meta.activeElapsedMs); cycle.meta.runStartedAt = now(); this.store.save(cycle); this.journal?.append('CYCLE_RUNNING',{cycleId:cycle.id,payload:{type:cycle.type,iteration:cycle.iteration,budget:cycle.budget,activeElapsedMs:cycle.meta.activeElapsedMs}});
+ 
+     while (!TERMINAL.has(cycle.status) && cycle.status !== 'waiting-confirmation' && cycle.status !== 'paused') {
+       const maxIterations = Number(cycle.budget?.maxIterations || this.maxIterations);
+       const maxWallTimeMs = Number(cycle.budget?.maxWallTimeMs || this.maxWallTimeMs);
+-      const elapsedMs = Date.now() - Date.parse(cycle.meta.runStartedAt || cycle.createdAt || now());
++      const elapsedMs = activeElapsedMs(cycle);
+       if (elapsedMs > maxWallTimeMs) {
+         cycle.status = 'failed';
+         cycle.evidence.push({ at: now(), level: 'error', code: 'MAX_WALL_TIME', text: 'بودجه زمانی چرخه برای جلوگیری از اجرای بی‌پایان تمام شد.', details: { elapsedMs, maxWallTimeMs } });
+@@ -74,6 +77,7 @@
+       this.store.save(cycle);
+       this.journal?.append('CYCLE_CHECKPOINT',{cycleId:cycle.id,payload:{status:cycle.status,iteration:cycle.iteration,steps:cycle.steps.map(s=>({id:s.id,status:s.status}))}});
+     }
++    closeRunSegment(cycle); cycle.updatedAt=now(); this.store.save(cycle);
+     if (TERMINAL.has(cycle.status)) cycle = await this.finalize(cycle, context);
+     return cycle;
+   }
+@@ -91,7 +95,7 @@
+     return this.run(cycle.id, context);
+   }
+   async resume(cycleId, context = {}) {
+-    let cycle=this.store.get(cycleId);if(!cycle)throw Object.assign(new Error('Cycle not found'),{code:'CYCLE_NOT_FOUND'});const handler=this.handlers.get(cycle.type);if(!handler?.resumable)throw Object.assign(new Error('این چرخه Resume پشتیبانی نمی‌کند.'),{code:'CYCLE_NOT_RESUMABLE'});if(!['paused','interrupted'].includes(cycle.status))return cycle;cycle.status='running';cycle.finishedAt=null;cycle.end=null;cycle.meta=cycle.meta||{};cycle.meta.resumedAt=now();cycle.evidence=Array.isArray(cycle.evidence)?cycle.evidence:[];cycle.evidence.push({at:now(),code:'CYCLE_RESUMED'});this.store.save(cycle);this.journal?.append('CYCLE_RESUMED',{cycleId:cycle.id,payload:{type:cycle.type}});return this.run(cycle.id,context);
++    let cycle=this.store.get(cycleId);if(!cycle)throw Object.assign(new Error('Cycle not found'),{code:'CYCLE_NOT_FOUND'});const handler=this.handlers.get(cycle.type);if(!handler?.resumable)throw Object.assign(new Error('این چرخه Resume پشتیبانی نمی‌کند.'),{code:'CYCLE_NOT_RESUMABLE'});if(!['paused','interrupted'].includes(cycle.status))return cycle;cycle.status='running';cycle.finishedAt=null;cycle.end=null;cycle.meta=cycle.meta||{};cycle.meta.runStartedAt=null;cycle.meta.resumedAt=now();cycle.evidence=Array.isArray(cycle.evidence)?cycle.evidence:[];cycle.evidence.push({at:now(),code:'CYCLE_RESUMED'});this.store.save(cycle);this.journal?.append('CYCLE_RESUMED',{cycleId:cycle.id,payload:{type:cycle.type}});return this.run(cycle.id,context);
+   }
+   async cancel(cycleId, context = {}) {
+     let cycle=this.store.get(cycleId);if(!cycle)throw Object.assign(new Error('Cycle not found'),{code:'CYCLE_NOT_FOUND'});const handler=this.handlers.get(cycle.type);if(!handler?.allowCancel)throw Object.assign(new Error('Cancel برای این چرخه فعال نیست.'),{code:'CYCLE_CANCEL_NOT_ALLOWED'});if(TERMINAL.has(cycle.status)&&cycle.status!=='interrupted')return cycle;let patch={};if(typeof handler.cancel==='function')patch=await handler.cancel(cycle,context)||{};cycle={...cycle,...patch,status:'cancelled',finishedAt:now(),updatedAt:now()};cycle.evidence=Array.isArray(cycle.evidence)?cycle.evidence:[];cycle.evidence.push({at:cycle.finishedAt,code:'CYCLE_CANCELLED_SAFE_BOUNDARY'});cycle.end=null;this.store.save(cycle);this.journal?.append('CYCLE_CANCELLED',{cycleId:cycle.id,payload:{type:cycle.type}});return this.finalize(cycle,context);
+@@ -102,14 +106,14 @@
+     const handler=this.handlers.get(cycle.type);
+     if(typeof handler?.undo!=='function') return {ok:false,message:'Undo برای این چرخه فعال نیست'};
+     if(this.beforeRun){let gate;try{gate=await this.beforeRun(cycle,{...context,phase:'rollback'});}catch(error){gate={ok:false,code:error.code||'ROLLBACK_PREFLIGHT_FAILED',message:error.message}}if(gate?.ok===false){this.journal?.append('ROLLBACK_PREFLIGHT_BLOCKED',{cycleId:cycle.id,payload:{type:cycle.type,code:gate.code||'ROLLBACK_PREFLIGHT_BLOCKED'}});return{ok:false,code:gate.code||'ROLLBACK_PREFLIGHT_BLOCKED',message:gate.message||'Rollback preflight متوقف شد',results:[]};}}
+-    const rollbackAllowed=cycle.status==='completed'||(handler?.allowPartialUndo&&['cancelled','failed','interrupted'].includes(cycle.status));
++    const rollbackAllowed=cycle.status==='completed'||cycle.status==='rollback-failed'||(handler?.allowPartialUndo&&['cancelled','failed','interrupted'].includes(cycle.status));
+     if(!rollbackAllowed) return {ok:false,message:'این وضعیت چرخه قابل Undo نیست'};
+     let results;
+     try{results=await handler.undo(cycle,context);}catch(error){
+       cycle.evidence.push({at:now(),code:'ROLLBACK_FAILED',ok:false,error:error.code||error.message});cycle.updatedAt=now();this.store.save(cycle);this.journal?.append('CYCLE_ROLLBACK_FAILED',{cycleId:cycle.id,payload:{error:error.code||error.message}});return{ok:false,message:error.message,results:[]};
+     }
+     const list=Array.isArray(results)?results:[results];const ok=list.length>0&&list.every(r=>r?.ok!==false);
+-    cycle.status=ok?'rolled-back':'failed';cycle.finishedAt=now();cycle.updatedAt=now();
++    cycle.status=ok?'rolled-back':'rollback-failed';cycle.finishedAt=now();cycle.updatedAt=now();
+     cycle.evidence.push({at:cycle.finishedAt,code:'ROLLBACK',ok,results:list});
+     cycle.end={status:cycle.status,quality:ok?'verified':'failed',completedSteps:cycle.steps.filter(s=>s.status==='completed').length,failedSteps:ok?0:1,evidenceCount:cycle.evidence.length,nextCycleSuggestions:['workspace-health'],summary:ok?`${list.length} عملیات با موفقیت Restore/Undo شد.`:'Rollback با خطا کامل شد؛ نتایج را بررسی کنید.',at:cycle.finishedAt};
+     this.store.save(cycle);this.journal?.append('CYCLE_ROLLBACK',{cycleId:cycle.id,payload:{ok,results:list.length,status:cycle.status}});return{ok,results:list,cycle};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/cycle-store.cjs ./electron/services/cycle-store.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/cycle-store.cjs	2026-08-13 06:30:46.000000000 +0000
++++ ./electron/services/cycle-store.cjs	2026-08-15 04:18:08.303671351 +0000
+@@ -17,11 +17,13 @@
+   }
+ 
+   reconcileInterrupted(){
+-    const rows=this.list(this.maxCycles);let changed=0;for(const cycle of rows){if(!['running'].includes(cycle.status))continue;cycle.status='interrupted';cycle.finishedAt=cycle.finishedAt||new Date().toISOString();cycle.updatedAt=cycle.finishedAt;cycle.evidence=Array.isArray(cycle.evidence)?cycle.evidence:[];cycle.evidence.push({at:cycle.finishedAt,level:'warning',code:'PROCESS_RESTART_INTERRUPTED',text:'برنامه در حالی بسته شد که چرخه Running بود؛ وضعیت فایل‌ها باید از Transaction Recovery بررسی شود.'});cycle.end={status:'interrupted',quality:'interrupted',completedSteps:(cycle.steps||[]).filter(s=>s.status==='completed').length,failedSteps:0,evidenceCount:cycle.evidence.length,nextCycleSuggestions:[],summary:'چرخه به دلیل Restart/Crash ناتمام ثبت شد. برای عملیات Write، Recovery Center را بررسی کنید.',at:cycle.finishedAt};this.save(cycle);changed++;}return changed;
++    const rows=this.list(Math.max(this.maxCycles,5000));let changed=0;for(const cycle of rows){if(!['running'].includes(cycle.status))continue;cycle.meta=cycle.meta||{};const started=Date.parse(cycle.meta.runStartedAt||'');const checkpoint=Date.parse(cycle.updatedAt||'');const accumulated=Number.isFinite(Number(cycle.meta.activeElapsedMs))?Math.max(0,Number(cycle.meta.activeElapsedMs)):0;if(Number.isFinite(started)&&Number.isFinite(checkpoint)&&checkpoint>=started)cycle.meta.activeElapsedMs=accumulated+(checkpoint-started);else cycle.meta.activeElapsedMs=accumulated;cycle.meta.runStartedAt=null;cycle.status='interrupted';cycle.finishedAt=cycle.finishedAt||new Date().toISOString();cycle.updatedAt=cycle.finishedAt;cycle.evidence=Array.isArray(cycle.evidence)?cycle.evidence:[];cycle.evidence.push({at:cycle.finishedAt,level:'warning',code:'PROCESS_RESTART_INTERRUPTED',text:'برنامه در حالی بسته شد که چرخه Running بود؛ وضعیت فایل‌ها باید از Transaction Recovery بررسی شود.'});cycle.end={status:'interrupted',quality:'interrupted',completedSteps:(cycle.steps||[]).filter(s=>s.status==='completed').length,failedSteps:0,evidenceCount:cycle.evidence.length,nextCycleSuggestions:[],summary:'چرخه به دلیل Restart/Crash ناتمام ثبت شد. برای عملیات Write، Recovery Center را بررسی کنید.',at:cycle.finishedAt};this.save(cycle);changed++;}return changed;
+   }
+   prune(){
+-    let files=[];try{files=fs.readdirSync(this.dir).filter(f=>f.endsWith('.json')).map(f=>({f,st:fs.statSync(path.join(this.dir,f))})).sort((a,b)=>b.st.mtimeMs-a.st.mtimeMs);}catch{return;}
+-    for(const row of files.slice(this.maxCycles)){try{fs.unlinkSync(path.join(this.dir,row.f));}catch{}}
++    let files=[];try{files=fs.readdirSync(this.dir).filter(f=>f.endsWith('.json')).map(f=>{const file=path.join(this.dir,f);let cycle=null;try{cycle=JSON.parse(fs.readFileSync(file,'utf8'));}catch{}return{f,file,st:fs.statSync(file),cycle};}).sort((a,b)=>b.st.mtimeMs-a.st.mtimeMs);}catch{return;}
++    const protectedStates=new Set(['created','running','waiting-confirmation','paused','interrupted']);
++    const terminal=files.filter(row=>row.cycle&&!protectedStates.has(String(row.cycle.status||'')));
++    for(const row of terminal.slice(this.maxCycles)){try{fs.unlinkSync(row.file);}catch{}}
+   }
+ }
+ module.exports = { CycleStore };
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/file-explorer-service.cjs ./electron/services/file-explorer-service.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/file-explorer-service.cjs	2026-08-13 19:26:15.000000000 +0000
++++ ./electron/services/file-explorer-service.cjs	2026-08-15 04:19:13.493286446 +0000
+@@ -91,10 +91,10 @@
+   }
+   if(plan.action==='copy'){
+     const stagingRoot=assertInsideRoot(path.join(rr,'.workspace-agent-staging',safeCycleId(cycleId||Date.now())),rr);await fsp.mkdir(stagingRoot,{recursive:true});const stage=assertInsideRoot(path.join(stagingRoot,`copy-${crypto.randomBytes(8).toString('hex')}.part`),rr);const tx=transactionStore?.create({kind:'explorer-copy',cycleId,root:rr,operations:[{kind:'explorer-copy-file',source:plan.source,destination:plan.destination,stage,size:plan.sourceSnapshot.size}]})||null;
+-    let destinationCommitted=false;try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.copyFile(plan.source,stage,fs.constants.COPYFILE_EXCL);transactionStore?.markOp(tx.id,0,{state:'staged'});const sourceAfter=await fsp.lstat(plan.source);if(!sameSnapshot(sourceAfter,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد؛ مقصد commit نشد.');const fh=await fsp.open(stage,'r');try{await fh.sync();}finally{await fh.close();}await fsp.rename(stage,plan.destination);destinationCommitted=true;transactionStore?.markOp(tx.id,0,{state:'committed'});const [sourceHash,destinationHash]=await Promise.all([sha256File(plan.source),sha256File(plan.destination)]);if(sourceHash!==destinationHash)throw err('EXPLORER_COPY_HASH_MISMATCH','SHA-256 منبع و مقصد Copy برابر نیست.');const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.sha256=destinationHash;completed.undo={kind:'remove-copied-file',path:plan.destination,sha256:destinationHash,size:Number(st.size||0)};transactionStore?.mark(tx.id,{status:'completed'});try{await fsp.rm(stagingRoot,{recursive:true,force:true});}catch{}return completed;}catch(error){try{if(exists(stage))await fsp.rm(stage,{force:true});}catch{}try{if(destinationCommitted&&exists(plan.destination))await fsp.rm(plan.destination,{force:true});}catch{}transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw error;}
++    let destinationCommitted=false;try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.copyFile(plan.source,stage,fs.constants.COPYFILE_EXCL);transactionStore?.markOp(tx.id,0,{state:'staged'});const sourceAfter=await fsp.lstat(plan.source);if(!sameSnapshot(sourceAfter,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد؛ مقصد commit نشد.');const fh=await fsp.open(stage,'r');try{await fh.sync();}finally{await fh.close();}await fsp.rename(stage,plan.destination);destinationCommitted=true;transactionStore?.markOp(tx.id,0,{state:'committed'});const [sourceHash,destinationHash]=await Promise.all([sha256File(plan.source),sha256File(plan.destination)]);if(sourceHash!==destinationHash)throw err('EXPLORER_COPY_HASH_MISMATCH','SHA-256 منبع و مقصد Copy برابر نیست.');const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.sha256=destinationHash;completed.undo={kind:'remove-copied-file',path:plan.destination,sha256:destinationHash,size:Number(st.size||0)};transactionStore?.mark(tx.id,{status:'completed'});try{await fsp.rm(stagingRoot,{recursive:true,force:true});}catch{}return completed;}catch(error){let cleanupOk=true;try{if(exists(stage))await fsp.rm(stage,{force:true});}catch{cleanupOk=false;}try{if(destinationCommitted&&exists(plan.destination))await fsp.rm(plan.destination,{force:true});}catch{cleanupOk=false;}cleanupOk=cleanupOk&&!exists(stage)&&(!destinationCommitted||!exists(plan.destination))&&exists(plan.source);transactionStore?.mark(tx.id,{status:cleanupOk?'rolled-back':'rollback-failed',error:error.code||error.message});if(!cleanupOk)error.details={...(error.details||{}),rollbackIncomplete:true,stageExists:exists(stage),destinationExists:exists(plan.destination),sourceExists:exists(plan.source)};throw error;}
+   }
+   const opKind=plan.sourceSnapshot.type==='directory'?'explorer-move-dir':'explorer-move-file';const tx=transactionStore?.create({kind:plan.action==='rename'?'explorer-rename':'explorer-move',cycleId,root:rr,operations:[{kind:opKind,source:plan.source,destination:plan.destination,size:plan.sourceSnapshot.size}]})||null;
+-  try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.rename(plan.source,plan.destination);transactionStore?.markOp(tx.id,0,{state:'committed'});const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.undo={kind:'move-back',source:plan.destination,destination:plan.source,after:completed.after};transactionStore?.mark(tx.id,{status:'completed'});return completed;}catch(error){transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw error;}
++  try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.rename(plan.source,plan.destination);transactionStore?.markOp(tx.id,0,{state:'committed'});const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.undo={kind:'move-back',source:plan.destination,destination:plan.source,after:completed.after};transactionStore?.mark(tx.id,{status:'completed'});return completed;}catch(error){const rolledBack=exists(plan.source)&&!exists(plan.destination);transactionStore?.mark(tx.id,{status:rolledBack?'rolled-back':'rollback-failed',error:error.code||error.message});if(!rolledBack)error.details={...(error.details||{}),rollbackIncomplete:true,sourceExists:exists(plan.source),destinationExists:exists(plan.destination)};throw error;}
+ }
+ async function verifyCompleted(completed){
+   const mismatches=[];if(completed.action==='new-folder'){const st=await lstatMaybe(completed.destination);if(!st?.isDirectory())mismatches.push({code:'FOLDER_MISSING',path:completed.destination});return{ok:!mismatches.length,mismatches,mode:'directory-exists'};}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/maintenance.cjs ./electron/services/maintenance.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/maintenance.cjs	2026-08-13 06:29:21.000000000 +0000
++++ ./electron/services/maintenance.cjs	2026-08-15 04:18:32.138780298 +0000
+@@ -75,7 +75,7 @@
+ async function executeMaintenance(root,cycleId,operations=[],options={}){
+   const resolvedRoot=assertWriteRoot(root);await preflightMaintenance(resolvedRoot,operations);const transactionStore=options.transactionStore||null;const base=path.join(resolvedRoot,'.workspace-agent-quarantine',String(cycleId).replace(/[^a-zA-Z0-9_-]/g,'_'),'maintenance');const actual=operations.map(op=>({...op,destination:safeDestination(path.join(base,op.relativePath))}));const tx=transactionStore?.create({kind:'maintenance-quarantine',cycleId,root:resolvedRoot,operations:actual})||null;const completed=[];
+   try{transactionStore?.mark(tx.id,{status:'executing'});for(let i=0;i<actual.length;i++){const op=actual[i],source=assertInsideRoot(op.source,resolvedRoot),destination=op.destination;await fsp.mkdir(path.dirname(destination),{recursive:true});const before=await fsp.stat(source);await fsp.rename(source,destination);const after=await fsp.stat(destination);completed.push({...op,before:{size:before.size,mtimeMs:before.mtimeMs,isDirectory:before.isDirectory()},after:{size:after.size,mtimeMs:after.mtimeMs,isDirectory:after.isDirectory()},undo:{kind:'restore',source:destination,destination:source}});transactionStore?.markOp(tx.id,i,{state:'committed'});}transactionStore?.mark(tx.id,{status:'completed'});
+-  }catch(error){const rollbackResults=await restoreMaintenance(completed);transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw Object.assign(new Error(`Cleanup در میانه اجرا متوقف شد و Rollback خودکار انجام شد: ${error.message}`),{code:'MAINTENANCE_BATCH_FAILED_ROLLED_BACK',details:{cause:error.code||error.message,rollbackResults}});}return {base,completed};
++  }catch(error){const rollbackResults=await restoreMaintenance(completed);const rollbackOk=rollbackResults.every(x=>x?.ok!==false);transactionStore?.mark(tx.id,{status:rollbackOk?'rolled-back':'rollback-failed',error:error.code||error.message});throw Object.assign(new Error(`Cleanup در میانه اجرا متوقف شد؛ نتیجه Rollback باید بررسی شود: ${error.message}`),{code:rollbackOk?'MAINTENANCE_BATCH_FAILED_ROLLED_BACK':'MAINTENANCE_BATCH_FAILED_ROLLBACK_INCOMPLETE',details:{cause:error.code||error.message,rollbackResults}});}return {base,completed};
+ }
+ async function verifyMaintenance(completed=[]){
+   const mismatches=[];
+@@ -92,7 +92,7 @@
+     const u=op.undo;if(!u)continue;
+     try{
+       if(!fs.existsSync(u.source)){results.push({ok:false,...u,error:'QUARANTINE_SOURCE_MISSING'});continue;}
+-      await fsp.mkdir(path.dirname(u.destination),{recursive:true});const destination=safeDestination(u.destination);await fsp.rename(u.source,destination);results.push({ok:true,...u,destination});
++      if(fs.existsSync(u.destination)){results.push({ok:false,...u,error:'UNDO_DESTINATION_EXISTS'});continue;}await fsp.mkdir(path.dirname(u.destination),{recursive:true});await fsp.rename(u.source,u.destination);results.push({ok:true,...u,destination:u.destination,exact:true});
+     }catch(error){results.push({ok:false,...u,error:error.code||error.message});}
+   }
+   return results;
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/organizer.cjs ./electron/services/organizer.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/organizer.cjs	2026-08-13 06:29:21.000000000 +0000
++++ ./electron/services/organizer.cjs	2026-08-15 04:18:32.138188361 +0000
+@@ -32,9 +32,9 @@
+       completed.push({...op,before:{size:before.size,mtimeMs:before.mtimeMs},after:{size:after.size,mtimeMs:after.mtimeMs},undo:{kind:'move',source:destination,destination:source}});transactionStore?.markOp(tx.id,i,{state:'committed'});
+     }transactionStore?.mark(tx.id,{status:'completed'});
+   }catch(error){
+-    const rollbackResults=await undoMoves(completed);transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw Object.assign(new Error(`مرتب‌سازی در میانه اجرا متوقف شد و Rollback خودکار انجام شد: ${error.message}`),{code:'MOVE_BATCH_FAILED_ROLLED_BACK',details:{cause:error.code||error.message,rollbackResults}});
++    const rollbackResults=await undoMoves(completed);const rollbackOk=rollbackResults.every(x=>x?.ok!==false);transactionStore?.mark(tx.id,{status:rollbackOk?'rolled-back':'rollback-failed',error:error.code||error.message});throw Object.assign(new Error(`مرتب‌سازی در میانه اجرا متوقف شد؛ نتیجه Rollback باید بررسی شود: ${error.message}`),{code:rollbackOk?'MOVE_BATCH_FAILED_ROLLED_BACK':'MOVE_BATCH_FAILED_ROLLBACK_INCOMPLETE',details:{cause:error.code||error.message,rollbackResults}});
+   }return completed;
+ }
+ async function verifyMoves(completed=[]) {const mismatches=[];for(const op of completed){let st=null;try{st=await fsp.stat(op.destination)}catch{}const sourceExists=fs.existsSync(op.source);if(!st||sourceExists||Number(st?.size)!==Number(op.size))mismatches.push({source:op.source,destination:op.destination,sourceExists,destinationExists:Boolean(st),expectedSize:op.size,actualSize:st?.size??null});}return{ok:mismatches.length===0,mismatches};}
+-async function undoMoves(operations = []) {const results=[];for(const op of [...operations].reverse()){const u=op.undo;if(!u)continue;try{if(!fs.existsSync(u.source)){results.push({ok:false,...u,error:'UNDO_SOURCE_MISSING'});continue;}await fsp.mkdir(path.dirname(u.destination),{recursive:true});const destination=safeName(u.destination);await fsp.rename(u.source,destination);results.push({ok:true,...u,destination});}catch(error){results.push({ok:false,...u,error:error.code||error.message});}}return results;}
++async function undoMoves(operations = []) {const results=[];for(const op of [...operations].reverse()){const u=op.undo;if(!u)continue;try{if(!fs.existsSync(u.source)){results.push({ok:false,...u,error:'UNDO_SOURCE_MISSING'});continue;}if(fs.existsSync(u.destination)){results.push({ok:false,...u,error:'UNDO_DESTINATION_EXISTS'});continue;}await fsp.mkdir(path.dirname(u.destination),{recursive:true});await fsp.rename(u.source,u.destination);results.push({ok:true,...u,destination:u.destination,exact:true});}catch(error){results.push({ok:false,...u,error:error.code||error.message});}}return results;}
+ module.exports = { CATEGORIES, categoryFor, planOrganization, preflightMoves, executeMoves, verifyMoves, undoMoves, safeName };
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/quarantine.cjs ./electron/services/quarantine.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/quarantine.cjs	2026-08-13 06:29:21.000000000 +0000
++++ ./electron/services/quarantine.cjs	2026-08-15 04:18:32.138540930 +0000
+@@ -59,7 +59,7 @@
+ async function executeQuarantine(root, cycleId, operations=[], review=[], options={}) {
+   const resolvedRoot=assertWriteRoot(root);await preflightQuarantine(resolvedRoot,operations,review);const transactionStore=options.transactionStore||null;const base=path.join(resolvedRoot,'.workspace-agent-quarantine',String(cycleId).replace(/[^a-zA-Z0-9_-]/g,'_'));const actual=operations.map(op=>({...op,destination:safeName(path.join(base,op.relativePath))}));const tx=transactionStore?.create({kind:'duplicate-quarantine',cycleId,root:resolvedRoot,operations:actual})||null;const completed=[];
+   try{transactionStore?.mark(tx.id,{status:'executing'});for (let i=0;i<actual.length;i++) {const op=actual[i],source=assertInsideRoot(op.source,resolvedRoot),destination=op.destination;await fsp.mkdir(path.dirname(destination),{recursive:true});const before=await fsp.stat(source);await fsp.rename(source,destination);const after=await fsp.stat(destination);completed.push({...op,before:{size:before.size,mtimeMs:before.mtimeMs},after:{size:after.size,mtimeMs:after.mtimeMs},undo:{kind:'restore',source:destination,destination:source}});transactionStore?.markOp(tx.id,i,{state:'committed'});}transactionStore?.mark(tx.id,{status:'completed'});
+-  }catch(error){const rollbackResults=await restoreQuarantine(completed);transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw Object.assign(new Error(`قرنطینه در میانه اجرا متوقف شد و Rollback خودکار انجام شد: ${error.message}`),{code:'QUARANTINE_BATCH_FAILED_ROLLED_BACK',details:{cause:error.code||error.message,rollbackResults}});}return { base, completed };
++  }catch(error){const rollbackResults=await restoreQuarantine(completed);const rollbackOk=rollbackResults.every(x=>x?.ok!==false);transactionStore?.mark(tx.id,{status:rollbackOk?'rolled-back':'rollback-failed',error:error.code||error.message});throw Object.assign(new Error(`قرنطینه در میانه اجرا متوقف شد؛ نتیجه Rollback باید بررسی شود: ${error.message}`),{code:rollbackOk?'QUARANTINE_BATCH_FAILED_ROLLED_BACK':'QUARANTINE_BATCH_FAILED_ROLLBACK_INCOMPLETE',details:{cause:error.code||error.message,rollbackResults}});}return { base, completed };
+ }
+ async function verifyQuarantine(completed=[]) {
+   const mismatches=[];
+@@ -76,7 +76,7 @@
+     const u=op.undo; if(!u) continue;
+     try {
+       if (!fs.existsSync(u.source)) { results.push({ok:false,...u,error:'QUARANTINE_SOURCE_MISSING'}); continue; }
+-      await fsp.mkdir(path.dirname(u.destination),{recursive:true}); const destination=safeName(u.destination); await fsp.rename(u.source,destination); results.push({ok:true,...u,destination});
++      if(fs.existsSync(u.destination)){results.push({ok:false,...u,error:'UNDO_DESTINATION_EXISTS'});continue;}await fsp.mkdir(path.dirname(u.destination),{recursive:true}); await fsp.rename(u.source,u.destination); results.push({ok:true,...u,destination:u.destination,exact:true});
+     } catch(error) { results.push({ok:false,...u,error:error.code||error.message}); }
+   }
+   return results;
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/recommendation-applier.cjs ./electron/services/recommendation-applier.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/recommendation-applier.cjs	2026-08-13 06:29:21.000000000 +0000
++++ ./electron/services/recommendation-applier.cjs	2026-08-15 04:19:12.129510093 +0000
+@@ -34,10 +34,11 @@
+     for(let i=0;i<staged.length;i++){const op=staged[i];await fsp.mkdir(path.dirname(op.destination),{recursive:true});await fsp.rename(op.stage,op.destination);const st=await fsp.stat(op.destination);completed.push({...op,after:{size:st.size,mtimeMs:st.mtimeMs},undo:{source:op.destination,destination:op.source}});transactionStore?.markOp(tx.id,i,{state:'committed'});}
+     try{await fsp.rm(stagingRoot,{recursive:true,force:true});}catch{}transactionStore?.mark(tx.id,{status:'completed'});return completed;
+   }catch(error){
+-    for(const op of [...completed].reverse()){try{if(exists(op.destination)&&!exists(op.source)){await fsp.mkdir(path.dirname(op.source),{recursive:true});await fsp.rename(op.destination,op.source);}}catch{}}
+-    for(const op of [...staged].reverse()){try{if(exists(op.stage)&&!exists(op.source)){await fsp.mkdir(path.dirname(op.source),{recursive:true});await fsp.rename(op.stage,op.source);}}catch{}}
+-    try{await fsp.rm(stagingRoot,{recursive:true,force:true});}catch{}transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});
+-    throw Object.assign(new Error(`اجرای پیشنهادها متوقف و Auto-Rollback شد: ${error.message}`),{code:'RECOMMENDATION_BATCH_FAILED_ROLLED_BACK'});
++    const rollbackResults=[];
++    for(const op of [...completed].reverse()){try{if(!exists(op.destination)){rollbackResults.push({ok:false,source:op.destination,destination:op.source,error:'ROLLBACK_SOURCE_MISSING'});continue;}if(exists(op.source)){rollbackResults.push({ok:false,source:op.destination,destination:op.source,error:'ROLLBACK_DESTINATION_EXISTS'});continue;}await fsp.mkdir(path.dirname(op.source),{recursive:true});await fsp.rename(op.destination,op.source);rollbackResults.push({ok:true,source:op.destination,destination:op.source});}catch(e){rollbackResults.push({ok:false,source:op.destination,destination:op.source,error:e.code||e.message});}}
++    for(const op of [...staged].reverse()){try{if(!exists(op.stage))continue;if(exists(op.source)){rollbackResults.push({ok:false,source:op.stage,destination:op.source,error:'ROLLBACK_DESTINATION_EXISTS'});continue;}await fsp.mkdir(path.dirname(op.source),{recursive:true});await fsp.rename(op.stage,op.source);rollbackResults.push({ok:true,source:op.stage,destination:op.source});}catch(e){rollbackResults.push({ok:false,source:op.stage,destination:op.source,error:e.code||e.message});}}
++    const rollbackOk=rollbackResults.every(x=>x.ok!==false);if(rollbackOk){try{await fsp.rm(stagingRoot,{recursive:true,force:true});}catch{}}transactionStore?.mark(tx.id,{status:rollbackOk?'rolled-back':'rollback-failed',error:error.code||error.message});
++    throw Object.assign(new Error(`اجرای پیشنهادها متوقف شد؛ نتیجه Auto-Rollback باید بررسی شود: ${error.message}`),{code:rollbackOk?'RECOMMENDATION_BATCH_FAILED_ROLLED_BACK':'RECOMMENDATION_BATCH_FAILED_ROLLBACK_INCOMPLETE',details:{rollbackResults,stagingRoot:rollbackOk?null:stagingRoot}});
+   }
+ }
+ async function verifyRecommendationPlan(completed=[]){const mismatches=[];for(const op of completed){let st=null;try{st=await fsp.stat(op.destination);}catch{}if(!st?.isFile()||exists(op.source)||Number(st.size)!==Number(op.size))mismatches.push({source:op.source,destination:op.destination,sourceExists:exists(op.source),destinationExists:Boolean(st),sizeOk:Number(st?.size)===Number(op.size)});}return{ok:mismatches.length===0,mismatches};}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/recovery-service.cjs ./electron/services/recovery-service.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/recovery-service.cjs	2026-08-13 19:21:10.000000000 +0000
++++ ./electron/services/recovery-service.cjs	2026-08-15 04:18:48.565293252 +0000
+@@ -1,24 +1,27 @@
+ const fs=require('fs');
+ const fsp=fs.promises;
+ const path=require('path');
++const {hashFile}=require('./duplicate-finder.cjs');
+ function exists(p){try{return Boolean(p)&&fs.existsSync(p);}catch{return false;}}
+ function pathState(p,op){if(!exists(p))return{exists:false,valid:false};try{const st=fs.statSync(p);const kind=String(op?.meta?.kind||'');const dir=kind==='quarantine-dir'||kind.endsWith('-dir');const typeOk=dir?st.isDirectory():st.isFile();const sizeOk=dir||Number(st.size)===Number(op.size);return{exists:true,valid:typeOk&&sizeOk,typeOk,sizeOk,size:st.size};}catch{return{exists:true,valid:false};}}
+ function isCopyOp(op){return String(op?.meta?.kind||'')==='explorer-copy-file';}
++async function verifyCopyMatch(source,target){const ss=await fsp.stat(source),ts=await fsp.stat(target);if(!ss.isFile()||!ts.isFile()||Number(ss.size)!==Number(ts.size))return{ok:false,code:'RECOVERY_COPY_SIZE_MISMATCH'};const [a,b]=await Promise.all([hashFile(source),hashFile(target)]);return a===b?{ok:true,sha256:a}:{ok:false,code:'RECOVERY_COPY_CONTENT_MISMATCH',sourceHash:a,targetHash:b};}
++async function syncFile(file){const fh=await fsp.open(file,'r');try{await fh.sync();}finally{await fh.close();}}
+ function classifyOp(op){const ss=pathState(op.source,op),gs=op.stage?pathState(op.stage,op):{exists:false,valid:false},ds=pathState(op.destination,op);const s=ss.exists,g=gs.exists,d=ds.exists;
+   if(isCopyOp(op)){if(s&&!g&&!d&&ss.valid)return{state:'copy-source',safeResume:true,safeRollback:true};if(s&&g&&!d&&ss.valid&&gs.valid)return{state:'copy-staged',safeResume:true,safeRollback:true};if(s&&!g&&d&&ss.valid&&ds.valid)return{state:'copy-destination',safeResume:true,safeRollback:true};if(!s)return{state:'copy-source-missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
+   if(s&&!g&&!d&&ss.valid)return{state:'source',safeResume:true,safeRollback:true};if(op.stage&&!s&&g&&!d&&gs.valid)return{state:'staged',safeResume:true,safeRollback:true};if(!s&&!g&&d&&ds.valid)return{state:'destination',safeResume:true,safeRollback:true};if(!s&&!g&&!d)return{state:'missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
+ class RecoveryService{
+  constructor({transactionStore,cycleStore=null,journal=null,onRecovered=null}={}){this.store=transactionStore;this.cycleStore=cycleStore;this.journal=journal;this.onRecovered=onRecovered;}
+- inspect(){return this.store.list({recoverableOnly:false}).filter(tx=>!['completed','rolled-back','abandoned'].includes(tx.status)||this.cycleStore?.get(tx.cycleId)?.status==='interrupted').map(tx=>{const ops=tx.operations.map(op=>({...op,recovery:classifyOp(op)}));const ambiguous=ops.filter(x=>!x.recovery.safeResume||!x.recovery.safeRollback);const committed=ops.filter(x=>x.recovery.state==='destination').length,staged=ops.filter(x=>x.recovery.state==='staged').length,pending=ops.filter(x=>x.recovery.state==='source').length;return{...tx,operations:ops,recovery:{resumeAllowed:ambiguous.length===0,rollbackAllowed:ambiguous.length===0,manualReview:ambiguous.length>0,committed,staged,pending,ambiguous:ambiguous.length,recommendation:ambiguous.length?'manual-review':tx.status==='completed'?'reconcile-or-rollback':committed>0?'rollback-or-resume':staged>0?'resume-or-rollback':'resume'}};});}
++ inspect(){return this.store.list({recoverableOnly:false}).filter(tx=>!['completed','rolled-back','abandoned'].includes(tx.status)||this.cycleStore?.get(tx.cycleId)?.status==='interrupted').map(tx=>{const ops=tx.operations.map(op=>({...op,recovery:classifyOp(op)}));const ambiguous=ops.filter(x=>!x.recovery.safeResume||!x.recovery.safeRollback);const committed=ops.filter(x=>['destination','copy-destination'].includes(x.recovery.state)).length,staged=ops.filter(x=>['staged','copy-staged'].includes(x.recovery.state)).length,pending=ops.filter(x=>['source','copy-source'].includes(x.recovery.state)).length;return{...tx,operations:ops,recovery:{resumeAllowed:ambiguous.length===0,rollbackAllowed:ambiguous.length===0,manualReview:ambiguous.length>0,committed,staged,pending,ambiguous:ambiguous.length,recommendation:ambiguous.length?'manual-review':tx.status==='completed'?'reconcile-or-rollback':committed>0?'rollback-or-resume':staged>0?'resume-or-rollback':'resume'}};});}
+  async act(id,action){const tx=this.store.get(id);if(!tx)return{ok:false,code:'TRANSACTION_NOT_FOUND'};const inspected=this.inspect().find(x=>x.id===id);if(!inspected)return{ok:false,code:'TRANSACTION_NOT_RECOVERABLE'};if(inspected.recovery.manualReview)return{ok:false,code:'RECOVERY_MANUAL_REVIEW_REQUIRED',transaction:inspected};if(!['resume','rollback','abandon'].includes(action))return{ok:false,code:'INVALID_RECOVERY_ACTION'};if(action==='abandon'){this.store.mark(id,{status:'abandoned'});this.journal?.append('RECOVERY_ABANDONED',{cycleId:tx.cycleId,transactionId:id});return{ok:true,action,transaction:this.store.get(id)};}
+    this.store.mark(id,{status:`recovery-${action}`});const order=action==='rollback'?[...tx.operations].reverse():tx.operations;
+    try{for(const op of order){const state=classifyOp(op).state;if(isCopyOp(op)){
+        if(action==='resume'){
+-         if(state==='copy-source'){if(!op.stage)throw Object.assign(new Error('Copy recovery stage missing'),{code:'RECOVERY_COPY_STAGE_REQUIRED'});await fsp.mkdir(path.dirname(op.stage),{recursive:true});await fsp.copyFile(op.source,op.stage,fs.constants.COPYFILE_EXCL);this.store.markOp(id,op.index,{state:'staged-recovery'});await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});await fsp.rename(op.stage,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery'});}
+-         else if(state==='copy-staged'){await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});await fsp.rename(op.stage,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery'});}
+-         else if(state==='copy-destination'){this.store.markOp(id,op.index,{state:'committed-recovery'});}
++         if(state==='copy-source'){if(!op.stage)throw Object.assign(new Error('Copy recovery stage missing'),{code:'RECOVERY_COPY_STAGE_REQUIRED'});await fsp.mkdir(path.dirname(op.stage),{recursive:true});await fsp.copyFile(op.source,op.stage,fs.constants.COPYFILE_EXCL);await syncFile(op.stage);const verified=await verifyCopyMatch(op.source,op.stage);if(!verified.ok)throw Object.assign(new Error('Recovery copy staging با منبع برابر نیست.'),{code:verified.code,details:verified});this.store.markOp(id,op.index,{state:'staged-recovery',recoveryHash:verified.sha256||null});await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});await fsp.rename(op.stage,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery',recoveryHash:verified.sha256||null});}
++         else if(state==='copy-staged'){const verified=await verifyCopyMatch(op.source,op.stage);if(!verified.ok)throw Object.assign(new Error('Recovery staging تغییر کرده و Commit امن نیست.'),{code:verified.code,details:verified});await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});await fsp.rename(op.stage,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery',recoveryHash:verified.sha256||null});}
++         else if(state==='copy-destination'){const verified=await verifyCopyMatch(op.source,op.destination);if(!verified.ok)throw Object.assign(new Error('Copy مقصد بعد از Crash با منبع برابر نیست؛ Recovery خودکار متوقف شد.'),{code:verified.code,details:verified});this.store.markOp(id,op.index,{state:'committed-recovery',recoveryHash:verified.sha256||null});}
+        }else{
+-         if(state==='copy-destination'){await fsp.rm(op.destination,{force:false});this.store.markOp(id,op.index,{state:'rolled-back-recovery'});}
++         if(state==='copy-destination'){const verified=await verifyCopyMatch(op.source,op.destination);if(!verified.ok)throw Object.assign(new Error('Copy مقصد تغییر کرده است؛ برای جلوگیری از حذف داده Rollback متوقف شد.'),{code:verified.code,details:verified});await fsp.rm(op.destination,{force:false});this.store.markOp(id,op.index,{state:'rolled-back-recovery',recoveryHash:verified.sha256||null});}
+          else if(state==='copy-staged'){await fsp.rm(op.stage,{force:true});this.store.markOp(id,op.index,{state:'rolled-back-recovery'});}
+          else if(state==='copy-source'){this.store.markOp(id,op.index,{state:'rolled-back-recovery'});}
+        }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/renamer.cjs ./electron/services/renamer.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/renamer.cjs	2026-08-13 06:29:21.000000000 +0000
++++ ./electron/services/renamer.cjs	2026-08-15 04:18:32.139035124 +0000
+@@ -44,20 +44,25 @@
+     for(let i=0;i<staged.length;i++){const op=staged[i];await fsp.rename(op.temp,op.destination);completed.push({...op,undo:{kind:'rename',source:op.destination,destination:op.source}});transactionStore?.markOp(tx.id,i,{state:'committed'});}
+     transactionStore?.mark(tx.id,{status:'completed'});
+   }catch(error){
+-    for(const op of [...completed].reverse()){try{if(fs.existsSync(op.destination)&&!fs.existsSync(op.source))await fsp.rename(op.destination,op.source);}catch{}}
+-    for(const op of [...staged].reverse()){try{if(fs.existsSync(op.temp)&&!fs.existsSync(op.source))await fsp.rename(op.temp,op.source);}catch{}}
+-    transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw Object.assign(new Error(`Bulk Rename متوقف شد و Rollback خودکار اجرا شد: ${error.message}`),{code:'RENAME_BATCH_FAILED_ROLLED_BACK'});
++    const rollbackResults=[];
++    for(const op of [...completed].reverse()){try{if(!fs.existsSync(op.destination)){rollbackResults.push({ok:false,source:op.destination,destination:op.source,error:'ROLLBACK_SOURCE_MISSING'});continue;}if(fs.existsSync(op.source)){rollbackResults.push({ok:false,source:op.destination,destination:op.source,error:'ROLLBACK_DESTINATION_EXISTS'});continue;}await fsp.rename(op.destination,op.source);rollbackResults.push({ok:true,source:op.destination,destination:op.source});}catch(e){rollbackResults.push({ok:false,source:op.destination,destination:op.source,error:e.code||e.message});}}
++    for(const op of [...staged].reverse()){try{if(!fs.existsSync(op.temp))continue;if(fs.existsSync(op.source)){rollbackResults.push({ok:false,source:op.temp,destination:op.source,error:'ROLLBACK_DESTINATION_EXISTS'});continue;}await fsp.rename(op.temp,op.source);rollbackResults.push({ok:true,source:op.temp,destination:op.source});}catch(e){rollbackResults.push({ok:false,source:op.temp,destination:op.source,error:e.code||e.message});}}
++    const rollbackOk=rollbackResults.every(x=>x.ok!==false);transactionStore?.mark(tx.id,{status:rollbackOk?'rolled-back':'rollback-failed',error:error.code||error.message});throw Object.assign(new Error(`Bulk Rename متوقف شد؛ نتیجه Rollback باید بررسی شود: ${error.message}`),{code:rollbackOk?'RENAME_BATCH_FAILED_ROLLED_BACK':'RENAME_BATCH_FAILED_ROLLBACK_INCOMPLETE',details:{rollbackResults}});
+   }
+   return completed;
+ }
+ async function verifyRenames(completed=[]){const mismatches=[];for(const op of completed){let st=null;try{st=await fsp.stat(op.destination);}catch{}if(!st||fs.existsSync(op.source)||Number(st.size)!==Number(op.size))mismatches.push({source:op.source,destination:op.destination});}return{ok:mismatches.length===0,mismatches};}
+ async function undoRenames(completed=[]){
+-  const current=completed.map(op=>({...op,source:op.destination,destination:op.source,workspaceRoot:op.workspaceRoot,size:op.size,mtimeMs:undefined}));const results=[];
+-  // Two-phase reverse without mtime preflight (rename itself does not alter mtime on Windows in normal case).
+-  const staged=[];
+-  try{for(const op of [...current].reverse()){if(!fs.existsSync(op.source)){results.push({ok:false,source:op.source,destination:op.destination,error:'UNDO_SOURCE_MISSING'});continue;}const temp=tempName(op);await fsp.rename(op.source,temp);staged.push({...op,temp});}
+-    for(const op of staged){if(fs.existsSync(op.destination)){results.push({ok:false,source:op.source,destination:op.destination,error:'UNDO_DESTINATION_EXISTS'});continue;}await fsp.rename(op.temp,op.destination);results.push({ok:true,source:op.source,destination:op.destination});}
+-  }catch(error){results.push({ok:false,error:error.code||error.message});}
++  const results=[];
++  for(const op of [...completed].reverse()){
++    const source=op.destination,destination=op.source;
++    try{
++      if(!fs.existsSync(source)){results.push({ok:false,source,destination,error:'UNDO_SOURCE_MISSING'});continue;}
++      if(fs.existsSync(destination)){results.push({ok:false,source,destination,error:'UNDO_DESTINATION_EXISTS'});continue;}
++      await fsp.mkdir(path.dirname(destination),{recursive:true});await fsp.rename(source,destination);results.push({ok:true,source,destination,exact:true});
++    }catch(error){results.push({ok:false,source,destination,error:error.code||error.message});}
++  }
+   return results;
+ }
++
+ module.exports={validateFilename,transformName,planRename,preflightRenames,executeRenames,verifyRenames,undoRenames};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/transaction-store.cjs ./electron/services/transaction-store.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/electron/services/transaction-store.cjs	2026-08-13 06:36:56.000000000 +0000
++++ ./electron/services/transaction-store.cjs	2026-08-15 04:18:09.711716249 +0000
+@@ -12,6 +12,6 @@
+  list({recoverableOnly=false,limit=500}={}){let rows=[];try{rows=fs.readdirSync(this.dir).filter(f=>f.endsWith('.json')).map(f=>{try{return JSON.parse(fs.readFileSync(path.join(this.dir,f),'utf8'))}catch{return null}}).filter(Boolean);}catch{}if(recoverableOnly)rows=rows.filter(x=>!['completed','rolled-back','abandoned'].includes(x.status));return rows.sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,limit);}
+  mark(id,patch={}){const tx=this.get(id);if(!tx)return null;Object.assign(tx,patch);if(['completed','rolled-back','abandoned'].includes(tx.status)&&!tx.finishedAt)tx.finishedAt=new Date().toISOString();this.save(tx);this.journal?.append('TRANSACTION_STATE',{cycleId:tx.cycleId,transactionId:tx.id,payload:{status:tx.status}});return tx;}
+  markOp(id,index,patch={}){const tx=this.get(id);if(!tx||!tx.operations[index])return null;tx.operations[index]={...tx.operations[index],...patch};this.save(tx);this.journal?.append('TRANSACTION_OPERATION',{cycleId:tx.cycleId,transactionId:tx.id,payload:{index,state:tx.operations[index].state,error:tx.operations[index].error||null}});return tx;}
+- prune(){let files=[];try{files=fs.readdirSync(this.dir).filter(f=>f.endsWith('.json')).map(f=>({f,st:fs.statSync(path.join(this.dir,f))})).sort((a,b)=>b.st.mtimeMs-a.st.mtimeMs);}catch{return;}for(const row of files.slice(this.maxTransactions)){try{fs.unlinkSync(path.join(this.dir,row.f));}catch{}}}
++ prune(){let files=[];try{files=fs.readdirSync(this.dir).filter(f=>f.endsWith('.json')).map(f=>{const file=path.join(this.dir,f);let tx=null;try{tx=JSON.parse(fs.readFileSync(file,'utf8'));}catch{}return{f,file,st:fs.statSync(file),tx};}).sort((a,b)=>b.st.mtimeMs-a.st.mtimeMs);}catch{return;}const terminalStates=new Set(['completed','rolled-back','abandoned']);const terminal=files.filter(row=>row.tx&&terminalStates.has(String(row.tx.status||'')));for(const row of terminal.slice(this.maxTransactions)){try{fs.unlinkSync(row.file);}catch{}}}
+ }
+ module.exports={TransactionStore};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/package.json ./package.json
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/package.json	2026-08-14 18:53:16.000000000 +0000
++++ ./package.json	2026-08-15 04:24:40.187959294 +0000
+@@ -2,7 +2,7 @@
+   "name": "windows-workspace-agent",
+   "version": "1.0.0-rc1",
+   "private": true,
+-  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit2 dual-Windows release matrix, full 100k/1M scale gates, hardened evidence provenance, and clean-room artifact certification.",
++  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit3 dual-Windows release matrix, full 100k/1M scale gates, hardened evidence provenance, and clean-room artifact certification plus production resilience hardening.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+@@ -133,6 +133,6 @@
+     "dataEpoch": 1,
+     "releaseCandidate": "rc1",
+     "coreFeatureAdditionsAllowed": false,
+-    "toolingRevision": "cert-kit2"
++    "toolingRevision": "cert-kit3"
+   }
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/scripts/verify-rc1-source.cjs ./scripts/verify-rc1-source.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/scripts/verify-rc1-source.cjs	2026-08-14 18:53:33.000000000 +0000
++++ ./scripts/verify-rc1-source.cjs	2026-08-15 04:24:40.188175451 +0000
+@@ -7,7 +7,7 @@
+ const rc=pkg.workspaceAgentRelease||{};
+ if(pkg.version!=='1.0.0-rc1')fail('RC1_VERSION_REQUIRED','Source candidate باید دقیقاً version=1.0.0-rc1 باشد.',{version:pkg.version});
+ if(rc.channel!=='rc'||rc.releaseCandidate!=='rc1'||rc.featureFreeze!==true||rc.coreFeatureAdditionsAllowed!==false)fail('RC1_FREEZE_CONTRACT_INVALID','RC channel / feature-freeze contract نامعتبر است.',{workspaceAgentRelease:rc});
+-if(rc.toolingRevision!=='cert-kit2')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit2 باشد.',{toolingRevision:rc.toolingRevision});
++if(rc.toolingRevision!=='cert-kit3')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit3 باشد.',{toolingRevision:rc.toolingRevision});
+ if(rc.baselineVersion!=='0.9.8'||compareVersions(pkg.version,rc.baselineVersion)<=0)fail('RC1_BASELINE_INVALID','Baseline باید 0.9.8 و RC جدیدتر از آن باشد.',{baseline:rc.baselineVersion,version:pkg.version});
+ if(Number(rc.dataEpoch)!==Number(DATA_EPOCH))fail('RC1_DATA_EPOCH_MISMATCH','Data Epoch package با Update Guard تطابق ندارد.',{packageEpoch:rc.dataEpoch,runtimeEpoch:DATA_EPOCH});
+ if(pkg.build?.appId!=='com.workspaceagent.windows')fail('RC1_APP_ID_CHANGED','App ID در RC نباید تغییر کند.',{appId:pkg.build?.appId});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/src/App.jsx ./src/App.jsx
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/src/App.jsx	2026-08-14 16:20:54.000000000 +0000
++++ ./src/App.jsx	2026-08-15 04:23:34.647262978 +0000
+@@ -1,4 +1,4 @@
+-import React,{useEffect,useMemo,useState}from'react';
++import React,{useEffect,useMemo,useRef,useState}from'react';
+ import CycleTimeline from'./components/CycleTimeline.jsx';
+ const api=window.workspaceAgent;
+ const fmt=n=>new Intl.NumberFormat('fa-IR').format(n||0);
+@@ -7,6 +7,8 @@
+ const tabs={home:'مرکز فرمان',system:'Windows System',explorer:'File Explorer Skills',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+  const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null),[explorerForm,setExplorerForm]=useState({relativePath:'',query:'',sourceRelative:'',destinationRelative:'',newName:'',batchSources:'',batchDestination:'',batchDestinationRootToken:'',batchDestinationRootLabel:'Workspace فعلی',conflictPolicy:'skip',duplicateAware:true}),[explorerResult,setExplorerResult]=useState(null),[explorerError,setExplorerError]=useState(''),[rcCheck,setRcCheck]=useState(null),[diagResult,setDiagResult]=useState(null),[backupRows,setBackupRows]=useState([]),[backupPreview,setBackupPreview]=useState(null),[updateGuardState,setUpdateGuardState]=useState(null);
++ const[batchAutoRunning,setBatchAutoRunning]=useState(false);
++ const batchPumpRef=useRef({cycleId:'',mode:'idle',running:false});
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -25,11 +27,14 @@
+  async function explorerRead(type,input={}){setExplorerError('');setExplorerResult(null);const c=await run(type,input);if(c?.result)setExplorerResult(c.result);else if(c?.ok===false)setExplorerError(c.message||c.code||'File Explorer Skill ناموفق بود.');return c}
+  async function explorerWrite(type,input={}){if(!root)return;setExplorerError('');setBusy(true);try{const c=await api.startExplorerWrite(type,{root,...input});if(c?.id){setCycle(c);await refresh();await refreshRecovery();await refreshJournal();return c}setExplorerError(c?.message||c?.code||'Explorer Write Preview ساخته نشد.');return c}finally{setBusy(false)}}
+  async function pickExplorerDestinationRoot(){setExplorerError('');const r=await api.explorerPickDestinationRoot();if(r?.ok)setExplorerForm(x=>({...x,batchDestinationRootToken:r.token,batchDestinationRootLabel:r.displayPath||'Root خارجی'}));else if(!r?.cancelled)setExplorerError(r?.message||r?.code||'انتخاب Root مقصد ناموفق بود.');}
++ const isAutoBatchCheckpoint=c=>['explorer-batch-copy','explorer-batch-move'].includes(c?.type)&&c?.status==='paused'&&!c?.batchBlocker;
++ async function explorerBatchPump(seed){if(!isAutoBatchCheckpoint(seed))return seed;const control=batchPumpRef.current;if(control.running)return seed;control.cycleId=seed.id;control.mode='run';control.running=true;setBatchAutoRunning(true);let current=seed;try{while(isAutoBatchCheckpoint(current)&&control.mode==='run'&&control.cycleId===current.id){await new Promise(r=>setTimeout(r,35));if(control.mode!=='run')break;const next=await api.explorerBatchResume(current.id);if(!next?.id){setExplorerError(next?.message||next?.code||'ادامه خودکار Batch ناموفق بود.');break}current=next;setCycle(current);if(current.batchBlocker)setExplorerError(`Batch در Checkpoint امن متوقف شد: ${current.batchBlocker.code||current.batchBlocker.category||'BLOCKED'}`)}if(control.mode==='cancel'&&current?.id&&['paused','interrupted'].includes(current.status)){const cancelled=await api.explorerBatchCancel(current.id);if(cancelled?.id){current=cancelled;setCycle(cancelled)}else setExplorerError(cancelled?.message||cancelled?.code||'Cancel ناموفق بود.')}await refresh();return current}catch(error){setExplorerError(error?.message||'خطا در ادامه خودکار Batch');return current}finally{control.running=false;if(control.cycleId===seed.id){control.mode='idle';control.cycleId=''}setBatchAutoRunning(false)}}
++ function explorerBatchPauseAuto(id){const control=batchPumpRef.current;if(control.running&&control.cycleId===id)control.mode='pause';}
+  async function explorerBatch(type){if(!root)return;const sources=String(explorerForm.batchSources||'').split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);if(!sources.length){setExplorerError('حداقل یک مسیر منبع برای Batch وارد کنید.');return}setExplorerError('');setBusy(true);try{const c=await api.startExplorerBatch(type,{root,sourcesRelative:sources,destinationRootToken:explorerForm.batchDestinationRootToken||'',destinationDirRelative:explorerForm.batchDestination,conflictPolicy:explorerForm.conflictPolicy,duplicateAware:explorerForm.duplicateAware,chunkSize:16,maxItems:50000,reserveBytes:256*1024*1024});if(c?.id){setCycle(c);if(explorerForm.batchDestinationRootToken)setExplorerForm(x=>({...x,batchDestinationRootToken:'',batchDestinationRootLabel:'Workspace فعلی'}));await refresh();return c}setExplorerError(c?.message||c?.code||'Batch Preview ساخته نشد.');return c}finally{setBusy(false)}}
+- async function explorerBatchResume(id){setBusy(true);try{const c=await api.explorerBatchResume(id);if(c?.id)setCycle(c);else setExplorerError(c?.message||c?.code||'Resume ناموفق بود.');await refresh();return c}finally{setBusy(false)}}
+- async function explorerBatchCancel(id){setBusy(true);try{const c=await api.explorerBatchCancel(id);if(c?.id)setCycle(c);else setExplorerError(c?.message||c?.code||'Cancel ناموفق بود.');await refresh();return c}finally{setBusy(false)}}
++ async function explorerBatchResume(id){const seed=cycle?.id===id?cycle:null;if(isAutoBatchCheckpoint(seed)){void explorerBatchPump(seed);return seed}setBusy(true);try{const c=await api.explorerBatchResume(id);if(c?.id){setCycle(c);if(isAutoBatchCheckpoint(c))setTimeout(()=>void explorerBatchPump(c),0)}else setExplorerError(c?.message||c?.code||'Resume ناموفق بود.');await refresh();return c}finally{setBusy(false)}}
++ async function explorerBatchCancel(id){const control=batchPumpRef.current;if(control.running&&control.cycleId===id){control.mode='cancel';return cycle}setBusy(true);try{const c=await api.explorerBatchCancel(id);if(c?.id)setCycle(c);else setExplorerError(c?.message||c?.code||'Cancel ناموفق بود.');await refresh();return c}finally{setBusy(false)}}
+  async function startUiaAction(target,action,value=''){setUiaError('');setBusy(true);try{const selector={processId:target.processId,windowName:uiaMap?.focusedWindow?.name||'',windowClassName:uiaMap?.focusedWindow?.className||'',automationId:target.automationId||'',name:target.name||'',className:target.className||'',controlType:target.controlType||'',frameworkId:target.frameworkId||''};const c=await api.startWindowsUiAction({action,selector,value,sensitive:false});if(c?.id){setCycle(c);await refresh();await refreshJournal();return c}setUiaError(c?.message||c?.code||'ساخت Action Preview ناموفق بود.');return c}catch(error){setUiaError(error?.message||'خطای UIA Action')}finally{setBusy(false)}}
+- async function confirm(id,d){setBusy(true);try{const c=await api.confirmCycle(id,d);setCycle(c);if(c.type==='recommendation-apply')await refreshReviews(c.input?.root);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
++ async function confirm(id,d){setBusy(true);try{const c=await api.confirmCycle(id,d);setCycle(c);if(c.type==='recommendation-apply')await refreshReviews(c.input?.root);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();if(d==='approve'&&isAutoBatchCheckpoint(c))setTimeout(()=>void explorerBatchPump(c),0);return c}finally{setBusy(false)}}
+  async function undo(id){setBusy(true);try{const r=await api.undoCycle(id);if(r.cycle){setCycle(r.cycle);if(r.cycle.type==='recommendation-apply')await refreshReviews(r.cycle.input?.root)}await refresh()}finally{setBusy(false)}}
+  async function plan(){setGoal(await api.planGoal(command))}async function mission(){setGoal(null);return run('mission',{command})}
+  async function saveAI(){if(!aiSettings)return;setAiError('');const r=await api.aiSettingsUpdate(aiSettings);if(r?.ok){setAiSettings(r.settings);await refreshAI()}else setAiError(r?.message||r?.code||'ذخیره تنظیمات Local AI ناموفق بود.')}
+@@ -52,11 +57,11 @@
+  async function auditZone(z){setActiveZone(z);setZoneReport(null);await run('managed-zone-audit',{root:z.root,zoneId:z.id})}
+  const pending=useMemo(()=>reviewItems.filter(x=>x.status==='pending'),[reviewItems]);
+  const rootTabs=['home','mission','ai','health','intelligence','review','zones','drive','index','search','cleanup','files','duplicates','snapshots','automation','watch','pdf'];
+- return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.4</span></header>
++ return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v1.0.0-rc1</span></header>
+  {rootTabs.includes(tab)&&<section className="picker"><div><b>Workspace</b><span>{root||'پوشه‌ای انتخاب نشده'}</span></div><button onClick={pick}>انتخاب پوشه</button></section>}
+  {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="File Explorer Skills" sub="Properties / Search / Copy / Move / Rename" on={()=>setTab('explorer')} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/><Task title="Local AI" sub="Qwen / llama.cpp · Plan-only" on={()=>setTab('ai')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
+  {tab==='system'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('windows-system')} disabled={busy}>اجرای Windows System Doctor</button><span>Read-only؛ Startup Advisor فقط اولویت Review می‌دهد و Registry/Process را تغییر نمی‌دهد.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{system&&<SystemReport data={system}/>}</>}
+- {tab==='explorer'&&<><div className="panel"><div className="panel-title"><div><h3>File Explorer Skill Pack</h3><p>همه مسیرها نسبت به Workspace هستند. Readها بدون تغییر فایل؛ Writeها فقط Preview → Confirm → Execute → Verify.</p></div><b>v0.9.6</b></div><div className="formgrid"><input value={explorerForm.relativePath} onChange={e=>setExplorerForm(x=>({...x,relativePath:e.target.value}))} placeholder="مسیر نسبی، مثلاً docs/report.pdf"/><button onClick={()=>explorerRead('explorer-properties',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Properties</button><button onClick={()=>explorerRead('explorer-navigate',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Open in Explorer</button><button onClick={()=>explorerRead('explorer-select',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Reveal / Select</button></div><div className="formgrid"><input value={explorerForm.query} onChange={e=>setExplorerForm(x=>({...x,query:e.target.value}))} placeholder="Search query"/><button className="primary" onClick={()=>explorerRead('explorer-search',{query:explorerForm.query,limit:100})} disabled={!root||!explorerForm.query||busy}>Search</button></div>{explorerError&&<div className="action-error"><b>Explorer Skill متوقف شد</b><p>{explorerError}</p></div>}</div><div className="panel"><h3>Controlled Write Skills</h3><p>Writeهای تک‌آیتمی قبلی حفظ شده‌اند. برای Recursive/Batch از بخش Advanced Batch استفاده کنید؛ Symlink/Junction traversal همچنان مسدود است.</p><div className="formgrid"><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی؛ برای New Folder نام پوشه جدید"/><button onClick={()=>explorerWrite('explorer-new-folder',{destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.destinationRelative||busy}>Preview New Folder</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="منبع نسبی"/><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی دقیق"/><button onClick={()=>explorerWrite('explorer-copy',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Copy</button><button onClick={()=>explorerWrite('explorer-move',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Move</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="فایل/پوشه برای Rename"/><input value={explorerForm.newName} onChange={e=>setExplorerForm(x=>({...x,newName:e.target.value}))} placeholder="نام جدید فقط، بدون مسیر"/><button onClick={()=>explorerWrite('explorer-rename',{sourceRelative:explorerForm.sourceRelative,newName:explorerForm.newName})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.newName||busy}>Preview Rename</button></div></div><div className="panel"><h3>Advanced Batch / Recursive Operations</h3><p>منابع همیشه نسبت به Workspace هستند. مقصد می‌تواند Workspace فعلی یا Rootی باشد که با Folder Picker امن انتخاب می‌کنی. Cross-volume Move با Copy → SHA-256 Verify → Delete Source انجام می‌شود.</p><div className="formgrid"><button onClick={pickExplorerDestinationRoot} disabled={!root||busy}>انتخاب Root مقصد خارجی</button><button onClick={()=>setExplorerForm(x=>({...x,batchDestinationRootToken:'',batchDestinationRootLabel:'Workspace فعلی'}))} disabled={busy}>مقصد = Workspace</button><small>{explorerForm.batchDestinationRootLabel}</small></div><textarea value={explorerForm.batchSources} onChange={e=>setExplorerForm(x=>({...x,batchSources:e.target.value}))} placeholder={'docs\nphotos\nreport.pdf'} rows={5}/><div className="formgrid"><input value={explorerForm.batchDestination} onChange={e=>setExplorerForm(x=>({...x,batchDestination:e.target.value}))} placeholder="پوشه مقصد نسبی، مثلاً archive"/><select value={explorerForm.conflictPolicy} onChange={e=>setExplorerForm(x=>({...x,conflictPolicy:e.target.value}))}><option value="skip">Conflict: Skip</option><option value="rename">Conflict: Rename</option><option value="replace">Conflict: Replace file</option></select><label><input type="checkbox" checked={explorerForm.duplicateAware} onChange={e=>setExplorerForm(x=>({...x,duplicateAware:e.target.checked}))}/> Duplicate-aware SHA-256</label></div><div className="actions"><button className="primary" onClick={()=>explorerBatch('explorer-batch-copy')} disabled={!root||!explorerForm.batchSources||!explorerForm.batchDestination||busy}>Preview Batch / Recursive Copy</button><button onClick={()=>explorerBatch('explorer-batch-move')} disabled={!root||!explorerForm.batchSources||!explorerForm.batchDestination||busy}>Preview Batch Move</button></div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo} onResume={explorerBatchResume} onCancel={explorerBatchCancel}/>{explorerResult&&<ExplorerResult data={explorerResult}/>}</>}
++ {tab==='explorer'&&<><div className="panel"><div className="panel-title"><div><h3>File Explorer Skill Pack</h3><p>همه مسیرها نسبت به Workspace هستند. Readها بدون تغییر فایل؛ Writeها فقط Preview → Confirm → Execute → Verify.</p></div><b>v1.0.0-rc1</b></div><div className="formgrid"><input value={explorerForm.relativePath} onChange={e=>setExplorerForm(x=>({...x,relativePath:e.target.value}))} placeholder="مسیر نسبی، مثلاً docs/report.pdf"/><button onClick={()=>explorerRead('explorer-properties',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Properties</button><button onClick={()=>explorerRead('explorer-navigate',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Open in Explorer</button><button onClick={()=>explorerRead('explorer-select',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Reveal / Select</button></div><div className="formgrid"><input value={explorerForm.query} onChange={e=>setExplorerForm(x=>({...x,query:e.target.value}))} placeholder="Search query"/><button className="primary" onClick={()=>explorerRead('explorer-search',{query:explorerForm.query,limit:100})} disabled={!root||!explorerForm.query||busy}>Search</button></div>{explorerError&&<div className="action-error"><b>Explorer Skill متوقف شد</b><p>{explorerError}</p></div>}</div><div className="panel"><h3>Controlled Write Skills</h3><p>Writeهای تک‌آیتمی قبلی حفظ شده‌اند. برای Recursive/Batch از بخش Advanced Batch استفاده کنید؛ Symlink/Junction traversal همچنان مسدود است.</p><div className="formgrid"><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی؛ برای New Folder نام پوشه جدید"/><button onClick={()=>explorerWrite('explorer-new-folder',{destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.destinationRelative||busy}>Preview New Folder</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="منبع نسبی"/><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی دقیق"/><button onClick={()=>explorerWrite('explorer-copy',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Copy</button><button onClick={()=>explorerWrite('explorer-move',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Move</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="فایل/پوشه برای Rename"/><input value={explorerForm.newName} onChange={e=>setExplorerForm(x=>({...x,newName:e.target.value}))} placeholder="نام جدید فقط، بدون مسیر"/><button onClick={()=>explorerWrite('explorer-rename',{sourceRelative:explorerForm.sourceRelative,newName:explorerForm.newName})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.newName||busy}>Preview Rename</button></div></div><div className="panel"><h3>Advanced Batch / Recursive Operations</h3><p>منابع همیشه نسبت به Workspace هستند. مقصد می‌تواند Workspace فعلی یا Rootی باشد که با Folder Picker امن انتخاب می‌کنی. Cross-volume Move با Copy → SHA-256 Verify → Delete Source انجام می‌شود.</p><div className="formgrid"><button onClick={pickExplorerDestinationRoot} disabled={!root||busy}>انتخاب Root مقصد خارجی</button><button onClick={()=>setExplorerForm(x=>({...x,batchDestinationRootToken:'',batchDestinationRootLabel:'Workspace فعلی'}))} disabled={busy}>مقصد = Workspace</button><small>{explorerForm.batchDestinationRootLabel}</small></div><textarea value={explorerForm.batchSources} onChange={e=>setExplorerForm(x=>({...x,batchSources:e.target.value}))} placeholder={'docs\nphotos\nreport.pdf'} rows={5}/><div className="formgrid"><input value={explorerForm.batchDestination} onChange={e=>setExplorerForm(x=>({...x,batchDestination:e.target.value}))} placeholder="پوشه مقصد نسبی، مثلاً archive"/><select value={explorerForm.conflictPolicy} onChange={e=>setExplorerForm(x=>({...x,conflictPolicy:e.target.value}))}><option value="skip">Conflict: Skip</option><option value="rename">Conflict: Rename</option><option value="replace">Conflict: Replace file</option></select><label><input type="checkbox" checked={explorerForm.duplicateAware} onChange={e=>setExplorerForm(x=>({...x,duplicateAware:e.target.checked}))}/> Duplicate-aware SHA-256</label></div><div className="actions"><button className="primary" onClick={()=>explorerBatch('explorer-batch-copy')} disabled={!root||!explorerForm.batchSources||!explorerForm.batchDestination||busy}>Preview Batch / Recursive Copy</button><button onClick={()=>explorerBatch('explorer-batch-move')} disabled={!root||!explorerForm.batchSources||!explorerForm.batchDestination||busy}>Preview Batch Move</button></div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo} onResume={explorerBatchResume} onCancel={explorerBatchCancel} onPauseAuto={explorerBatchPauseAuto} autoRunning={batchAutoRunning&&batchPumpRef.current.cycleId===cycle?.id}/>{explorerResult&&<ExplorerResult data={explorerResult}/>}</>}
+  {tab==='uia'&&<><div className="toolbar"><button className="primary large" onClick={()=>{setUiaError('');run('windows-ui-map')}} disabled={busy}>خواندن UI پنجره فعال</button><span>Grounding خواندنی + Action کنترل‌شده با Preview/Confirm/Pin/Verify؛ بدون coordinate click، SendKeys عمومی یا Password write.</span></div>{uiaError&&<div className="panel action-error"><b>Action متوقف شد</b><p>{uiaError}</p></div>}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{uiaMap&&<UiaReport data={uiaMap} onAction={startUiaAction} busy={busy}/>}</>}
+  {tab==='mission'&&<><div className="panel"><h3>فرمان فارسی</h3><textarea className="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="مثلاً: این پوشه رو هوشمند بررسی کن، پیشنهادها رو برای Review آماده کن و چیزی رو خودکار تغییر نده"/><div className="actions"><button onClick={plan} disabled={!command}>فقط ساخت Plan</button><button className="primary" onClick={mission} disabled={!root||!command||busy}>اجرای Mission</button></div>{goal&&<div className="preview-box"><b>{goal.summary}</b><p>Confidence: {Math.round(goal.confidence*100)}%</p>{goal.notes?.map((n,i)=><small key={i}>{n}</small>)}{goal.steps.map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'نیازمند تأیید':'Read-only/Local'}</small></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+  {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>External loopback endpoint یا Managed llama-server؛ مدل هیچ Tool اجرایی مستقیم دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>AI</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Runtime</span><b>{aiRuntime?.managed?`${aiRuntime.state} · ${aiRuntime.pid||'-'}`:'External / manual'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback · no raw prompt · no background screenshot</b></div></>}</div><div className="panel"><h3>Hardware Advisor</h3><p>RAM/CPU و روی Windows اطلاعات WMI GPU خوانده می‌شود. VRAM WMI فقط سیگنال کم‌اعتماد است و Fit تضمین نمی‌شود.</p><div className="actions"><button onClick={probeAIHardware} disabled={busy}>Probe Hardware</button>{aiHardware?.advice&&<button onClick={async()=>{const r=await api.aiApplyHardwareAdvice(aiHardware.advice);if(r?.ok){setAiSettings(r.settings);await refreshAI()}}}>اعمال تنظیمات Runtime پیشنهادی</button>}</div>{aiHardware&&<><div className="meter"><span>RAM</span><b>{bytes(aiHardware.memory?.totalBytes)}</b></div><div className="meter"><span>CPU</span><b>{aiHardware.cpu?.logicalCores||'-'} threads</b></div><div className="meter"><span>GPU</span><b>{(aiHardware.gpus||[]).map(g=>g.name).join(' · ')||'نامشخص'}</b></div><div className="meter"><span>Suggested</span><b>{aiHardware.advice?.modelFamily} · ctx {fmt(aiHardware.advice?.contextSize)}</b></div><small>{aiHardware.advice?.note}</small></>}</div><div className="panel wide"><h3>Managed llama.cpp Runtime</h3><p>Agent فقط فایل <code>llama-server</code> و مدل <code>.gguf</code> انتخاب‌شده توسط کاربر را با آرگومان‌های allowlisted اجرا می‌کند. Host همیشه 127.0.0.1 و Web UI خاموش است.</p>{aiSettings&&<div className="formgrid"><label><span>Managed Runtime</span><input type="checkbox" checked={Boolean(aiSettings.managedRuntime)} onChange={e=>setAiSettings({...aiSettings,managedRuntime:e.target.checked})}/></label><label><span>Start with Agent</span><input type="checkbox" checked={Boolean(aiSettings.runtimeStartOnLaunch)} onChange={e=>setAiSettings({...aiSettings,runtimeStartOnLaunch:e.target.checked})}/></label><div className="inline"><input value={aiSettings.runtimeExecutablePath||''} readOnly placeholder="llama-server.exe"/><button onClick={pickAIRuntimeExe}>انتخاب Runtime</button></div><div className="inline"><input value={aiSettings.runtimeModelPath||''} readOnly placeholder="model.gguf"/><button onClick={pickAIModel}>انتخاب GGUF</button></div><label><span>Port</span><input type="number" value={aiSettings.runtimePort||8080} onChange={e=>setAiSettings({...aiSettings,runtimePort:Number(e.target.value)})}/></label><label><span>Context</span><input type="number" value={aiSettings.runtimeContextSize||8192} onChange={e=>setAiSettings({...aiSettings,runtimeContextSize:Number(e.target.value)})}/></label><label><span>CPU Threads (0=auto)</span><input type="number" value={aiSettings.runtimeThreads||0} onChange={e=>setAiSettings({...aiSettings,runtimeThreads:Number(e.target.value)})}/></label><label><span>GPU Layers</span><select value={String(aiSettings.runtimeGpuLayers||'auto')} onChange={e=>setAiSettings({...aiSettings,runtimeGpuLayers:e.target.value})}><option value="auto">auto</option><option value="all">all</option><option value="0">CPU only</option></select></label><div className="actions"><button onClick={saveAI}>ذخیره تنظیمات</button><button className="primary" disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('start')}>Start</button><button disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('restart')}>Restart</button><button disabled={busy} onClick={()=>runtimeAction('stop')}>Stop</button></div></div>}{aiSelection&&<p>{aiSelection.ok?`Model ${aiSelection.modelFile} · ${bytes(aiSelection.modelBytes)} · RAM ratio ${Math.round((aiSelection.ramRatio||0)*100)}%`:`Selection: ${aiSelection.error?.code||'ناقص'}`} {aiSelection.warning||''}</p>}{aiRuntime?.logs?.length>0&&<details><summary>آخرین Runtime Logهای حافظه‌ای</summary><pre className="preview-box">{aiRuntime.logs.slice(-12).map(x=>`${x.kind}: ${x.text}`).join('\n')}</pre></details>}</div><div className="panel"><h3>Provider + Capability</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id / managed alias"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health</button><button onClick={warmupAI}>Warmup</button><button onClick={()=>probeAICapabilities(false)}>Probe JSON</button><button disabled={!aiSettings.allowVision} onClick={()=>probeAICapabilities(true)}>Probe Vision</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}{aiCapabilities&&<div className="preview-box"><b>Capability Probe: {aiCapabilities.ok?'PASS':'CHECK'}</b><small>Schema JSON: {aiCapabilities.schemaJson?.ok?'OK':'NO'} · Vision advertised: {aiCapabilities.vision?.supported?'YES':'NO'} · Vision tested: {aiCapabilities.vision?.tested?(aiCapabilities.vision?.ok?'PASS':'FAIL'):'NO'}</small><small>Context: {fmt(aiCapabilities.props?.contextSize||0)} · Slots: {fmt(aiCapabilities.props?.totalSlots||0)} · Build: {aiCapabilities.props?.buildInfo||'-'}</small></div>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIUiAssist}>UIA-first / Vision fallback</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}{aiUiAssist?.ok&&<div className="panel wide"><h3>UI Assist</h3><p>Source: <b>{aiUiAssist.source}</b> · {aiUiAssist.reason}</p><small>Policy: UIA first · هیچ Screenshot خودکاری گرفته نمی‌شود.</small>{aiUiAssist.source==='uia'?<p>{fmt(aiUiAssist.uia?.elements?.length)} کنترل از UI Automation کافی بود؛ Vision فراخوانی نشد.</p>:<p>{aiUiAssist.vision?.summary}</p>}</div>}<div className="panel wide"><h3>Intelligent UI Grounding</h3><p>هدف را با زبان طبیعی بگو. UIA Candidate می‌سازد؛ Vision فقط همان Candidateها را تأیید/رد می‌کند و Target یا coordinate جدید نمی‌سازد.</p><div className="formgrid"><input value={uiGroundIntent} onChange={e=>setUiGroundIntent(e.target.value)} placeholder="مثلاً: دکمه ذخیره تنظیمات را پیدا کن"/><div className="actions"><button className="primary" disabled={busy||!uiGroundIntent.trim()} onClick={groundUiIntent}>Ground با UIA</button><button disabled={busy||!uiGrounding?.ok||!aiSettings?.allowVision} onClick={groundUiWithVision}>Vision corroboration</button></div></div>{uiGrounding?.ok&&<><div className="mini-stats"><b>{Math.round((uiGrounding.result?.topConfidence||0)*100)}%</b><span>Top confidence</span><b>{uiGrounding.result?.quality||'-'}</b><span>Quality</span><b>{uiGrounding.result?.visionUsed?'YES':'NO'}</b><span>Vision fused</span></div><div className="formgrid"><label><span>Action فقط با انتخاب کاربر</span><select value={groundAction} onChange={e=>setGroundAction(e.target.value)}><option value="focus">focus</option><option value="invoke">invoke</option><option value="toggle">toggle</option><option value="expand">expand</option><option value="collapse">collapse</option><option value="scrollIntoView">scrollIntoView</option><option value="setValue">setValue</option></select></label>{groundAction==='setValue'&&<input value={groundValue} maxLength={2048} onChange={e=>setGroundValue(e.target.value)} placeholder="مقدار غیرحساس"/>}</div>{(uiGrounding.result?.candidates||[]).map((c,i)=><div className="uia-row" key={c.id}><div><b>#{i+1} · {c.element?.name||'(بدون Name)'}</b><small>{c.element?.controlType} · {c.element?.surfaceKind||'window'} · semantic {Math.round((c.semanticScore||0)*100)}% · context {Math.round((c.contextScore||0)*100)}% · {c.element?.isOffscreen?'offscreen · ':''}{c.vision?.matched?`vision ${Math.round((c.vision.confidence||0)*100)}%`:'UIA only'}</small></div><div className="uia-actions"><span>{Math.round(((c.fusedConfidence??c.confidence)||0)*100)}%</span><button disabled={busy||!actionsForRole(c).includes(groundAction)} onClick={()=>startGroundedAction(c)}>Preview همین Candidate</button></div></div>)}</>}{cycle?.type==='windows-ui-action'&&cycle?.status==='completed'&&<div className="preview-box"><b>Post-action verification</b><small>UIA verification قبلاً انجام شده؛ این مرحله فقط corroboration تصویری روی Screenshot انتخابی است.</small><button disabled={busy||!aiSettings?.allowVision} onClick={verifyCurrentUiaVisual}>Visual Verify آخرین UI Action</button>{uiVisualVerify?.ok&&<small>نتیجه: {uiVisualVerify.visual?.result||'deterministic'} · {Math.round((uiVisualVerify.visual?.confidence||0)*100)}% · overall {uiVisualVerify.overall||'-'}</small>}</div>}</div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}\n {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/src/components/CycleTimeline.jsx ./src/components/CycleTimeline.jsx
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/src/components/CycleTimeline.jsx	2026-08-14 04:25:10.000000000 +0000
++++ ./src/components/CycleTimeline.jsx	2026-08-15 04:25:23.039455020 +0000
+@@ -1,9 +1,9 @@
+ import React from 'react';
+-const fa={created:'ساخته شد',running:'در حال اجرا','waiting-confirmation':'منتظر تأیید',completed:'تمام',failed:'خطا',cancelled:'لغو',paused:'مکث امن','rolled-back':'برگشت داده شد',pending:'در صف',approved:'تأیید شد'};
++const fa={created:'ساخته شد',running:'در حال اجرا','waiting-confirmation':'منتظر تأیید',completed:'تمام',failed:'خطا',cancelled:'لغو',paused:'مکث امن','rolled-back':'برگشت داده شد','rollback-failed':'برگشت ناقص',pending:'در صف',approved:'تأیید شد'};
+ const bytes=n=>{if(!n)return'۰ B';const u=['B','KB','MB','GB','TB'];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${new Intl.NumberFormat('fa-IR',{maximumFractionDigits:1}).format(v)} ${u[i]}`};
+-export default function CycleTimeline({cycle,onConfirm,onUndo,onResume,onCancel}){
++export default function CycleTimeline({cycle,onConfirm,onUndo,onResume,onCancel,onPauseAuto,autoRunning=false}){
+   if(!cycle)return <div className="empty">هنوز چرخه‌ای اجرا نشده.</div>;
+-  const batch=['explorer-batch-copy','explorer-batch-move'].includes(cycle.type);const undoable=['organize','duplicate-review','maintenance-cleanup','rename','mission','explorer-batch-copy','explorer-batch-move'].includes(cycle.type);const canUndo=(cycle.status==='completed'||(batch&&['cancelled','failed','interrupted'].includes(cycle.status)))&&undoable;
++  const batch=['explorer-batch-copy','explorer-batch-move'].includes(cycle.type);const undoable=['organize','duplicate-review','maintenance-cleanup','rename','mission','explorer-batch-copy','explorer-batch-move'].includes(cycle.type);const canUndo=(cycle.status==='completed'||cycle.status==='rollback-failed'||(batch&&['cancelled','failed','interrupted'].includes(cycle.status)))&&undoable;
+   const previewOps=(cycle.operations||[]).slice(0,10);
+   return <div className="cycle-card">
+     <div className="cycle-head"><div><b>{cycle.type}</b><small>{cycle.id}</small></div><span className={`badge ${cycle.status}`}>{fa[cycle.status]||cycle.status}</span></div>
+@@ -13,9 +13,9 @@
+     {cycle.status==='waiting-confirmation'&&cycle.type==='mission'&&<div className="preview-box"><b>Mission Guard</b><p>یک چرخه فرزند به عملیات Write رسیده است. تأیید شما فقط همان گام را آزاد می‌کند.</p><small>{cycle.pendingChildId}</small></div>}
+     {cycle.goalPlan&&<div className="preview-box"><b>Goal Plan</b><p>{cycle.goalPlan.summary}</p>{(cycle.goalPlan.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'Confirm required':'Read-only'}</small></div>)}</div>}
+     {cycle.status==='waiting-confirmation'&&<div className="actions"><button className="primary" onClick={()=>onConfirm(cycle.id,'approve')}>تأیید همین گام و اجرا</button><button onClick={()=>onConfirm(cycle.id,'reject')}>لغو</button></div>}
+-    {cycle.status==='paused'&&batch&&<div className="actions"><button className="primary" onClick={()=>onResume?.(cycle.id)}>ادامه از Checkpoint</button><button onClick={()=>onCancel?.(cycle.id)}>لغو امن Batch</button></div>}
+-    {batch&&cycle.batchProgress&&<div className="preview-box"><b>Batch Progress</b><p>{cycle.batchProgress.doneItems+cycle.batchProgress.skippedItems} / {cycle.batchProgress.totalItems} · skipped {cycle.batchProgress.skippedItems} · failed {cycle.batchProgress.failedItems}</p><small>{cycle.batchProgress.doneBytes||0} / {cycle.batchProgress.totalBytes||0} bytes</small></div>}
+-    {canUndo&&<button className="danger ghost" onClick={()=>onUndo(cycle.id)}>Restore / Undo این چرخه</button>}
++    {cycle.status==='paused'&&batch&&<div className="actions">{autoRunning?<><button className="primary" onClick={()=>onPauseAuto?.(cycle.id)}>مکث پس از Chunk جاری</button><button onClick={()=>onCancel?.(cycle.id)}>لغو امن پس از Chunk جاری</button></>:<><button className="primary" onClick={()=>onResume?.(cycle.id)}>ادامه خودکار از Checkpoint</button><button onClick={()=>onCancel?.(cycle.id)}>لغو امن Batch</button></>}</div>}
++    {batch&&cycle.batchProgress&&<div className="preview-box"><b>Batch Progress{autoRunning?' · Auto Continue':''}</b><p>{cycle.batchProgress.doneItems+cycle.batchProgress.skippedItems} / {cycle.batchProgress.totalItems} · skipped {cycle.batchProgress.skippedItems} · failed {cycle.batchProgress.failedItems}</p><small>{cycle.batchProgress.doneBytes||0} / {cycle.batchProgress.totalBytes||0} bytes{autoRunning?' · checkpointها خودکار ادامه پیدا می‌کنند':''}</small></div>}
++    {canUndo&&<button className="danger ghost" onClick={()=>onUndo(cycle.id)}>{cycle.status==='rollback-failed'?'Retry Restore / Undo':'Restore / Undo این چرخه'}</button>}
+     {cycle.end&&<div className="endbox"><div className="end-title"><b>پایان چرخه</b><span className={`quality ${cycle.end.quality}`}>{cycle.end.quality||cycle.end.status}</span></div><span>{cycle.end.summary}</span><small>Evidence: {cycle.end.evidenceCount||0} · Steps OK: {cycle.end.completedSteps||0}</small>{cycle.end.nextCycleSuggestions?.length>0&&<small>پیشنهاد چرخه بعد: {cycle.end.nextCycleSuggestions.join(' · ')}</small>}</div>}
+   </div>;
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/cycle-rollback-truthfulness-rc1.test.cjs ./tests/cycle-rollback-truthfulness-rc1.test.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/cycle-rollback-truthfulness-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/cycle-rollback-truthfulness-rc1.test.cjs	2026-08-15 04:25:23.314623994 +0000
+@@ -0,0 +1,25 @@
++const assert=require('assert');
++const fs=require('fs');
++const fsp=fs.promises;
++const os=require('os');
++const path=require('path');
++const {CycleStore}=require('../electron/services/cycle-store.cjs');
++const {CycleEngine,TERMINAL}=require('../electron/services/cycle-engine.cjs');
++(async()=>{
++  const dir=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-rollback-truth-'));
++  try{
++    const store=new CycleStore(dir);
++    let allow=false;
++    const engine=new CycleEngine({store,maxIterations:4,maxWallTimeMs:10000});
++    engine.register('truthful-undo',{
++      allowPartialUndo:true,
++      async next(){return{status:'completed',steps:[{id:'done',status:'completed',label:'done'}],undoStack:[{kind:'test'}]};},
++      async undo(){return allow?[{ok:true,exact:true}]:[{ok:false,error:'DESTINATION_OCCUPIED'}];}
++    });
++    let c=engine.create('truthful-undo',{});c=await engine.run(c.id);assert.equal(c.status,'completed');
++    let rb=await engine.rollback(c.id);assert.equal(rb.ok,false);assert.equal(rb.cycle.status,'rollback-failed');assert(TERMINAL.has('rollback-failed'));
++    assert.equal(store.get(c.id).status,'rollback-failed');
++    allow=true;rb=await engine.rollback(c.id);assert.equal(rb.ok,true);assert.equal(rb.cycle.status,'rolled-back');
++    console.log('cycle-rollback-truthfulness-rc1.test.cjs PASS',{explicitFailure:true,retryAfterConflict:true});
++  }finally{await fsp.rm(dir,{recursive:true,force:true});}
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/product-resilience-hardening-vrc1.test.cjs ./tests/product-resilience-hardening-vrc1.test.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/product-resilience-hardening-vrc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/product-resilience-hardening-vrc1.test.cjs	2026-08-15 04:19:32.358623994 +0000
+@@ -0,0 +1,54 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {CycleStore}=require('../electron/services/cycle-store.cjs');
++const {CycleEngine}=require('../electron/services/cycle-engine.cjs');
++const {TransactionStore}=require('../electron/services/transaction-store.cjs');
++const {RecoveryService}=require('../electron/services/recovery-service.cjs');
++const {undoRenames}=require('../electron/services/renamer.cjs');
++const {undoMoves}=require('../electron/services/organizer.cjs');
++const {restoreQuarantine}=require('../electron/services/quarantine.cjs');
++const {restoreMaintenance}=require('../electron/services/maintenance.cjs');
++function tmp(name){return fs.mkdtempSync(path.join(os.tmpdir(),`wa-${name}-`));}
++(async()=>{
++  // Waiting/paused wall clock must not consume active cycle budget.
++  {
++    const dir=tmp('resume-budget');const store=new CycleStore(dir);const engine=new CycleEngine({store,maxWallTimeMs:1000,maxIterations:10});
++    engine.register('probe',{resumable:true,async next(){return{status:'completed',steps:[]};}});
++    let c=engine.create('probe');c.status='paused';c.meta.runStartedAt=new Date(Date.now()-60_000).toISOString();c.meta.activeElapsedMs=0;store.save(c);
++    c=await engine.resume(c.id);assert.equal(c.status,'completed');assert(!c.evidence.some(x=>x.code==='MAX_WALL_TIME'));assert(Number(c.meta.activeElapsedMs)>=0&&Number(c.meta.activeElapsedMs)<1000);
++  }
++  // Active/recoverable records are never pruned merely because retention count is exceeded.
++  {
++    const dir=tmp('cycle-prune');const store=new CycleStore(dir,{maxCycles:2});
++    store.save({id:'active',status:'running',updatedAt:'2026-01-01T00:00:00.000Z',steps:[],evidence:[]});
++    for(let i=0;i<4;i++)store.save({id:`done-${i}`,status:'completed',updatedAt:new Date(Date.now()+i).toISOString(),steps:[],evidence:[]});
++    assert(store.get('active'),'active cycle was pruned');assert(store.list(20).filter(x=>x.status==='completed').length<=2);
++  }
++  {
++    const dir=tmp('tx-prune');const store=new TransactionStore(dir,{maxTransactions:2});
++    const active=store.create({kind:'probe',root:dir,operations:[]});
++    for(let i=0;i<4;i++){const tx=store.create({kind:'probe',root:dir,operations:[]});store.mark(tx.id,{status:'completed'});}
++    assert(store.get(active.id),'recoverable transaction was pruned');assert(store.list().filter(x=>x.status==='completed').length<=2);
++  }
++  // Undo conflict must not strand files in hidden temp names or silently restore under a different name.
++  {
++    const dir=tmp('rename-undo');const original=path.join(dir,'old.txt'),renamed=path.join(dir,'new.txt');fs.writeFileSync(original,'occupied');fs.writeFileSync(renamed,'moved');
++    const rows=await undoRenames([{source:original,destination:renamed,workspaceRoot:dir,size:5}]);assert.equal(rows[0].ok,false);assert.equal(rows[0].error,'UNDO_DESTINATION_EXISTS');assert.equal(fs.readFileSync(original,'utf8'),'occupied');assert.equal(fs.readFileSync(renamed,'utf8'),'moved');assert(!fs.readdirSync(dir).some(x=>x.startsWith('.wa-rename-')));
++  }
++  for(const [name,fn] of [['organize',undoMoves],['duplicate',restoreQuarantine],['maintenance',restoreMaintenance]]){
++    const dir=tmp(`${name}-undo`);const original=path.join(dir,'a.txt'),moved=path.join(dir,'moved.txt');fs.writeFileSync(original,'new-data');fs.writeFileSync(moved,'old-data');
++    const kind=name==='organize'?'move':'restore';const rows=await fn([{undo:{kind,source:moved,destination:original}}]);assert.equal(rows[0].ok,false,`${name} conflict must fail exact restore`);assert.equal(rows[0].error,'UNDO_DESTINATION_EXISTS');assert.equal(fs.readFileSync(original,'utf8'),'new-data');assert.equal(fs.readFileSync(moved,'utf8'),'old-data');assert.deepEqual(fs.readdirSync(dir).sort(),['a.txt','moved.txt']);
++  }
++  // Crash recovery must never delete a same-size copy that no longer matches the source.
++  {
++    const dir=tmp('copy-recovery-mismatch'),src=path.join(dir,'src.bin'),dst=path.join(dir,'dst.bin'),stage=path.join(dir,'stage.part');fs.writeFileSync(src,'AAAA');fs.writeFileSync(dst,'BBBB');
++    const store=new TransactionStore(dir);const tx=store.create({kind:'explorer-copy',root:dir,operations:[{kind:'explorer-copy-file',source:src,destination:dst,stage,size:4}]});store.mark(tx.id,{status:'executing'});store.markOp(tx.id,0,{state:'committed'});const recovery=new RecoveryService({transactionStore:store});const out=await recovery.act(tx.id,'rollback');assert.equal(out.ok,false);assert.equal(out.code,'RECOVERY_COPY_CONTENT_MISMATCH');assert.equal(fs.readFileSync(dst,'utf8'),'BBBB');assert.equal(store.get(tx.id).status,'recovery-failed');
++  }
++  {
++    const dir=tmp('copy-recovery-match'),src=path.join(dir,'src.bin'),dst=path.join(dir,'dst.bin'),stage=path.join(dir,'stage.part');fs.writeFileSync(src,'SAME');fs.writeFileSync(dst,'SAME');
++    const store=new TransactionStore(dir);const tx=store.create({kind:'explorer-copy',root:dir,operations:[{kind:'explorer-copy-file',source:src,destination:dst,stage,size:4}]});store.mark(tx.id,{status:'executing'});store.markOp(tx.id,0,{state:'committed'});const recovery=new RecoveryService({transactionStore:store});const out=await recovery.act(tx.id,'rollback');assert.equal(out.ok,true);assert(!fs.existsSync(dst));assert.equal(fs.readFileSync(src,'utf8'),'SAME');
++  }
++  console.log('product-resilience-hardening-vrc1.test.cjs PASS',{resumeBudget:true,retention:true,exactUndo:true,copyRecoveryHash:true});
++})().catch(error=>{console.error(error);process.exit(1)});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/rc1-release-matrix-contract.test.cjs ./tests/rc1-release-matrix-contract.test.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-14 18:52:50.000000000 +0000
++++ ./tests/rc1-release-matrix-contract.test.cjs	2026-08-15 04:24:40.188441275 +0000
+@@ -5,9 +5,9 @@
+ const {detectWindowsFamily,validatePeerPair,MANUAL_KEYS}=require('../scripts/rc1-certification-envelope.cjs');
+ assert.equal(detectWindowsFamily({windowsFamily:'Windows10'}),'Windows10');
+ assert.equal(detectWindowsFamily({os:{caption:'Microsoft Windows 11 Pro',build:'26100'}}),'Windows11');
+-const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit2',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit2',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit2'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit2'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
++const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit3',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit3',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit3'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit3'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
+ assert(MANUAL_KEYS.includes('realUpgradeFrom0_9_8'),'real packaged upgrade evidence must be required');
+ const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');
+ for(const token of ['PeerWindowsReport','--require-dual-windows','100000,1000000','yyyyMMdd-HHmmss-fff','windows-runs'])assert(orchestrator.includes(token),`missing RC1 matrix invariant: ${token}`);
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/rc1-source-contract.test.cjs ./tests/rc1-source-contract.test.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/rc1-source-contract.test.cjs	2026-08-14 18:53:33.000000000 +0000
++++ ./tests/rc1-source-contract.test.cjs	2026-08-15 04:24:40.188263462 +0000
+@@ -8,7 +8,7 @@
+ assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+ assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+ assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+-assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit2');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);
++assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit3');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);
+ const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+ assert(/PASS/.test(out));
+ console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit3.txt' /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/ui-batch-auto-progress-rc1.test.cjs ./tests/ui-batch-auto-progress-rc1.test.cjs
+--- /mnt/data/wwa_certkit2/windows-workspace-agent-v1.0.0-rc1-cert-kit2-source/tests/ui-batch-auto-progress-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/ui-batch-auto-progress-rc1.test.cjs	2026-08-15 04:23:47.646623994 +0000
+@@ -0,0 +1,21 @@
++const assert=require('assert');
++const fs=require('fs');
++const path=require('path');
++const root=path.resolve(__dirname,'..');
++const app=fs.readFileSync(path.join(root,'src','App.jsx'),'utf8');
++const timeline=fs.readFileSync(path.join(root,'src','components','CycleTimeline.jsx'),'utf8');
++assert(app.includes("useRef,useState"),'App must use a ref-backed batch pump');
++assert(app.includes('async function explorerBatchPump(seed)'),'automatic batch pump missing');
++assert(app.includes("isAutoBatchCheckpoint(c)"),'normal checkpoint classifier missing');
++assert(app.includes("control.mode='cancel'"),'safe cancel request must be serialized through the pump');
++assert(app.includes("control.mode='pause'"),'safe pause request must stop future chunk resumes');
++assert(app.includes("d==='approve'&&isAutoBatchCheckpoint(c)"),'approved batch must auto-continue after the first checkpoint');
++assert(app.includes('autoRunning={batchAutoRunning&&batchPumpRef.current.cycleId===cycle?.id}'),'timeline must receive current auto-run state');
++assert(timeline.includes('ادامه خودکار از Checkpoint'),'manual resume should restart automatic continuation');
++assert(timeline.includes('مکث پس از Chunk جاری'),'running batch must expose safe-boundary pause');
++assert(timeline.includes('لغو امن پس از Chunk جاری'),'running batch must expose safe-boundary cancel');
++assert(app.includes('<span className="version">v1.0.0-rc1</span>'),'main UI version must match RC source');
++assert(app.includes('<b>v1.0.0-rc1</b>'),'Explorer UI version must match RC source');
++assert(!app.includes('<span className="version">v0.9.4</span>'),'stale app version label remains');
++assert(!app.includes('<b>v0.9.6</b>'),'stale Explorer version label remains');
++console.log('ui-batch-auto-progress-rc1.test.cjs PASS',{autoContinue:true,safePause:true,safeCancel:true,versionLabels:true});

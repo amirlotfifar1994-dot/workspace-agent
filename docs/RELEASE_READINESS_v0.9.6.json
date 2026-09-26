@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "workspace-release-readiness-v1",
+  "version": "0.9.6",
+  "coreSource": "READY",
+  "regression": "PASS",
+  "sourceHygiene": "PASS",
+  "explorerBatchSchemaV2": "PASS",
+  "crossVolumeServiceTests": "PASS",
+  "storageBlockerTests": "PASS",
+  "permissionBlockerTests": "PASS",
+  "rootIdentityBlockerTests": "PASS",
+  "windowsTwoDriveUat": "PENDING_WINDOWS",
+  "manualDisconnectUat": "PENDING_MANUAL",
+  "manualDiskFullUat": "PENDING_MANUAL",
+  "manualReadOnlyAclUat": "PENDING_MANUAL",
+  "ntfs100kScaleUat": "PENDING_WINDOWS",
+  "packageLock": "PENDING",
+  "nsisBuild": "PENDING",
+  "portableBuild": "PENDING",
+  "authenticode": "PENDING"
+}

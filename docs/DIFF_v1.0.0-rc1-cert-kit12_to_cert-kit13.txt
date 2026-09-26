@@ -1,0 +1,35 @@
+Files README_FA.md and README_FA.md differ
+Only in docs: CHANGELOG_v1.0.0-rc1-cert-kit13-ntfs-restore-hardening_FA.md
+Only in docs: DIFF_v1.0.0-rc1-cert-kit12_to_cert-kit13.txt
+Only in docs: EXACT_TRANSACTIONAL_RESTORE_v1.0.0-rc1-cert-kit13_FA.md
+Only in docs: GAP_AUDIT_v1.0.0-rc1-cert-kit13_FA.md
+Only in docs: NTFS_METADATA_FIDELITY_v1.0.0-rc1-cert-kit13_FA.md
+Files docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md and docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md differ
+Files docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md and docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md differ
+Files docs/RELEASE_READINESS_v1.0.0-rc1.json and docs/RELEASE_READINESS_v1.0.0-rc1.json differ
+Only in docs: VALIDATION_v1.0.0-rc1-cert-kit13-ntfs-restore-hardening_FA.md
+Files electron/services/automation-store.cjs and electron/services/automation-store.cjs differ
+Files electron/services/configuration-service.cjs and electron/services/configuration-service.cjs differ
+Files electron/services/explorer-batch-service.cjs and electron/services/explorer-batch-service.cjs differ
+Files electron/services/file-explorer-service.cjs and electron/services/file-explorer-service.cjs differ
+Files electron/services/file-watcher-service.cjs and electron/services/file-watcher-service.cjs differ
+Files electron/services/local-ai-config-store.cjs and electron/services/local-ai-config-store.cjs differ
+Files electron/services/local-ai-service.cjs and electron/services/local-ai-service.cjs differ
+Files electron/services/managed-zone-store.cjs and electron/services/managed-zone-store.cjs differ
+Files electron/services/state-backup-service.cjs and electron/services/state-backup-service.cjs differ
+Only in electron/services: windows-ntfs-metadata.cjs
+Files package.json and package.json differ
+Files scripts/rc1-finalize.cjs and scripts/rc1-finalize.cjs differ
+Files scripts/rc1-stable-readiness.cjs and scripts/rc1-stable-readiness.cjs differ
+Files scripts/verify-rc1-source.cjs and scripts/verify-rc1-source.cjs differ
+Files scripts/windows-certification-v097.ps1 and scripts/windows-certification-v097.ps1 differ
+Files scripts/windows-rc1-execution.ps1 and scripts/windows-rc1-execution.ps1 differ
+Only in tests: ntfs-metadata-fidelity-rc1.test.cjs
+Files tests/rc1-execution-kit-contract.test.cjs and tests/rc1-execution-kit-contract.test.cjs differ
+Files tests/rc1-manual-evidence-prefill.test.cjs and tests/rc1-manual-evidence-prefill.test.cjs differ
+Files tests/rc1-release-matrix-contract.test.cjs and tests/rc1-release-matrix-contract.test.cjs differ
+Files tests/rc1-source-contract.test.cjs and tests/rc1-source-contract.test.cjs differ
+Files tests/rc1-stable-readiness.test.cjs and tests/rc1-stable-readiness.test.cjs differ
+Files tests/state-backup-v098.test.cjs and tests/state-backup-v098.test.cjs differ
+Only in tests: state-restore-transactional-rc1.test.cjs
+Only in tests: windows-ntfs-metadata-rc1.uat.cjs

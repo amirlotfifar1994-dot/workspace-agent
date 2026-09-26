@@ -1,0 +1,14 @@
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const cp=require('child_process');
+const root=path.resolve(__dirname,'..');
+const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+assert.equal(pkg.version,'1.0.0-rc1');
+assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit21');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
+const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+assert(/PASS/.test(out));
+console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});

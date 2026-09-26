@@ -1,0 +1,10 @@
+const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit21');
+assert(pkg.scripts['recover:execution:rc1']);assert(pkg.scripts['resume:execution:rc1']);
+const js=fs.readFileSync(path.join(root,'scripts/rc1-execution-recovery.cjs'),'utf8');
+for(const t of ['workspace-agent-rc1-execution-recovery-plan-v1','BLOCK_STATE_CHAIN_INVALID','RESUME_PRIMARY_HANDOFF','RERUN_PRIMARY_CERTIFICATION','RESUME_PEER_RETURN','RERUN_PEER_CERTIFICATION','RESUME_FINALIZE','PROMOTION_COMPLETE'])assert(js.includes(t),t);
+const phase=fs.readFileSync(path.join(root,'scripts/rc1-phase-readiness.cjs'),'utf8');assert(phase.includes('CURRENT_RELEASE_IDENTITY_UNAVAILABLE'));
+const ps=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');
+for(const t of ["'Recover'","'Resume'",'RECOVERY_PLANNED','RECOVERY_INVALIDATED_PARTIAL','PRIMARY_CERTIFICATION_REUSED','PEER_CERTIFICATION_REUSED','recovery-invalidated','FINALIZE_RUNNING','--hash-state-file','Canonical execution state hashing failed.'])assert(ps.includes(t),t);
+assert(ps.includes("$leaf -notin @('primary-certification','peer-certification')"),'partial invalidation must be bounded to known phase outputs');
+console.log('rc1-execution-recovery-contract PASS');

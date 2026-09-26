@@ -1,0 +1,16 @@
+{
+  "version": "0.9.3",
+  "core": "READY",
+  "regression": "PASS",
+  "sourceHygiene": "PASS",
+  "productionGrounding": "READY_FOR_WINDOWS_UAT",
+  "multiSurfaceInspection": "IMPLEMENTED",
+  "staleTargetRecovery": "IMPLEMENTED",
+  "adaptiveVisionMapping": "IMPLEMENTED",
+  "scrollItemAction": "IMPLEMENTED",
+  "windowsRealUat": "PENDING",
+  "multiMonitorRealUat": "PENDING",
+  "packageLock": "PENDING",
+  "nsis": "PENDING",
+  "portable": "PENDING"
+}

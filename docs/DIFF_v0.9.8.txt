@@ -1,0 +1,847 @@
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/README_FA.md /mnt/data/wa098/README_FA.md
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/README_FA.md	2026-08-14 11:20:32.000000000 +0000
++++ /mnt/data/wa098/README_FA.md	2026-08-14 16:24:47.381941308 +0000
+@@ -1,48 +1,95 @@
+-# Workspace Agent v0.9.7 — Windows Certification & Release Closure
++# Workspace Agent v0.9.8 — RC Readiness & Safe State Foundation
+ 
+-v0.9.7 قابلیت File Explorer نسخه v0.9.6 را تغییر بنیادی نمی‌دهد؛ این نسخه لایه اثبات و Release را سخت‌گیرانه می‌کند تا PASS واقعی Windows با SKIP یا شبیه‌سازی اشتباه نشود.
++v0.9.8 روی آماده‌سازی Core برای ورود به `v1.0.0-rc1` تمرکز دارد. قابلیت‌های File Explorer، Local AI، UIA Grounding، Volume Safety و Windows Certification نسخه‌های قبلی حفظ شده‌اند؛ این نسخه لایه‌های Startup Self‑Check، Version/Data migration guard، State Backup و Diagnostic Bundle را اضافه می‌کند.
+ 
+ ## مهم‌ترین تغییرات
+ 
+-- Certification status صریح: `PASS / FAIL / INCOMPLETE / SKIP / PENDING_MANUAL`.
+-- Required UAT که Skip شود دیگر PASS نیست و Certification را `INCOMPLETE` می‌کند.
+-- Unified UAT روی دو Root واقعی NTFS با Volume `UniqueId` متفاوت.
+-- تست Cross-volume Move/Undo، Unicode path و duplicate-aware روی همان دو Volume.
+-- Scale UAT قابل تنظیم از 10k تا 1M فایل واقعی.
+-- Source Tree Fingerprint قطعی برای ورودی Release.
+-- `package-lock.json` همچنان اجباری؛ packageهای registry باید integrity داشته باشند.
+-- Lockfile provenance شامل SHA256، تعداد package و runtime تولیدکننده.
+-- NSIS/Portable و Packaged Worker/App smoke در Certification کامل.
+-- Evidence دستی اختیاری/اجباری برای disconnect واقعی، Disk Full، ACL/Read-only و Power-loss.
+-- Official release با UAT دو Volume v0.9.7 fail-closed شده است.
++- RC Startup Self‑Check با وضعیت `PASS / WARN / BLOCK`
++- Version / Update Guard با `stableVersion`، `pending target` و `rollbackRecommended`
++- Data Epoch gate برای جلوگیری از Write نسخه قدیمی روی State جدیدتر
++- Write fail-closed هنگام Version/Data gate BLOCK
++- State Backup فشرده (`json.gz`) با SHA-256 برای payload و کل bundle
++- Restore فقط بعد از Preview؛ قبل از Restore یک pre-restore backup خودکار ساخته می‌شود
++- Backup شامل Workspace contents، Index DB، Journal یا Secret نیست
++- Diagnostic Bundle redacted با path hashing و بدون journal payload / screenshot / raw prompt
++- Packaged-app smoke حالا RC Self-Check و Update Guard را هم gate می‌کند
++- Update-preflight CLI برای ثبت target version + artifact SHA256 قبل از updater/installer آینده
++
++## RC Self‑Check
++
++Self‑Check این موارد را یک‌جا بررسی می‌کند:
++
++1. writable بودن userData
++2. Event Journal hash chain
++3. SQLite index health
++4. Recovery transactionهای باز
++5. Watcher dirty/blocked roots
++6. Volume identity state
++7. previous unclean shutdown
++8. Resource pressure
++9. Local AI runtime/circuit state
++10. Version/Data compatibility gate
++
++`BLOCK` برای مواردی مثل Journal corruption، SQLite health failure، changed Volume identity در root مانیتورشده، downgrade/data-epoch ناسازگار یا update boot ناموفق استفاده می‌شود.
++
++## State Backup
++
++State Backup داخلی شامل این metadata/configuration است:
++
++- Automation Rules
++- Managed Zones
++- Watch Roots
++- Local AI settings (بدون Credential)
++- Persistent Index root metadata
++
++اما شامل این موارد نیست:
++
++- فایل‌های Workspace
++- SQLite index database
++- Event Journal
++- screenshot
++- raw AI prompts
++- passwords/API keys/secrets
++
++Index metadata فقط برای پیشنهاد Rebuild بعد از Restore استفاده می‌شود؛ دیتابیس Index restore نمی‌شود.
+ 
+-## Windows Certification
++## Diagnostics
+ 
+-روی Windows 10/11 با Node/npm دقیق پروژه:
++Diagnostic Bundle فقط با اقدام صریح کاربر export می‌شود و به‌صورت `json.gz` ذخیره می‌شود. Pathها hash/redact می‌شوند و journal payloadها داخل آن قرار نمی‌گیرند.
+ 
+-```powershell
+-$env:WA_CERT_ROOT_A='C:\WA-Cert'
+-$env:WA_CERT_ROOT_B='D:\WA-Cert'
+-
+-npm run release:lock
+-npm run certify:windows:v097 -- -RunScale -BuildArtifacts
+-```
++## Update hook
+ 
+-برای Certification کامل با شواهد دستی:
++برای updater/installer آینده:
+ 
+ ```powershell
+-npm run certify:windows:v097 -- `
+-  -RunScale `
+-  -BuildArtifacts `
+-  -RequireSigning `
+-  -RequireManualEvidence `
+-  -ManualEvidenceFile .\manual-evidence.json
++npm run update:prepare -- `
++  --user-data="C:\Path\To\WorkspaceAgentUserData" `
++  --current=0.9.8 `
++  --target=1.0.0-rc1 `
++  --sha256=<artifact-sha256> `
++  --backup=<pre-update-backup.json.gz>
+ ```
+ 
+-Template در `docs/MANUAL_CERTIFICATION_EVIDENCE_v0.9.7.template.json` قرار دارد.
++این دستور هیچ installer یا rollback باینری اجرا نمی‌کند؛ فقط State لازم برای تشخیص boot نسخه جدید و rollback recommendation را ثبت می‌کند.
+ 
+-## مرز فعلی این سورس
++## Validation
++
++```text
++Dependency pins        PASS
++Source hygiene         PASS
++Syntax                 PASS
++JSX                    PASS
++Legacy regressions     PASS
++RC Self-Check          PASS
++Version/Update Guard   PASS
++Data Epoch Guard       PASS
++State Backup/Restore   PASS
++Diagnostics Redaction  PASS
++Update Preflight       PASS
++
++51 test suites/files   PASS
++```
+ 
+-در محیط ساخت این نسخه Windows واقعی و npm registry در دسترس نبود؛ بنابراین `package-lock.json`، NSIS/Portable، Authenticode و UAT واقعی دو NTFS هنوز `PENDING_WINDOWS` هستند. Regression/source gates خود سورس PASS شده‌اند.
++Windows Certification واقعی، `package-lock.json` رسمی، `npm ci`، NSIS/Portable و Authenticode همچنان باید روی Windows/registry-accessible environment اجرا شوند.
+ 
+-جزئیات: `docs/WINDOWS_CERTIFICATION_MODEL_v0.9.7_FA.md` و `docs/VALIDATION_v0.9.7_FA.md`.
++جزئیات در `docs/RC_READINESS_MODEL_v0.9.8_FA.md` و `docs/VALIDATION_v0.9.8_FA.md` است.
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/CHANGELOG_v0.9.8_FA.md /mnt/data/wa098/docs/CHANGELOG_v0.9.8_FA.md
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/CHANGELOG_v0.9.8_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/docs/CHANGELOG_v0.9.8_FA.md	2026-08-14 16:24:47.384248529 +0000
+@@ -0,0 +1,31 @@
++# Changelog v0.9.8
++
++## Added
++
++- `version-update-guard.cjs`
++- Data Epoch compatibility guard
++- `rc-self-check-service.cjs`
++- `state-backup-service.cjs`
++- `diagnostics-bundle-service.cjs`
++- `diagnostic-redaction.cjs`
++- Update preflight CLI
++- RC Self‑Check UI
++- State Backup/Restore UI
++- Redacted Diagnostics export UI
++- Packaged smoke RC gates
++
++## Changed
++
++- App version: `0.9.7` → `0.9.8`
++- Write cycles now consult Version/Update Guard before root-volume guard
++- Certification runtime schema → v2
++- Capability registry includes RC/state-safety capabilities
++- source fingerprint historical test now validates current package version dynamically
++
++## Safety
++
++- Restore always creates pre-restore backup by default
++- State Backup excludes workspace contents/index database/journal/secrets
++- Diagnostics excludes journal payload/raw prompts/screenshots and redacts paths
++- Data from a future Data Epoch causes fail-closed writes
++- No automatic installer-level rollback is implemented
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/RC_READINESS_MODEL_v0.9.8_FA.md /mnt/data/wa098/docs/RC_READINESS_MODEL_v0.9.8_FA.md
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/RC_READINESS_MODEL_v0.9.8_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/docs/RC_READINESS_MODEL_v0.9.8_FA.md	2026-08-14 16:24:47.383266683 +0000
+@@ -0,0 +1,108 @@
++# RC Readiness Model — v0.9.8
++
++## هدف
++
++v0.9.8 قابلیت جدید پرریسک اضافه نمی‌کند؛ هدف این است که Core موجود قبل از v1.0 RC بتواند خرابی State، downgrade ناسازگار، update ناقص و نیاز به گزارش تشخیصی را fail-safe مدیریت کند.
++
++## 1. Startup Self‑Check
++
++خروجی:
++
++```text
++pass  = runtime سالم
++warn  = runtime قابل استفاده ولی نیازمند توجه
++block = write safety قابل اعتماد نیست
++```
++
++Self‑Check read-only است و به‌جز نوشتن audit event، Workspace را تغییر نمی‌دهد.
++
++## 2. Version / Update Guard
++
++فایل داخلی: `runtime/update-guard.json`
++
++State اصلی:
++
++- `stableVersion`
++- `lastSeenVersion`
++- `dataEpoch`
++- `pending.targetVersion`
++- `pending.artifactSha256`
++- `rollbackRecommended`
++- `writeBlocked`
++
++### Downgrade
++
++اگر `lastSeenVersion > currentVersion` باشد، Writeها fail-closed می‌شوند.
++
++### Data Epoch
++
++v0.9.8 فقط `dataEpoch = 1` را می‌شناسد. اگر State دارای epoch بالاتر باشد، نسخه قدیمی اجازه Write ندارد حتی اگر version string به هر دلیل قابل مقایسه نباشد.
++
++### Update boot
++
++1. installer/updater آینده preflight را ثبت می‌کند.
++2. نسخه target اولین boot را ثبت می‌کند.
++3. Startup Self‑Check اجرا می‌شود.
++4. `PASS` => نسخه stable می‌شود.
++5. `WARN` => برنامه قابل استفاده است ولی update pending می‌ماند.
++6. `BLOCK` => Write مسدود و `rollbackRecommended=true` می‌شود.
++
++Rollback باینری خودکار در این نسخه وجود ندارد.
++
++## 3. State Backup
++
++فرمت: gzip JSON
++
++Integrity:
++
++- `payloadSha256`
++- `bundleSha256`
++- SHA256 خود فایل gzip در خروجی
++
++Restore:
++
++1. parse + gzip limit
++2. schema validation
++3. payload integrity
++4. full bundle integrity
++5. Preview
++6. one-time IPC token
++7. pre-restore backup
++8. apply config/local AI settings
++9. index roots فقط برای rebuild suggestion
++
++## 4. Diagnostics privacy
++
++Diagnostic export شامل raw path نیست. Pathها به این شکل تبدیل می‌شوند:
++
++```json
++{
++  "redacted": true,
++  "basename": "file-or-directory-name",
++  "hash": "stable-truncated-sha256"
++}
++```
++
++Journal payload حذف شده و فقط timestamp/type/cycle/transaction metadata نگه داشته می‌شود.
++
++## 5. Packaged smoke
++
++`packaged-app-smoke` فقط startup را بررسی نمی‌کند. موارد زیر نیز باید سالم باشند:
++
++- Journal
++- SQLite
++- RC Self‑Check != BLOCK
++- Update Guard writeBlocked = false
++
++## 6. مرز v0.9.8
++
++هنوز Pending واقعی:
++
++- package-lock از npm registry واقعی
++- Windows 10/11 Certification
++- two-volume NTFS evidence
++- scale 100k/1M واقعی
++- NSIS/Portable build
++- packaged app smoke واقعی روی Windows
++- Authenticode
++- updater/installer binary rollback implementation
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/RELEASE_READINESS_v0.9.8.json /mnt/data/wa098/docs/RELEASE_READINESS_v0.9.8.json
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/RELEASE_READINESS_v0.9.8.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/docs/RELEASE_READINESS_v0.9.8.json	2026-08-14 16:24:47.386275198 +0000
+@@ -0,0 +1,21 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-v1",
++  "version": "0.9.8",
++  "core": "READY",
++  "regression": "PASS",
++  "rcSelfCheck": "PASS",
++  "versionUpdateGuard": "PASS",
++  "dataEpochGuard": "PASS",
++  "stateBackupRestore": "PASS",
++  "diagnosticsPrivacy": "PASS",
++  "packagedSmokeRcGate": "SOURCE_VALIDATED",
++  "packageLock": "PENDING_REGISTRY_ENVIRONMENT",
++  "windows10Certification": "PENDING_WINDOWS",
++  "windows11Certification": "PENDING_WINDOWS",
++  "twoVolumeNtfs": "PENDING_WINDOWS",
++  "scale100kTo1m": "PENDING_WINDOWS",
++  "nsis": "PENDING_WINDOWS",
++  "portable": "PENDING_WINDOWS",
++  "authenticode": "PENDING_CERTIFICATE",
++  "binaryRollback": "DEFERRED_TO_V1_RC_RELEASE_PIPELINE"
++}
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/ROADMAP_FA.md /mnt/data/wa098/docs/ROADMAP_FA.md
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/ROADMAP_FA.md	2026-08-14 11:20:32.000000000 +0000
++++ /mnt/data/wa098/docs/ROADMAP_FA.md	2026-08-14 16:24:47.387325581 +0000
+@@ -1,17 +1,29 @@
+-# Roadmap پس از v0.9.7
++# Roadmap پس از v0.9.8
+ 
+-## v0.9.7 — Certification foundation انجام شد
++## v0.9.8 — RC Readiness انجام شد
+ 
+-Core، File Explorer و Certification gates آماده‌اند. PASS رسمی هنوز نیازمند اجرای واقعی Windows دارد.
++- Startup Self‑Check
++- Version/Update Guard
++- Data Epoch compatibility
++- State Backup/Restore
++- Redacted Diagnostics
++- packaged smoke RC gate
+ 
+-## مرحله بعد
++## v1.0.0-rc1 — مرحله بعد
+ 
+-1. اجرای `release:lock` روی Windows آنلاین با Node 24.14.1 / npm 11.11.0.
+-2. اجرای Certification روی Windows 11 با دو Volume NTFS واقعی.
+-3. تکرار روی Windows 10.
+-4. Scale 100k و سپس 1M فایل.
+-5. ثبت شواهد دستی disconnect، disk-full، ACL/read-only و unclean shutdown.
+-6. ساخت win-unpacked، NSIS و Portable و smoke واقعی.
+-7. Authenticode و SHA256/release manifest.
++فقط بعد از محیط Windows واقعی و registry-accessible:
+ 
+-بعد از PASS واقعی این مرحله، File Explorer Core را می‌توان برای فاز فعلی freeze کرد و Skill Pack بعدی را شروع کرد.
++1. تولید و commit `package-lock.json`
++2. `npm ci` روی Node/npm pin شده
++3. Windows 10/11 Certification
++4. دو Volume واقعی NTFS
++5. Scale 100k و سپس 1M
++6. `win-unpacked` + Worker/App smoke
++7. NSIS + Portable
++8. Authenticode در صورت دسترسی Certificate
++9. State Backup پیش از Upgrade
++10. Update-preflight ثبت target/hash
++11. نصب RC و بررسی RC Self‑Check
++12. در صورت PASS، mark stable
++
++بعد از بسته‌شدن v1.0 Core، Skill Pack بعدی می‌تواند CorelDRAW باشد؛ تا آن زمان Agent عمومی ویندوز اولویت دارد.
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/VALIDATION_v0.9.8_FA.md /mnt/data/wa098/docs/VALIDATION_v0.9.8_FA.md
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/docs/VALIDATION_v0.9.8_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/docs/VALIDATION_v0.9.8_FA.md	2026-08-14 16:25:39.955108402 +0000
+@@ -0,0 +1,43 @@
++# Validation v0.9.8
++
++## Automated gates
++
++- dependency pins: PASS
++- source hygiene: PASS
++- syntax: PASS
++- JSX: PASS
++- complete historical regression chain: PASS
++- version/update guard: PASS
++- semantic version/pre-release comparison: PASS
++- future Data Epoch write block: PASS
++- RC self-check pass/warn/block classification: PASS
++- state backup gzip creation: PASS
++- payload + bundle SHA256 integrity: PASS
++- restore preview: PASS
++- automatic pre-restore backup: PASS
++- local AI settings restore: PASS
++- corrupted backup rejection: PASS
++- diagnostics path redaction: PASS
++- diagnostics secret removal: PASS
++- update-preflight CLI: PASS
++
++## Test count
++
++`51` main test suites/files PASS.
++
++## Environment limits
++
++این محیط Windows نیست و npm registry دسترسی مؤثر برای lock generation ندارد. بنابراین Windows-specific UAT، package-lock رسمی، npm ci، Installer/Portable و signing در این گزارش PASS اعلام نشده‌اند.
++
++## Release boundary probes
++
++```text
++npm run check:release-inputs
++→ LOCKFILE_REQUIRED (exit 1, expected fail-closed)
++
++WA_CERT_STRICT=1 node tests/windows-certification-v097.uat.cjs
++→ SKIP Windows only (exit 3, expected INCOMPLETE)
++
++npm run build
++→ vite: not found (exit 127; node_modules not installed in this environment)
++```
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/ipc.cjs /mnt/data/wa098/electron/ipc.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/ipc.cjs	2026-08-14 06:34:29.000000000 +0000
++++ /mnt/data/wa098/electron/ipc.cjs	2026-08-14 16:20:10.047171844 +0000
+@@ -18,8 +18,9 @@
+   let size=image.getSize();if(Math.max(size.width,size.height)>maxDimension){const scale=maxDimension/Math.max(size.width,size.height);image=image.resize({width:Math.max(1,Math.round(size.width*scale)),height:Math.max(1,Math.round(size.height*scale)),quality:'best'});size=image.getSize();}
+   let mime='image/png',buf=image.toPNG();if(buf.length>8*1024*1024){mime='image/jpeg';buf=image.toJPEG(92);}return{imageDataUrl:`data:${mime};base64,${buf.toString('base64')}`,meta:{applied,cropFraction:plan.ok?plan.cropFraction:1,mapping:plan.ok?plan.mapping.source:'unmapped-user-image',mappingConfidence:plan.ok?plan.mapping.confidence:'untrusted',mappingCode:plan.ok?'OK':plan.code,sourceSize:source,outputSize:size}};
+ }
+-function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null, localAIService=null, uiGroundingService=null, explorerBatchStore=null }) {
++function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null, localAIService=null, uiGroundingService=null, explorerBatchStore=null, updateGuard=null, rcSelfCheckService=null, stateBackupService=null, diagnosticsBundleService=null }) {
+   const importTokens=new Map();
++  const backupRestoreTokens=new Map();
+   const explorerDestinationTokens=new Map();
+   const pruneExplorerDestinationTokens=()=>{const t=Date.now();for(const [k,v] of explorerDestinationTokens)if(v.expiresAt<=t)explorerDestinationTokens.delete(k);};
+   ipcMain.handle('wa:select-folder', async e => trusted(e) ? (await dialog.showOpenDialog({properties:['openDirectory']})).filePaths[0] || '' : '');
+@@ -93,7 +94,14 @@
+   ipcMain.handle('wa:recovery-act', async (e,id,action) => trusted(e) ? recoveryService.act(id,action) : deny());
+   ipcMain.handle('wa:resilience-status', e => trusted(e) ? (rootResilienceService?rootResilienceService.status():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
+   ipcMain.handle('wa:resilience-probe', async e => trusted(e) ? (rootResilienceService?rootResilienceService.probeNow():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
+-  ipcMain.handle('wa:cert-status', e => trusted(e) ? ({schemaVersion:'workspace-agent-cert-runtime-v1',at:new Date().toISOString(),platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal.verify(),localAI:localAIService?.status?.()||null,uiGrounding:uiGroundingService?.status?.()||null}) : deny());
++  ipcMain.handle('wa:cert-status', e => trusted(e) ? ({schemaVersion:'workspace-agent-cert-runtime-v2',at:new Date().toISOString(),platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal.verify(),localAI:localAIService?.status?.()||null,uiGrounding:uiGroundingService?.status?.()||null,updateGuard:updateGuard?.status?.()||null,rcSelfCheck:rcSelfCheckService?.run?.({deepIndex:false})||null}) : deny());
++  ipcMain.handle('wa:rc-self-check', (e,deep=false) => {if(!trusted(e))return deny();try{const report=rcSelfCheckService?.run?.({deepIndex:Boolean(deep)})||{schemaVersion:'workspace-agent-rc-selfcheck-v1',overall:'block',summary:{pass:0,warn:0,block:1},checks:[{id:'service',status:'block',code:'SELF_CHECK_UNAVAILABLE'}]};updateGuard?.recordSelfCheck?.(report);return report;}catch(error){return{ok:false,code:error.code||'RC_SELF_CHECK_FAILED',message:error.message}}});
++  ipcMain.handle('wa:update-guard-status', e => trusted(e) ? (updateGuard?.status?.()||{schemaVersion:'workspace-agent-update-guard-v1',writeBlocked:false}) : deny());
++  ipcMain.handle('wa:diagnostics-export', async e => {if(!trusted(e))return deny();if(!diagnosticsBundleService)return{ok:false,code:'DIAGNOSTICS_UNAVAILABLE'};const r=await dialog.showSaveDialog({title:'Export Redacted Diagnostics',defaultPath:`workspace-agent-diagnostics-${Date.now()}.json.gz`,filters:[{name:'Gzip JSON',extensions:['gz']}]});if(r.canceled||!r.filePath)return{ok:false,cancelled:true};try{return diagnosticsBundleService.saveTo(r.filePath)}catch(error){return{ok:false,code:error.code||'DIAGNOSTICS_EXPORT_FAILED',message:error.message}}});
++  ipcMain.handle('wa:state-backup-create', e => {if(!trusted(e))return deny();try{return stateBackupService?.create?.({reason:'manual'})||{ok:false,code:'STATE_BACKUP_UNAVAILABLE'}}catch(error){return{ok:false,code:error.code||'STATE_BACKUP_FAILED',message:error.message}}});
++  ipcMain.handle('wa:state-backup-list', e => trusted(e) ? (stateBackupService?.list?.({limit:30})||[]) : deny());
++  ipcMain.handle('wa:state-backup-restore-preview', async e => {if(!trusted(e))return deny();if(!stateBackupService)return{ok:false,code:'STATE_BACKUP_UNAVAILABLE'};const r=await dialog.showOpenDialog({title:'Restore Workspace Agent State Backup',properties:['openFile'],filters:[{name:'Workspace Agent Backup',extensions:['gz']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true};try{const preview=stateBackupService.preview(r.filePaths[0]);const token=`backup-${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;backupRestoreTokens.set(token,{file:r.filePaths[0],expiresAt:Date.now()+10*60*1000});return{...preview,token,bundle:undefined};}catch(error){return{ok:false,code:error.code||'STATE_BACKUP_PREVIEW_FAILED',message:error.message}}});
++  ipcMain.handle('wa:state-backup-restore-apply', (e,token) => {if(!trusted(e))return deny();const rec=backupRestoreTokens.get(String(token||''));backupRestoreTokens.delete(String(token||''));if(!rec||rec.expiresAt<=Date.now())return{ok:false,code:'STATE_BACKUP_TOKEN_INVALID'};try{return stateBackupService.restore(rec.file,{createPreRestore:true})}catch(error){return{ok:false,code:error.code||'STATE_BACKUP_RESTORE_FAILED',message:error.message}}});
+   ipcMain.handle('wa:resource-pressure', e => trusted(e) ? (resourcePressureGuard?.snapshot?.()||{schemaVersion:'resource-pressure-v1',state:'unavailable'}) : deny());
+   ipcMain.handle('wa:watch-list', e => trusted(e) ? watcherService.configs() : deny());
+   ipcMain.handle('wa:watch-events', (e,limit=300) => trusted(e) ? watcherService.events(limit) : deny());
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/main.cjs /mnt/data/wa098/electron/main.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/main.cjs	2026-08-14 06:34:15.000000000 +0000
++++ /mnt/data/wa098/electron/main.cjs	2026-08-14 16:23:52.071712506 +0000
+@@ -20,6 +20,10 @@
+ const { SystemResilienceController } = require('./services/system-resilience-controller.cjs');
+ const { LifecycleState } = require('./services/lifecycle-state.cjs');
+ const { ResourcePressureGuard } = require('./services/resource-pressure-guard.cjs');
++const { VersionUpdateGuard } = require('./services/version-update-guard.cjs');
++const { RCSelfCheckService } = require('./services/rc-self-check-service.cjs');
++const { StateBackupService } = require('./services/state-backup-service.cjs');
++const { DiagnosticsBundleService } = require('./services/diagnostics-bundle-service.cjs');
+ const { LocalAIService } = require('./services/local-ai-service.cjs');
+ const { UIGroundingService } = require('./services/ui-grounding-service.cjs');
+ const { CycleEngine } = require('./services/cycle-engine.cjs');
+@@ -32,19 +36,19 @@
+ const { batchCycle } = require('./services/explorer-batch-cycles.cjs');
+ const { registerIpc } = require('./ipc.cjs');
+ 
+-let mainWindow;let automationService;let watcherService;let persistentFileIndex;let explorerBatchStore;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;let uiGroundingService;
++let mainWindow;let automationService;let watcherService;let persistentFileIndex;let explorerBatchStore;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;let uiGroundingService;let updateGuard;let rcSelfCheckService;let stateBackupService;let diagnosticsBundleService;
+ 
+ function certificationSmokeOutput(){const eq=process.argv.find(x=>String(x).startsWith('--cert-smoke-output='));if(eq)return String(eq).slice('--cert-smoke-output='.length);const i=process.argv.indexOf('--cert-smoke-output');return i>=0?String(process.argv[i+1]||''):'';}
+ function certificationUserData(){const eq=process.argv.find(x=>String(x).startsWith('--cert-user-data='));if(eq)return String(eq).slice('--cert-user-data='.length);const i=process.argv.indexOf('--cert-user-data');return i>=0?String(process.argv[i+1]||''):'';}
+ const certUserData=certificationUserData();if(certUserData){try{app.setPath('userData',path.resolve(certUserData));}catch{}}
+-function writeCertificationSmoke(file,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService}={}){if(!file)return null;const out=path.resolve(file);fs.mkdirSync(path.dirname(out),{recursive:true});const report={schemaVersion:'workspace-agent-packaged-smoke-v1',ok:true,at:new Date().toISOString(),appVersion:app.getVersion(),platform:process.platform,arch:process.arch,electron:process.versions.electron,node:process.versions.node,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal?.verify?.()||null,localAI:localAIService?.status?.()||null,uiGrounding:uiGroundingService?.status?.()||null};fs.writeFileSync(out,JSON.stringify(report,null,2),'utf8');journal?.append('PACKAGED_CERT_SMOKE_WRITTEN',{payload:{file:out,ok:report.ok}});return report;}
++function writeCertificationSmoke(file,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService,updateGuard,rcSelfCheckService}={}){if(!file)return null;const out=path.resolve(file);fs.mkdirSync(path.dirname(out),{recursive:true});const journalStatus=journal?.verify?.()||null,indexHealth=persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rcSelfCheck=rcSelfCheckService?.run?.({deepIndex:false})||null,updateStatus=updateGuard?.status?.()||null;const ok=Boolean(journalStatus?.ok&&indexHealth?.ok&&rcSelfCheck?.overall!=='block'&&!updateStatus?.writeBlocked);const report={schemaVersion:'workspace-agent-packaged-smoke-v2',ok,at:new Date().toISOString(),appVersion:app.getVersion(),platform:process.platform,arch:process.arch,electron:process.versions.electron,node:process.versions.node,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth,rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journalStatus,localAI:localAIService?.status?.()||null,uiGrounding:uiGroundingService?.status?.()||null,updateGuard:updateStatus,rcSelfCheck};fs.writeFileSync(out,JSON.stringify(report,null,2),'utf8');journal?.append('PACKAGED_CERT_SMOKE_WRITTEN',{payload:{file:path.basename(out),ok:report.ok,selfCheck:rcSelfCheck?.overall||null,writeBlocked:Boolean(updateStatus?.writeBlocked)}});return report;}
+ 
+ function createWindow(){
+   mainWindow = new BrowserWindow({width:1540,height:980,minWidth:1120,minHeight:740,backgroundColor:'#0b1020',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+   const dev=process.env.VITE_DEV_SERVER_URL; if(dev) mainWindow.loadURL(dev); else mainWindow.loadFile(path.join(__dirname,'..','dist','index.html'));
+ }
+ app.whenReady().then(async()=>{
+-  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); try{explorerBatchStore=new ExplorerBatchStore(userData,{journal});}catch(error){explorerBatchStore=null;journal.append('EXPLORER_BATCH_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message}});} const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
++  const userData=app.getPath('userData');const journal=new EventJournal(userData);updateGuard=new VersionUpdateGuard(userData,{currentVersion:app.getVersion(),journal});lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal});stateBackupService=new StateBackupService(userData,{appVersion:app.getVersion(),configurationService,localAIService,persistentFileIndex,journal});rcSelfCheckService=new RCSelfCheckService({userData,appVersion:app.getVersion(),journal,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});diagnosticsBundleService=new DiagnosticsBundleService({appVersion:app.getVersion(),journal,selfCheckService:rcSelfCheckService,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});const startupSelfCheck=rcSelfCheckService.run({deepIndex:Boolean(lifecycleStartup.previousUnclean)});updateGuard.recordSelfCheck(startupSelfCheck); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); try{explorerBatchStore=new ExplorerBatchStore(userData,{journal});}catch(error){explorerBatchStore=null;journal.append('EXPLORER_BATCH_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message}});} const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk==='write'){const vg=updateGuard.assertWriteAllowed();if(!vg.ok)return vg;}if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+   const reconcileExplorerWrite=async completed=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const paths=[completed?.source,completed?.destination].filter(Boolean);const results=[];for(const p of [...new Set(paths)]){try{results.push(await persistentFileIndex.reconcilePath(completed.root,p));}catch(error){results.push({ok:false,path:p,code:error.code||'INDEX_RECONCILE_FAILED'});}}return{ok:results.every(x=>x?.ok!==false),results};};
+   const explorerBatchRootGuard=async({sourceRoot,destinationRoot,sourceIdentity='',destinationIdentity=''})=>{const [sg,dg]=await Promise.all([rootResilienceService.validateRoot(sourceRoot),rootResilienceService.validateRoot(destinationRoot)]);if(!sg.ok)return{...sg,code:sg.code||'EXPLORER_BATCH_SOURCE_ROOT_BLOCKED',which:'source'};if(!dg.ok)return{...dg,code:dg.code||'EXPLORER_BATCH_DESTINATION_ROOT_BLOCKED',which:'destination'};const si=String(sg.state?.identityKey||''),di=String(dg.state?.identityKey||'');if(sourceIdentity&&si&&sourceIdentity!==si)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume منبع بعد از Preview تغییر کرده است.',which:'source',expected:sourceIdentity,current:si};if(destinationIdentity&&di&&destinationIdentity!==di)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume مقصد بعد از Preview تغییر کرده است.',which:'destination',expected:destinationIdentity,current:di};return{ok:true,sourceIdentity:si,destinationIdentity:di};};
+   engine.register('explorer-properties',explorerPropertiesCycle());engine.register('explorer-search',explorerSearchCycle({index:persistentFileIndex}));engine.register('explorer-navigate',explorerNavigateCycle({shellAdapter:shell}));engine.register('explorer-select',explorerSelectCycle({shellAdapter:shell}));engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-move',explorerWriteCycle({action:'move',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-rename',explorerWriteCycle({action:'rename',transactionStore,onVerified:reconcileExplorerWrite}));const reconcileExplorerPaths=async({sourceRoot,destinationRoot,paths=[]})=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const results=[];const roots=[...new Set([sourceRoot,destinationRoot].filter(Boolean))];for(const p of [...new Set(paths.filter(Boolean))]){let matched=false;for(const r of roots){const rel=path.relative(path.resolve(r),path.resolve(p));if(rel===''||(!rel.startsWith('..')&&!path.isAbsolute(rel))){matched=true;try{results.push(await persistentFileIndex.reconcilePath(r,p));}catch(error){results.push({ok:false,path:p,root:r,code:error.code||'INDEX_RECONCILE_FAILED'});}break;}}if(!matched)results.push({ok:false,path:p,code:'INDEX_RECONCILE_PATH_OUTSIDE_BATCH_ROOTS'});}return{ok:results.every(x=>x?.ok!==false||x?.code==='INDEX_ROOT_NOT_REGISTERED'),results};};if(explorerBatchStore){engine.register('explorer-batch-copy',batchCycle({operation:'copy',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard}));engine.register('explorer-batch-move',batchCycle({operation:'move',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard}));}engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+@@ -52,7 +56,7 @@
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+   }});automationService.start();
+-  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService,explorerBatchStore});void localAIService.hardwareProfile({visionPreferred:localAIService.settings().allowVision}).catch(()=>{});void localAIService.autoStartManagedRuntime().catch(()=>{});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService});app.quit();return;}createWindow();
++  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService,explorerBatchStore,updateGuard,rcSelfCheckService,stateBackupService,diagnosticsBundleService});void localAIService.hardwareProfile({visionPreferred:localAIService.settings().allowVision}).catch(()=>{});void localAIService.autoStartManagedRuntime().catch(()=>{});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,uiGroundingService,updateGuard,rcSelfCheckService});app.quit();return;}createWindow();
+   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0) createWindow();});
+ });
+ app.on('before-quit',()=>{localAIService?.terminateRuntimeNow?.();automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();explorerBatchStore?.close();persistentFileIndex?.close();});
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/preload.cjs /mnt/data/wa098/electron/preload.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/preload.cjs	2026-08-14 06:34:30.000000000 +0000
++++ /mnt/data/wa098/electron/preload.cjs	2026-08-14 16:20:21.683277538 +0000
+@@ -5,6 +5,6 @@
+   startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startExplorerWrite: (type,input) => ipcRenderer.invoke('wa:start-explorer-write',type,input), explorerPickDestinationRoot:()=>ipcRenderer.invoke('wa:explorer-pick-destination-root'), startExplorerBatch:(type,input)=>ipcRenderer.invoke('wa:start-explorer-batch',type,input), explorerBatchResume:cycleId=>ipcRenderer.invoke('wa:explorer-batch-resume',cycleId), explorerBatchCancel:cycleId=>ipcRenderer.invoke('wa:explorer-batch-cancel',cycleId), explorerBatchStatus:jobId=>ipcRenderer.invoke('wa:explorer-batch-status',jobId), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
+   reviewList:root=>ipcRenderer.invoke('wa:review-list',root),reviewUpdate:(id,patch)=>ipcRenderer.invoke('wa:review-update',id,patch),reviewClear:root=>ipcRenderer.invoke('wa:review-clear',root),
+   zonesList:()=>ipcRenderer.invoke('wa:zones-list'),zonesAdd:input=>ipcRenderer.invoke('wa:zones-add',input),zonesRemove:id=>ipcRenderer.invoke('wa:zones-remove',id),storageTrend:root=>ipcRenderer.invoke('wa:storage-trend',root),
+-  journalList:filters=>ipcRenderer.invoke('wa:journal-list',filters),journalVerify:()=>ipcRenderer.invoke('wa:journal-verify'),recoveryList:()=>ipcRenderer.invoke('wa:recovery-list'),recoveryAct:(id,action)=>ipcRenderer.invoke('wa:recovery-act',id,action),watchList:()=>ipcRenderer.invoke('wa:watch-list'),watchEvents:limit=>ipcRenderer.invoke('wa:watch-events',limit),watchStatus:()=>ipcRenderer.invoke('wa:watch-status'),resilienceStatus:()=>ipcRenderer.invoke('wa:resilience-status'),resilienceProbe:()=>ipcRenderer.invoke('wa:resilience-probe'),certStatus:()=>ipcRenderer.invoke('wa:cert-status'),resourcePressure:()=>ipcRenderer.invoke('wa:resource-pressure'),watchAdd:(root,title)=>ipcRenderer.invoke('wa:watch-add',root,title),watchRemove:id=>ipcRenderer.invoke('wa:watch-remove',id),configExport:()=>ipcRenderer.invoke('wa:config-export'),configImportPreview:()=>ipcRenderer.invoke('wa:config-import-preview'),configImportApply:token=>ipcRenderer.invoke('wa:config-import-apply',token),
++  journalList:filters=>ipcRenderer.invoke('wa:journal-list',filters),journalVerify:()=>ipcRenderer.invoke('wa:journal-verify'),recoveryList:()=>ipcRenderer.invoke('wa:recovery-list'),recoveryAct:(id,action)=>ipcRenderer.invoke('wa:recovery-act',id,action),watchList:()=>ipcRenderer.invoke('wa:watch-list'),watchEvents:limit=>ipcRenderer.invoke('wa:watch-events',limit),watchStatus:()=>ipcRenderer.invoke('wa:watch-status'),resilienceStatus:()=>ipcRenderer.invoke('wa:resilience-status'),resilienceProbe:()=>ipcRenderer.invoke('wa:resilience-probe'),certStatus:()=>ipcRenderer.invoke('wa:cert-status'),rcSelfCheck:deep=>ipcRenderer.invoke('wa:rc-self-check',deep),updateGuardStatus:()=>ipcRenderer.invoke('wa:update-guard-status'),diagnosticsExport:()=>ipcRenderer.invoke('wa:diagnostics-export'),stateBackupCreate:()=>ipcRenderer.invoke('wa:state-backup-create'),stateBackupList:()=>ipcRenderer.invoke('wa:state-backup-list'),stateBackupRestorePreview:()=>ipcRenderer.invoke('wa:state-backup-restore-preview'),stateBackupRestoreApply:token=>ipcRenderer.invoke('wa:state-backup-restore-apply',token),resourcePressure:()=>ipcRenderer.invoke('wa:resource-pressure'),watchAdd:(root,title)=>ipcRenderer.invoke('wa:watch-add',root,title),watchRemove:id=>ipcRenderer.invoke('wa:watch-remove',id),configExport:()=>ipcRenderer.invoke('wa:config-export'),configImportPreview:()=>ipcRenderer.invoke('wa:config-import-preview'),configImportApply:token=>ipcRenderer.invoke('wa:config-import-apply',token),
+   automationList:()=>ipcRenderer.invoke('wa:automation-list'),automationCreate:input=>ipcRenderer.invoke('wa:automation-create',input),automationUpdate:(id,patch)=>ipcRenderer.invoke('wa:automation-update',id,patch),automationRemove:id=>ipcRenderer.invoke('wa:automation-remove',id),automationRun:id=>ipcRenderer.invoke('wa:automation-run',id),
+ });
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/capability-registry.cjs /mnt/data/wa098/electron/services/capability-registry.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/capability-registry.cjs	2026-08-14 11:15:06.000000000 +0000
++++ /mnt/data/wa098/electron/services/capability-registry.cjs	2026-08-14 16:22:04.278255728 +0000
+@@ -1,4 +1,8 @@
+ const CAPABILITIES = Object.freeze([
++  { id:'rc-self-check', group:'safety', title:'RC Startup Self-Check', mode:'pass-warn-block', status:'rc', detail:'UserData/Journal/SQLite/Recovery/Watcher/Volume/Lifecycle/Resource/AI/Version gates را یک‌جا ارزیابی می‌کند؛ BLOCK می‌تواند Writeها را fail-closed کند.' },
++  { id:'version-update-guard', group:'safety', title:'Version / Update Guard', mode:'stable-pending-rollback-hook', status:'rc', detail:'تشخیص downgrade، pending update + artifact SHA256، stable version و rollback recommendation؛ باینری را خودکار rollback نمی‌کند.' },
++  { id:'state-backup-integrity', group:'safety', title:'Integrity-protected State Backup', mode:'gzip-json-sha256', status:'rc', detail:'Backup تنظیمات/Local AI/index-root metadata بدون Workspace contents/Index DB/Secrets؛ restore با Preview و pre-restore backup.' },
++  { id:'redacted-diagnostics', group:'safety', title:'Redacted Diagnostic Bundle', mode:'user-exported-gzip-json', status:'rc', detail:'Runtime/self-check/health metadata با path hashing و بدون journal payload، secret، screenshot، raw prompt یا Workspace contents.' },
+   { id:'file-explorer-skill-pack', group:'windows', title:'File Explorer Skill Pack', mode:'uia-shell-fs-preview-confirm-verify', status:'beta', detail:'Properties/Search read-only + Navigate/Reveal تعاملی + New Folder/Copy/Move/Rename با relative-path policy، reparse guard، Confirmation، Verify و Undo؛ Copy recursive پوشه عمداً غیرفعال' },
+   { id:'windows-system-doctor', group:'windows', title:'Windows System Doctor', mode:'read-only', status:'active', detail:'OS/Build، RAM/CPU، Logical Disks، Startup inventory و Process memory snapshot با PowerShell/CIM' },
+   { id:'windows-uia-grounding', group:'windows', title:'Windows UIA Grounding', mode:'read-only', status:'beta', detail:'خواندن پنجره فعال و کنترل‌های UI از Microsoft UI Automation با RuntimeId/Password metadata' },
+@@ -53,7 +57,7 @@
+   { id:'event-journal', group:'safety', title:'Tamper-evident Event Journal', mode:'agent-local-audit', status:'active', detail:'NDJSON append-only با SHA-256 hash chain برای Cycle/Transaction/Recovery/Watcher events' },
+   { id:'file-watcher', group:'automation', title:'Workspace File Watcher', mode:'read-only-event-watch', status:'beta', detail:'fs.watch با debounce و Event history؛ هیچ Move/Cleanup خودکاری اجرا نمی‌کند' },
+   { id:'pdf-intelligence', group:'intelligence', title:'PDF Base Intelligence', mode:'read-only', status:'beta', detail:'Metadata و text operators روی PDFهای غیررمزشده؛ بدون OCR و با اعلام محدودیت encoding' },
+-  { id:'settings-portability', group:'agent', title:'Settings Export/Import', mode:'agent-local-config', status:'active', detail:'Export/Import Ruleها، Managed Zoneها و Watch Rootها؛ بدون فایل Workspace و بدون Secret' },
++  { id:'settings-portability', group:'agent', title:'Settings Export/Import', mode:'agent-local-config', status:'active', detail:'Export/Import Ruleها، Managed Zoneها و Watch Rootها؛ v0.9.8 علاوه بر آن State Backup integrity-protected دارد؛ بدون فایل Workspace و بدون Secret' },
+   { id:'startup-review-advisor', group:'windows', title:'Startup Review Advisor', mode:'analysis-suggestion-only', status:'beta', detail:'اولویت‌بندی ورودی‌های Startup برای Review؛ بدون Disable/Registry Write/Process Kill' },
+   { id:'local-ai-provider', group:'agent', title:'Local AI Provider', mode:'loopback-openai-compatible', status:'beta', detail:'اتصال فقط به endpoint محلی loopback مانند llama-server؛ بدون Cloud credential و بدون دانلود خودکار مدل' },
+   { id:'local-ai-safe-planner', group:'agent', title:'Schema-constrained Local AI Planner', mode:'plan-only-allowlist', status:'beta', detail:'LLM فقط Skillهای allowlisted را در JSON Schema پیشنهاد می‌دهد؛ Tool execution مستقیم، Shell و interactive UI action برای مدل وجود ندارد' },
+@@ -61,5 +65,5 @@
+   { id:'local-ai-vision-advisory', group:'intelligence', title:'Local Vision Advisory', mode:'user-selected-image-read-only', status:'beta', detail:'تحلیل تصویر انتخاب‌شده توسط کاربر با VLM محلی؛ بدون capture پس‌زمینه، coordinate/action generation یا اجرای UI' },
+   { id:'semantic-vision-labeling', group:'intelligence', title:'Semantic Vision Labeling', mode:'analysis', status:'beta', detail:'Foundation محلی Vision در v0.9 فعال شده؛ grounding اجرایی همچنان از UIA/Policy مستقل عبور می‌کند' },
+ ]);
+-function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v9.4', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
++function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v9.8', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
+ module.exports = { CAPABILITIES, capabilitySummary };
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/diagnostic-redaction.cjs /mnt/data/wa098/electron/services/diagnostic-redaction.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/diagnostic-redaction.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/electron/services/diagnostic-redaction.cjs	2026-08-14 16:19:14.581098482 +0000
+@@ -0,0 +1,21 @@
++const crypto=require('crypto');
++const path=require('path');
++function hash(v){return crypto.createHash('sha256').update(String(v||'')).digest('hex').slice(0,20);}
++const SECRET_KEY=/(password|passwd|secret|token|api.?key|credential|private.?key|authorization|cookie)/i;
++const PATH_KEY=/(^|_)(path|root|source|destination|file|dir|directory|executable|model)(_|$)/i;
++function pathDescriptor(v){const s=String(v||'');const base=/^[A-Za-z]:[\\/]/.test(s)||s.includes('\\')?path.win32.basename(s):path.basename(s);return{redacted:true,basename:String(base||'').slice(0,160),hash:hash(s)};}
++function sanitize(value,{depth=0,key=''}={}){
++ if(depth>8)return'[DEPTH_LIMIT]';
++ if(value===null||value===undefined)return value;
++ if(SECRET_KEY.test(key)&&!(/Included$/i.test(key)&&typeof value==='boolean'))return'[REDACTED]';
++ if(typeof value==='string'){
++   if(PATH_KEY.test(key))return pathDescriptor(value);
++   if(/^[A-Za-z]:[\\/]/.test(value)||/^\\\\/.test(value)||value.startsWith('/home/')||value.startsWith('/Users/'))return pathDescriptor(value);
++   return value.length>1200?`${value.slice(0,1200)}…[TRUNCATED]`:value;
++ }
++ if(typeof value==='number'||typeof value==='boolean')return value;
++ if(Array.isArray(value))return value.slice(0,300).map(v=>sanitize(v,{depth:depth+1,key}));
++ if(typeof value==='object'){const out={};for(const [k,v] of Object.entries(value).slice(0,300))out[k]=sanitize(v,{depth:depth+1,key:k});return out;}
++ return String(value);
++}
++module.exports={sanitizeDiagnostic:sanitize,pathDescriptor,hashDiagnosticValue:hash};
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/diagnostics-bundle-service.cjs /mnt/data/wa098/electron/services/diagnostics-bundle-service.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/diagnostics-bundle-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/electron/services/diagnostics-bundle-service.cjs	2026-08-14 16:18:12.121211595 +0000
+@@ -0,0 +1,13 @@
++const fs=require('fs');
++const path=require('path');
++const zlib=require('zlib');
++const crypto=require('crypto');
++const os=require('os');
++const {sanitizeDiagnostic}=require('./diagnostic-redaction.cjs');
++function sha(buf){return crypto.createHash('sha256').update(buf).digest('hex');}
++class DiagnosticsBundleService{
++ constructor({appVersion='',journal=null,selfCheckService=null,persistentFileIndex=null,recoveryService=null,watcherService=null,rootResilienceService=null,lifecycleState=null,resourcePressureGuard=null,localAIService=null,updateGuard=null}={}){Object.assign(this,{appVersion,journal,selfCheckService,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});}
++ build(){const recent=(this.journal?.list?.({limit:120})||[]).map(e=>({at:e.at,type:e.type,cycleId:e.cycleId||null,transactionId:e.transactionId||null}));let indexHealth=null;try{indexHealth=this.persistentFileIndex?.health?.({deep:false})||null;}catch(error){indexHealth={ok:false,code:error.code||'INDEX_HEALTH_FAILED'};}const raw={schemaVersion:'workspace-agent-diagnostics-v1',generatedAt:new Date().toISOString(),app:{version:this.appVersion,platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null},system:{cpuCount:os.cpus()?.length||0,totalMemoryBytes:os.totalmem(),freeMemoryBytes:os.freemem()},selfCheck:this.selfCheckService?.run?.({deepIndex:false})||null,journal:{verification:this.journal?.verify?.()||null,recentEvents:recent},indexHealth,recovery:{pending:this.recoveryService?.inspect?.()?.length||0},watcher:this.watcherService?.status?.()||null,rootResilience:this.rootResilienceService?.status?.()||null,lifecycle:this.lifecycleState?.status?.()||null,resourcePressure:this.resourcePressureGuard?.snapshot?.()||null,localAI:this.localAIService?.status?.()||null,updateGuard:this.updateGuard?.status?.()||null,privacy:{workspaceContentsIncluded:false,journalPayloadsIncluded:false,secretsIncluded:false,pathsRedacted:true,rawPromptsIncluded:false,screenshotsIncluded:false}};return sanitizeDiagnostic(raw);}
++ saveTo(file){const report=this.build();const raw=Buffer.from(JSON.stringify(report,null,2),'utf8');const gz=zlib.gzipSync(raw,{level:9});fs.writeFileSync(file,gz);const result={ok:true,file,basename:path.basename(file),bytes:gz.length,sha256:sha(gz),overall:report.selfCheck?.overall||null};this.journal?.append('DIAGNOSTICS_EXPORTED',{payload:{file:result.basename,bytes:result.bytes,sha256:result.sha256,overall:result.overall}});return result;}
++}
++module.exports={DiagnosticsBundleService};
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/rc-self-check-service.cjs /mnt/data/wa098/electron/services/rc-self-check-service.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/rc-self-check-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/electron/services/rc-self-check-service.cjs	2026-08-14 16:22:23.509060773 +0000
+@@ -0,0 +1,22 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++function check(id,status,code,summary,details={}){return{id,status,code,summary,details};}
++class RCSelfCheckService{
++ constructor({userData='',appVersion='',journal=null,persistentFileIndex=null,recoveryService=null,watcherService=null,rootResilienceService=null,lifecycleState=null,resourcePressureGuard=null,localAIService=null,updateGuard=null}={}){Object.assign(this,{userData,appVersion,journal,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});}
++ _userDataWritable(){const file=path.join(this.userData||'.',`.__wa-selfcheck-${process.pid}-${crypto.randomBytes(3).toString('hex')}`);try{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,'ok');fs.unlinkSync(file);return{ok:true};}catch(error){try{fs.rmSync(file,{force:true})}catch{}return{ok:false,code:error.code||'USERDATA_WRITE_FAILED'};}}
++ run({deepIndex=false}={}){const rows=[];
++   const writable=this._userDataWritable();rows.push(writable.ok?check('user-data','pass','USERDATA_WRITABLE','Runtime state directory writable.'):check('user-data','block',writable.code,'Runtime state directory is not writable.'));
++   const j=this.journal?.verify?.()||{ok:false,code:'JOURNAL_UNAVAILABLE'};rows.push(j.ok?check('journal','pass','JOURNAL_OK','Event journal hash chain is valid.',{count:Number(j.count||0)}):check('journal','block','JOURNAL_INTEGRITY_FAILED','Event journal integrity failed.',{invalidSeq:j.invalidSeq||null,error:j.error||null}));
++   let ih={ok:false,code:'INDEX_UNAVAILABLE'};try{ih=this.persistentFileIndex?.health?.({deep:Boolean(deepIndex)})||ih;}catch(error){ih={ok:false,code:error.code||'INDEX_HEALTH_FAILED'};}rows.push(ih.ok?check('index','pass','INDEX_OK','Persistent index health check passed.',{activeScans:Number(ih.activeScans||0),roots:ih.roots||{}}):this.persistentFileIndex?check('index','block','INDEX_HEALTH_FAILED','Persistent index health check failed.',{check:ih.check||null,code:ih.code||null}):check('index','warn','INDEX_UNAVAILABLE','Persistent index is unavailable; legacy capabilities can still run.'));
++   const rec=this.recoveryService?.inspect?.()||[];rows.push(rec.length?check('recovery','warn','RECOVERY_PENDING','Recoverable/interrupted transactions need review.',{count:rec.length,manualReview:rec.filter(x=>x.recovery?.manualReview).length}):check('recovery','pass','RECOVERY_CLEAR','No recoverable transaction is pending.'));
++   const ws=this.watcherService?.status?.()||{};const dirty=Array.isArray(ws.dirtyRoots)?ws.dirtyRoots.length:0,blocked=Array.isArray(ws.blockedRoots)?ws.blockedRoots.length:0;rows.push(dirty||blocked?check('watcher','warn','WATCHER_ATTENTION','Watcher has dirty or blocked roots.',{dirty,blocked,pending:Number(ws.pending||0)}):check('watcher','pass','WATCHER_OK','Watcher state has no dirty/blocked root.',{watched:Number(ws.watched||0),pending:Number(ws.pending||0)}));
++   const rs=this.rootResilienceService?.status?.()||{roots:[]};const roots=Array.isArray(rs.roots)?rs.roots:[];const identity=roots.filter(x=>x.identityChanged).length,unavailable=roots.filter(x=>String(x.status||'').includes('unavailable')).length;rows.push(identity?check('volumes','block','VOLUME_IDENTITY_CHANGED','At least one watched root has a changed volume identity.',{identityChanged:identity,unavailable,total:roots.length}):unavailable?check('volumes','warn','VOLUME_UNAVAILABLE','At least one watched root is unavailable.',{unavailable,total:roots.length}):check('volumes','pass','VOLUMES_OK','Known root identities are not in a changed state.',{total:roots.length}));
++   const lc=this.lifecycleState?.status?.()||{};const previousUnclean=Boolean(lc.previousSession&&lc.previousSession.cleanExit===false);rows.push(previousUnclean?check('lifecycle','warn','PREVIOUS_UNCLEAN_EXIT','Previous application session did not exit cleanly.',{previousSessionId:lc.previousSession?.sessionId||null}):check('lifecycle','pass','LIFECYCLE_OK','No unclean previous-session marker is active.'));
++   const pressure=this.resourcePressureGuard?.snapshot?.()||{};const ps=String(pressure.state||'unknown');rows.push(ps==='critical'?check('resources','warn','RESOURCE_PRESSURE_CRITICAL','System resource pressure is currently critical.',{state:ps}):check('resources','pass','RESOURCES_OK','Resource pressure is not critical.',{state:ps}));
++   const ai=this.localAIService?.status?.()||null;if(!ai||!ai.enabled)rows.push(check('local-ai','pass','AI_OPTIONAL_DISABLED','Local AI is disabled/optional.'));else if(ai.guard?.circuitOpen)rows.push(check('local-ai','warn','AI_CIRCUIT_OPEN','Local AI circuit breaker is open.',{model:ai.model||null}));else if(ai.runtime?.managed&&ai.runtime?.state!=='running')rows.push(check('local-ai','warn','AI_RUNTIME_NOT_RUNNING','Managed local AI is enabled but runtime is not running.',{model:ai.model||null,state:ai.runtime?.state||null}));else rows.push(check('local-ai','pass','AI_OK','Local AI configuration has no blocking runtime state.',{model:ai.model||null}));
++   const ug=this.updateGuard?.status?.()||null;if(ug?.writeBlocked)rows.push(check('version-update','block',ug.blockCode||'UPDATE_GUARD_WRITE_BLOCKED','Version/update guard is blocking writes.',{rollbackRecommended:Boolean(ug.rollbackRecommended),pendingTarget:ug.pending?.targetVersion||null}));else if(ug?.pending)rows.push(check('version-update','warn','UPDATE_PENDING_VALIDATION','A pending update has not yet been marked stable.',{pendingTarget:ug.pending.targetVersion}));else rows.push(check('version-update','pass','VERSION_GATE_OK','No version/update write block is active.',{stableVersion:ug?.stableVersion||null,currentVersion:this.appVersion}));
++   const summary={pass:rows.filter(x=>x.status==='pass').length,warn:rows.filter(x=>x.status==='warn').length,block:rows.filter(x=>x.status==='block').length};const overall=summary.block?'block':summary.warn?'warn':'pass';const out={schemaVersion:'workspace-agent-rc-selfcheck-v1',at:new Date().toISOString(),appVersion:this.appVersion,overall,summary,checks:rows};this.journal?.append('RC_SELF_CHECK',{payload:{overall,...summary,deepIndex:Boolean(deepIndex)}});return out;
++ }
++}
++module.exports={RCSelfCheckService};
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/state-backup-service.cjs /mnt/data/wa098/electron/services/state-backup-service.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/state-backup-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/electron/services/state-backup-service.cjs	2026-08-14 16:21:17.190431756 +0000
+@@ -0,0 +1,19 @@
++const fs=require('fs');
++const path=require('path');
++const zlib=require('zlib');
++const crypto=require('crypto');
++const SCHEMA='workspace-agent-state-backup-v1';
++function stable(v){if(Array.isArray(v))return`[${v.map(stable).join(',')}]`;if(v&&typeof v==='object')return`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${stable(v[k])}`).join(',')}}`;return JSON.stringify(v);}
++function sha(v){return crypto.createHash('sha256').update(typeof v==='string'?v:stable(v)).digest('hex');}
++function safeFileName(){return`state-backup-${new Date().toISOString().replace(/[:.]/g,'-')}-${crypto.randomBytes(3).toString('hex')}.json.gz`;}
++class StateBackupService{
++ constructor(baseDir,{appVersion='',configurationService=null,localAIService=null,persistentFileIndex=null,journal=null}={}){this.dir=path.join(baseDir,'backups');this.appVersion=String(appVersion||'');this.configurationService=configurationService;this.localAIService=localAIService;this.persistentFileIndex=persistentFileIndex;this.journal=journal;fs.mkdirSync(this.dir,{recursive:true});}
++ _payload(){return{configuration:this.configurationService?.exportBundle?.()||null,localAI:this.localAIService?.settings?.()||null,indexRoots:this.persistentFileIndex?.listRoots?.().map(x=>({root:x.root,status:x.status,generation:x.generation,completedAt:x.completedAt||null,files:Number(x.files||0),bytes:Number(x.bytes||0)}))||[]};}
++ build({reason='manual'}={}){const payload=this._payload();const base={schemaVersion:SCHEMA,createdAt:new Date().toISOString(),appVersion:this.appVersion,reason:String(reason||'manual').slice(0,80),policy:{workspaceContentsIncluded:false,indexDatabaseIncluded:false,journalIncluded:false,secretsIncluded:false,indexRequiresRebuildOnRestore:true},payload};return{...base,payloadSha256:sha(payload),bundleSha256:sha(base)};}
++ create({reason='manual'}={}){const bundle=this.build({reason});const raw=Buffer.from(JSON.stringify(bundle,null,2),'utf8');const gz=zlib.gzipSync(raw,{level:9});const file=path.join(this.dir,safeFileName());fs.writeFileSync(file,gz);const result={ok:true,file,basename:path.basename(file),bytes:gz.length,sha256:sha(gz),bundle};this.journal?.append('STATE_BACKUP_CREATED',{payload:{file:result.basename,bytes:result.bytes,sha256:result.sha256,reason:bundle.reason}});return result;}
++ _read(file){const resolved=path.resolve(String(file||''));const gz=fs.readFileSync(resolved);if(gz.length>25*1024*1024)throw Object.assign(new Error('Backup file exceeds size limit.'),{code:'BACKUP_FILE_TOO_LARGE'});let raw;try{raw=zlib.gunzipSync(gz,{maxOutputLength:64*1024*1024});}catch{throw Object.assign(new Error('Backup gzip is invalid.'),{code:'BACKUP_GZIP_INVALID'});}let bundle;try{bundle=JSON.parse(raw.toString('utf8'));}catch{throw Object.assign(new Error('Backup JSON is invalid.'),{code:'BACKUP_JSON_INVALID'});}if(bundle?.schemaVersion!==SCHEMA)throw Object.assign(new Error('Backup schema is unsupported.'),{code:'BACKUP_SCHEMA_UNSUPPORTED'});if(bundle.payloadSha256!==sha(bundle.payload))throw Object.assign(new Error('Backup payload integrity check failed.'),{code:'BACKUP_INTEGRITY_FAILED'});const base={schemaVersion:bundle.schemaVersion,createdAt:bundle.createdAt,appVersion:bundle.appVersion,reason:bundle.reason,policy:bundle.policy,payload:bundle.payload};if(bundle.bundleSha256!==sha(base))throw Object.assign(new Error('Backup bundle integrity check failed.'),{code:'BACKUP_INTEGRITY_FAILED'});return{bundle,bytes:gz.length,sha256:sha(gz),file:resolved};}
++ preview(file){const r=this._read(file);const p=r.bundle.payload||{};return{ok:true,schemaVersion:SCHEMA,file:r.file,basename:path.basename(r.file),sha256:r.sha256,createdAt:r.bundle.createdAt,appVersion:r.bundle.appVersion,reason:r.bundle.reason,summary:{rules:p.configuration?.automationRules?.length||0,zones:p.configuration?.managedZones?.length||0,watches:p.configuration?.watchRoots?.length||0,indexRoots:p.indexRoots?.length||0,localAI:Boolean(p.localAI)},bundle:r.bundle};}
++ restore(file,{createPreRestore=true}={}){const p=this.preview(file);const pre=createPreRestore?this.create({reason:'pre-restore'}):null;const report={configuration:null,localAI:null,indexRootsForRebuild:(p.bundle.payload?.indexRoots||[]).map(x=>x.root).filter(Boolean),preRestoreBackup:pre?pre.basename:null};if(p.bundle.payload?.configuration)report.configuration=this.configurationService?.apply?.(p.bundle.payload.configuration)||null;if(p.bundle.payload?.localAI&&this.localAIService?.updateSettings){const ai={...p.bundle.payload.localAI};delete ai.schemaVersion;report.localAI=this.localAIService.updateSettings(ai);}this.journal?.append('STATE_BACKUP_RESTORED',{payload:{source:p.basename,preRestoreBackup:report.preRestoreBackup,indexRootsForRebuild:report.indexRootsForRebuild.length}});return{ok:true,report};}
++ list({limit=30}={}){let rows=[];try{rows=fs.readdirSync(this.dir).filter(x=>x.endsWith('.json.gz')).map(name=>{const file=path.join(this.dir,name);const st=fs.statSync(file);return{name,file,size:st.size,mtimeMs:st.mtimeMs};}).sort((a,b)=>b.mtimeMs-a.mtimeMs).slice(0,Math.max(1,Math.min(200,Number(limit)||30)));}catch{}return rows.map(x=>({name:x.name,size:x.size,updatedAt:new Date(x.mtimeMs).toISOString()}));}
++}
++module.exports={StateBackupService,SCHEMA,stable,sha};
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/version-update-guard.cjs /mnt/data/wa098/electron/services/version-update-guard.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/electron/services/version-update-guard.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/electron/services/version-update-guard.cjs	2026-08-14 16:23:19.520957602 +0000
+@@ -0,0 +1,38 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++
++const SCHEMA='workspace-agent-update-guard-v1';
++const DATA_EPOCH=1;
++function now(){return new Date().toISOString();}
++function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=`${file}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,file);}
++function read(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}}
++function parseVersion(v='0.0.0'){
++ const m=String(v||'0.0.0').trim().match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/);
++ if(!m)return{major:0,minor:0,patch:0,pre:['invalid']};
++ return{major:Number(m[1]),minor:Number(m[2]),patch:Number(m[3]),pre:m[4]?m[4].split('.'):[]};
++}
++function compareIdentifiers(a,b){const an=/^\d+$/.test(a),bn=/^\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an&&!bn)return-1;if(!an&&bn)return 1;return String(a).localeCompare(String(b));}
++function compareVersions(a,b){const x=parseVersion(a),y=parseVersion(b);for(const k of ['major','minor','patch'])if(x[k]!==y[k])return x[k]>y[k]?1:-1;if(!x.pre.length&&!y.pre.length)return 0;if(!x.pre.length)return 1;if(!y.pre.length)return-1;const n=Math.max(x.pre.length,y.pre.length);for(let i=0;i<n;i++){if(x.pre[i]===undefined)return-1;if(y.pre[i]===undefined)return 1;const c=compareIdentifiers(x.pre[i],y.pre[i]);if(c)return c>0?1:-1;}return 0;}
++function validSha(v=''){return /^[a-f0-9]{64}$/i.test(String(v||''));}
++class VersionUpdateGuard{
++ constructor(baseDir,{currentVersion='0.0.0',journal=null,observeBoot=true}={}){this.dir=path.join(baseDir,'runtime');this.file=path.join(this.dir,'update-guard.json');this.currentVersion=String(currentVersion||'0.0.0');this.journal=journal;this.state=this._load();if(observeBoot)this._observeBoot();}
++ _load(){const v=read(this.file);if(v?.schemaVersion===SCHEMA){if(!Number.isInteger(v.dataEpoch))v.dataEpoch=DATA_EPOCH;return v;}return{schemaVersion:SCHEMA,dataEpoch:DATA_EPOCH,stableVersion:null,lastSeenVersion:null,lastBootAt:null,pending:null,lastSelfCheck:null,rollbackRecommended:false,writeBlocked:false,blockCode:null,history:[]};}
++ _save(){this.state.history=(this.state.history||[]).slice(-60);atomic(this.file,this.state);}
++ _history(type,payload={}){this.state.history=this.state.history||[];this.state.history.push({at:now(),type,...payload});}
++ _observeBoot(){const prev=this.state.lastSeenVersion;this.state.lastSeenVersion=this.currentVersion;this.state.lastBootAt=now();this.state.rollbackRecommended=false;this.state.writeBlocked=false;this.state.blockCode=null;
++   if(Number(this.state.dataEpoch||DATA_EPOCH)>DATA_EPOCH){this.state.writeBlocked=true;this.state.rollbackRecommended=true;this.state.blockCode='STATE_DATA_EPOCH_TOO_NEW';this._history('STATE_DATA_EPOCH_BLOCKED',{found:Number(this.state.dataEpoch),supported:DATA_EPOCH});}
++   if(prev&&compareVersions(prev,this.currentVersion)>0&&!this.state.writeBlocked){this.state.writeBlocked=true;this.state.rollbackRecommended=true;this.state.blockCode='APP_DOWNGRADE_DETECTED';this._history('DOWNGRADE_DETECTED',{from:prev,to:this.currentVersion});}
++   if(this.state.pending&&this.state.pending.targetVersion===this.currentVersion&&!this.state.pending.firstBootAt){this.state.pending.firstBootAt=now();this._history('PENDING_UPDATE_FIRST_BOOT',{targetVersion:this.currentVersion});}
++   this._save();this.journal?.append('UPDATE_GUARD_BOOT',{payload:{currentVersion:this.currentVersion,previousVersion:prev||null,writeBlocked:this.state.writeBlocked,blockCode:this.state.blockCode,pendingTarget:this.state.pending?.targetVersion||null}});
++ }
++ status(){return JSON.parse(JSON.stringify({...this.state,currentVersion:this.currentVersion,schemaVersion:SCHEMA}));}
++ prepareUpdate({targetVersion,artifactSha256,backupFile=null}={}){const target=String(targetVersion||'').trim();if(compareVersions(target,this.currentVersion)<=0)throw Object.assign(new Error('نسخه هدف Update باید از نسخه فعلی جدیدتر باشد.'),{code:'UPDATE_TARGET_NOT_NEWER'});if(!validSha(artifactSha256))throw Object.assign(new Error('SHA256 artifact برای Update Guard نامعتبر است.'),{code:'UPDATE_ARTIFACT_SHA_REQUIRED'});this.state.pending={targetVersion:target,artifactSha256:String(artifactSha256).toLowerCase(),backupFile:backupFile?path.basename(String(backupFile)):null,preparedAt:now(),firstBootAt:null,lastCheckAt:null};this._history('UPDATE_PREPARED',{targetVersion:target,artifactSha256:String(artifactSha256).toLowerCase()});this._save();this.journal?.append('UPDATE_PREPARED',{payload:{targetVersion:target,artifactSha256:String(artifactSha256).toLowerCase(),backupFile:this.state.pending.backupFile}});return this.status();}
++ recordSelfCheck(report){const overall=String(report?.overall||'block').toLowerCase();const warningCodes=(report?.checks||[]).filter(x=>x.status==='warn').map(x=>x.code);const effectiveOverall=overall==='warn'&&warningCodes.length>0&&warningCodes.every(x=>x==='UPDATE_PENDING_VALIDATION')?'pass':overall;this.state.lastSelfCheck={at:report?.at||now(),version:this.currentVersion,overall,effectiveOverall,blocks:Number(report?.summary?.block||0),warnings:Number(report?.summary?.warn||0)};if(this.state.pending?.targetVersion===this.currentVersion){this.state.pending.lastCheckAt=now();if(effectiveOverall==='block'){this.state.rollbackRecommended=true;this.state.writeBlocked=true;this.state.blockCode='UPDATE_SELF_CHECK_BLOCKED';this._history('UPDATE_BOOT_BLOCKED',{targetVersion:this.currentVersion});}else if(effectiveOverall==='pass'){this.state.stableVersion=this.currentVersion;this.state.pending=null;this.state.rollbackRecommended=false;this.state.writeBlocked=false;this.state.blockCode=null;this._history('UPDATE_MARKED_STABLE',{version:this.currentVersion});}else{this.state.rollbackRecommended=false;this.state.writeBlocked=false;this.state.blockCode=null;this._history('UPDATE_BOOT_WARNING',{targetVersion:this.currentVersion});}}
++   else if(overall==='block'&&this.state.blockCode==='APP_DOWNGRADE_DETECTED'){this.state.writeBlocked=true;this.state.rollbackRecommended=true;}
++   else if(!this.state.pending&&effectiveOverall==='pass'&&!this.state.writeBlocked){this.state.stableVersion=this.currentVersion;}
++   this._save();this.journal?.append('UPDATE_GUARD_SELF_CHECK',{payload:{version:this.currentVersion,overall,writeBlocked:this.state.writeBlocked,rollbackRecommended:this.state.rollbackRecommended,pendingTarget:this.state.pending?.targetVersion||null}});return this.status();}
++ assertWriteAllowed(){if(this.state.writeBlocked)return{ok:false,code:this.state.blockCode||'UPDATE_GUARD_WRITE_BLOCKED',message:'Writeها به‌دلیل Version/Update Guard تا بررسی وضعیت نسخه مسدود هستند.',rollbackRecommended:Boolean(this.state.rollbackRecommended)};return{ok:true};}
++ clearPending({reason='manual-clear'}={}){this._history('UPDATE_PENDING_CLEARED',{reason:String(reason||'manual-clear')});this.state.pending=null;if(this.state.blockCode==='UPDATE_SELF_CHECK_BLOCKED'){this.state.writeBlocked=false;this.state.rollbackRecommended=false;this.state.blockCode=null;}this._save();return this.status();}
++}
++module.exports={VersionUpdateGuard,compareVersions,parseVersion,SCHEMA,DATA_EPOCH};
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/package.json /mnt/data/wa098/package.json
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/package.json	2026-08-14 11:17:47.000000000 +0000
++++ /mnt/data/wa098/package.json	2026-08-14 16:23:26.203109908 +0000
+@@ -1,16 +1,16 @@
+ {
+   "name": "windows-workspace-agent",
+-  "version": "0.9.7",
++  "version": "0.9.8",
+   "private": true,
+-  "description": "Cycle-driven Windows workspace agent with Windows certification harness, production-hardened File Explorer batch operations, cross-volume safety, local AI, UIA grounding, and reproducible release gates.",
++  "description": "Cycle-driven Windows workspace agent with RC readiness, startup self-check, diagnostics and backup guards, Windows certification harness, production-hardened File Explorer batch operations, cross-volume safety, local AI, UIA grounding, and reproducible release gates.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs && node --check electron/services/file-explorer-service.cjs && node --check electron/services/file-explorer-cycles.cjs && node --check tests/file-explorer-skill-pack-v094.test.cjs && node --check electron/services/explorer-batch-store.cjs && node --check electron/services/explorer-batch-service.cjs && node --check electron/services/explorer-batch-cycles.cjs && node --check tests/file-explorer-batch-v095.test.cjs && node --check tests/explorer-batch-recovery-v095.test.cjs && node --check tests/windows-file-explorer-v095.uat.cjs && node --check electron/services/explorer-storage-guard.cjs && node --check tests/file-explorer-production-v096.test.cjs && node --check tests/explorer-batch-schema-v096.test.cjs && node --check tests/windows-file-explorer-v096.uat.cjs && node --check electron/services/certification-core.cjs && node --check scripts/source-tree-fingerprint.cjs && node --check tests/certification-core-v097.test.cjs && node --check tests/source-tree-fingerprint-v097.test.cjs && node --check tests/windows-certification-v097.uat.cjs && node --check tests/windows-scale-v097.uat.cjs && node --check scripts/verify-manual-evidence-v097.cjs && node --check tests/manual-evidence-v097.test.cjs && node --check scripts/lockfile-provenance.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs && node tests/file-explorer-skill-pack-v094.test.cjs && node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs && node tests/file-explorer-production-v096.test.cjs && node tests/explorer-batch-schema-v096.test.cjs && node tests/certification-core-v097.test.cjs && node tests/source-tree-fingerprint-v097.test.cjs && node tests/manual-evidence-v097.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs && node --check electron/services/file-explorer-service.cjs && node --check electron/services/file-explorer-cycles.cjs && node --check tests/file-explorer-skill-pack-v094.test.cjs && node --check electron/services/explorer-batch-store.cjs && node --check electron/services/explorer-batch-service.cjs && node --check electron/services/explorer-batch-cycles.cjs && node --check tests/file-explorer-batch-v095.test.cjs && node --check tests/explorer-batch-recovery-v095.test.cjs && node --check tests/windows-file-explorer-v095.uat.cjs && node --check electron/services/explorer-storage-guard.cjs && node --check tests/file-explorer-production-v096.test.cjs && node --check tests/explorer-batch-schema-v096.test.cjs && node --check tests/windows-file-explorer-v096.uat.cjs && node --check electron/services/certification-core.cjs && node --check scripts/source-tree-fingerprint.cjs && node --check tests/certification-core-v097.test.cjs && node --check tests/source-tree-fingerprint-v097.test.cjs && node --check tests/windows-certification-v097.uat.cjs && node --check tests/windows-scale-v097.uat.cjs && node --check scripts/verify-manual-evidence-v097.cjs && node --check tests/manual-evidence-v097.test.cjs && node --check scripts/lockfile-provenance.cjs && node --check electron/services/version-update-guard.cjs && node --check electron/services/diagnostic-redaction.cjs && node --check electron/services/rc-self-check-service.cjs && node --check electron/services/state-backup-service.cjs && node --check electron/services/diagnostics-bundle-service.cjs && node --check tests/version-update-guard-v098.test.cjs && node --check tests/rc-self-check-v098.test.cjs && node --check tests/state-backup-v098.test.cjs && node --check tests/diagnostics-v098.test.cjs && node --check scripts/prepare-update-v098.cjs && node --check tests/update-preflight-v098.test.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs && node tests/file-explorer-skill-pack-v094.test.cjs && node tests/file-explorer-batch-v095.test.cjs && node tests/explorer-batch-recovery-v095.test.cjs && node tests/file-explorer-production-v096.test.cjs && node tests/explorer-batch-schema-v096.test.cjs && node tests/certification-core-v097.test.cjs && node tests/source-tree-fingerprint-v097.test.cjs && node tests/manual-evidence-v097.test.cjs && node tests/version-update-guard-v098.test.cjs && node tests/rc-self-check-v098.test.cjs && node tests/state-backup-v098.test.cjs && node tests/diagnostics-v098.test.cjs && node tests/update-preflight-v098.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -64,7 +64,9 @@
+     "fingerprint:source": "node scripts/source-tree-fingerprint.cjs",
+     "certify:windows:v097": "powershell -ExecutionPolicy Bypass -File scripts/windows-certification-v097.ps1",
+     "verify:manual-evidence": "node scripts/verify-manual-evidence-v097.cjs",
+-    "lock:provenance": "node scripts/lockfile-provenance.cjs"
++    "lock:provenance": "node scripts/lockfile-provenance.cjs",
++    "test:rc-v098": "node tests/version-update-guard-v098.test.cjs && node tests/rc-self-check-v098.test.cjs && node tests/state-backup-v098.test.cjs && node tests/diagnostics-v098.test.cjs && node tests/update-preflight-v098.test.cjs",
++    "update:prepare": "node scripts/prepare-update-v098.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/scripts/prepare-update-v098.cjs /mnt/data/wa098/scripts/prepare-update-v098.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/scripts/prepare-update-v098.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/scripts/prepare-update-v098.cjs	2026-08-14 16:23:19.642343745 +0000
+@@ -0,0 +1,8 @@
++const path=require('path');
++const fs=require('fs');
++const {VersionUpdateGuard}=require('../electron/services/version-update-guard.cjs');
++function arg(name){const p=`--${name}=`;const x=process.argv.find(v=>String(v).startsWith(p));return x?String(x).slice(p.length):'';}
++const userData=arg('user-data'),current=arg('current'),target=arg('target'),artifact=arg('sha256'),backup=arg('backup');
++if(!userData||!current||!target||!artifact){console.error('Usage: node scripts/prepare-update-v098.cjs --user-data=<path> --current=<version> --target=<version> --sha256=<64hex> [--backup=<file>]');process.exit(2);}
++if(!fs.existsSync(path.resolve(userData)))fs.mkdirSync(path.resolve(userData),{recursive:true});
++try{const g=new VersionUpdateGuard(path.resolve(userData),{currentVersion:current,observeBoot:false});const status=g.prepareUpdate({targetVersion:target,artifactSha256:artifact,backupFile:backup||null});console.log(JSON.stringify({ok:true,schemaVersion:'workspace-agent-update-preflight-v098-v1',currentVersion:current,targetVersion:status.pending?.targetVersion||null,artifactSha256:status.pending?.artifactSha256||null,backupFile:status.pending?.backupFile||null},null,2));}catch(error){console.error(`${error.code||'UPDATE_PREPARE_FAILED'}: ${error.message}`);process.exit(1);}
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/src/App.jsx /mnt/data/wa098/src/App.jsx
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/src/App.jsx	2026-08-14 11:20:34.000000000 +0000
++++ /mnt/data/wa098/src/App.jsx	2026-08-14 16:20:54.291995845 +0000
+@@ -6,7 +6,7 @@
+ const actionsForRole=c=>{const t=String(c?.element?.controlType||'');const a=['focus'];if(/Button|MenuItem|Hyperlink|ListItem|TabItem/.test(t))a.push('invoke');if(/CheckBox|RadioButton|ToggleButton/.test(t))a.push('toggle');if(/ComboBox|TreeItem|MenuItem/.test(t))a.push('expand','collapse');if(/Edit|Document|ComboBox/.test(t))a.push('setValue');if(c?.element?.canScrollIntoView)a.push('scrollIntoView');return [...new Set(a)]};
+ const tabs={home:'مرکز فرمان',system:'Windows System',explorer:'File Explorer Skills',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+- const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null),[explorerForm,setExplorerForm]=useState({relativePath:'',query:'',sourceRelative:'',destinationRelative:'',newName:'',batchSources:'',batchDestination:'',batchDestinationRootToken:'',batchDestinationRootLabel:'Workspace فعلی',conflictPolicy:'skip',duplicateAware:true}),[explorerResult,setExplorerResult]=useState(null),[explorerError,setExplorerError]=useState('');
++ const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null),[explorerForm,setExplorerForm]=useState({relativePath:'',query:'',sourceRelative:'',destinationRelative:'',newName:'',batchSources:'',batchDestination:'',batchDestinationRootToken:'',batchDestinationRootLabel:'Workspace فعلی',conflictPolicy:'skip',duplicateAware:true}),[explorerResult,setExplorerResult]=useState(null),[explorerError,setExplorerError]=useState(''),[rcCheck,setRcCheck]=useState(null),[diagResult,setDiagResult]=useState(null),[backupRows,setBackupRows]=useState([]),[backupPreview,setBackupPreview]=useState(null),[updateGuardState,setUpdateGuardState]=useState(null);
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -14,11 +14,12 @@
+  const refreshRecovery=async()=>setRecoveries(await api.recoveryList());
+  const refreshJournal=async()=>{setJournalRows(await api.journalList({limit:250}));setJournalStatus(await api.journalVerify())};
+  const refreshWatches=async()=>{setWatches(await api.watchList());setWatchEvents(await api.watchEvents(250));setWatchStatus(await api.watchStatus());setResilience(await api.resilienceStatus())};
+- const refreshCert=async()=>setCertStatus(await api.certStatus());
++ const refreshCert=async()=>{const c=await api.certStatus();setCertStatus(c);setRcCheck(c?.rcSelfCheck||null);setUpdateGuardState(c?.updateGuard||null)};
++ const refreshBackups=async()=>setBackupRows(await api.stateBackupList());
+  const refreshAI=async()=>{const [status,settings,runtime,selection]=await Promise.all([api.aiStatus(),api.aiSettings(),api.aiRuntimeStatus(),api.aiRuntimeSelection()]);setAiStatus(status);setAiSettings(settings);setAiRuntime(runtime);setAiSelection(selection)};
+  const refreshReviews=async r=>{const target=r||root;if(!target){setReviewItems([]);return}setReviewItems(await api.reviewList(target));};
+  const refreshIndex=async r=>{const target=r||root;if(!target){setIndexStatus(null);setIndexErrors([]);setIndexHealth(null);return}setIndexStatus(await api.indexStatus(target));setIndexErrors(await api.indexErrors(target,100));setIndexHealth(await api.indexHealth(false));};
+- useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();refreshAI();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
++ useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();refreshBackups();refreshAI();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
+  async function pick(){const p=await api.selectFolder();if(p){setRoot(p);setCycle(null);setHealth(null);setDup(null);setSearchResult(null);setIntel(null);setSimilarImages(null);setSimilarTexts(null);setSelectedReview([]);await refreshSnaps(p);await refreshReviews(p);await refreshIndex(p)}}
+  async function run(type,input={}){const actualRoot=input.root||root;if(!actualRoot&&!['windows-system','windows-ui-map'].includes(type))return;setBusy(true);try{const c=await api.startCycle(type,{root:actualRoot,...input});setCycle(c);if(type==='workspace-health'&&c.result)setHealth(c.result);if((type==='duplicates'||type==='indexed-duplicates')&&c.result)setDup(c.result);if((type==='file-search'||type==='indexed-file-search')&&c.result)setSearchResult(c.result);if(type==='persistent-index-scan'||type==='persistent-index-maintenance')await refreshIndex(actualRoot);if(type==='windows-system'&&c.result)setSystem(c.result);if(type==='windows-ui-map'&&c.result)setUiaMap(c.result);if(type==='workspace-intelligence'&&c.result)setIntel(c.result);if(type==='similar-images'&&c.result)setSimilarImages(c.result);if(type==='similar-texts'&&c.result)setSimilarTexts(c.result);if(type==='managed-zone-audit'&&c.result)setZoneReport(c.result);if(type==='drive-audit'&&c.result)setDriveReport(c.result);if(type==='pdf-intelligence'&&c.result)setPdfReport(c.result);if(type==='review-queue-build'||type==='recommendation-apply')await refreshReviews(actualRoot);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
+  async function explorerRead(type,input={}){setExplorerError('');setExplorerResult(null);const c=await run(type,input);if(c?.result)setExplorerResult(c.result);else if(c?.ok===false)setExplorerError(c.message||c.code||'File Explorer Skill ناموفق بود.');return c}
+@@ -73,8 +74,8 @@
+  {tab==='recovery'&&<><div className="panel"><div className="panel-title"><div><h3>Crash Recovery Center</h3><p>Transactionهای Write نیمه‌تمام بعد از Restart از روی Source / Staging / Destination طبقه‌بندی می‌شوند. هیچ Recovery خودکار Write نمی‌کند.</p></div><div className="mini-stats"><b>{fmt(recoveries.length)}</b><span>Recoverable</span><b>{journalStatus?.ok?'OK':'Check'}</b><span>Journal Chain</span></div></div><div className="toolbar"><button onClick={async()=>{await refreshRecovery();await refreshJournal()}}>Refresh</button></div>{recoveries.map(tx=><div className="rule" key={tx.id}><div><b>{tx.kind} · {tx.id}</b><small>{tx.status} · {tx.operations.length} عملیات · committed {fmt(tx.recovery.committed)} · staged {fmt(tx.recovery.staged)} · pending {fmt(tx.recovery.pending)}</small><small>{tx.recovery.manualReview?'نیازمند بررسی دستی':`پیشنهاد: ${tx.recovery.recommendation}`}</small></div><div className="actions"><button disabled={!tx.recovery.resumeAllowed} onClick={async()=>{await api.recoveryAct(tx.id,'resume');await refreshRecovery();await refreshJournal()}}>Resume</button><button className="danger" disabled={!tx.recovery.rollbackAllowed} onClick={async()=>{await api.recoveryAct(tx.id,'rollback');await refreshRecovery();await refreshJournal()}}>Rollback</button><button onClick={async()=>{await api.recoveryAct(tx.id,'abandon');await refreshRecovery();await refreshJournal()}}>فقط Archive</button></div></div>)}{!recoveries.length&&<p>Transaction نیمه‌تمامی برای Recovery وجود ندارد.</p>}</div><div className="panel"><h3>Event Journal</h3><p>Hash chain: {journalStatus?.ok?'سالم':'نیازمند بررسی'} · {fmt(journalStatus?.count)} رویداد در فایل فعال</p>{journalRows.slice(0,120).map(e=><div className="file-row" key={`${e.seq}-${e.hash}`}><b>#{fmt(e.seq)} {e.type}</b><span>{e.at} {e.cycleId?`· ${e.cycleId}`:''}</span></div>)}</div></>}
+  {tab==='watch'&&<><div className="panel"><h3>File Watcher — Bounded / Coalesced / Volume-aware</h3><p>Eventهای یک Path با هم coalesce می‌شوند، reconcile سریال است و Backpressure سقف‌دار دارد. هنگام Suspend یا قطع Volume، Watcher fail-safe متوقف می‌شود و Root برای Full Reindex علامت می‌خورد.</p><div className="toolbar"><button className="primary" disabled={!root} onClick={async()=>{await api.watchAdd(root);await refreshWatches()}}>Watch همین Workspace</button><button onClick={refreshWatches}>Refresh Events</button><button onClick={async()=>{setResilience(await api.resilienceProbe());await refreshWatches()}}>Probe Storage</button></div>{watchStatus&&<div className="mini-stats"><b>{fmt(watchStatus.pending)}</b><span>Pending</span><b>{fmt(watchStatus.coalesced)}</b><span>Coalesced</span><b>{fmt(watchStatus.droppedDelivery+watchStatus.droppedPending)}</b><span>Backpressure drops</span><b>{watchStatus.suspended?'Paused':'Active'}</b><span>Power state</span></div>}{resilience&&<div className="panel note"><b>Root / Volume Resilience</b>{(resilience.roots||[]).map((r,i)=><div className="file-row" key={`${r.root}-${i}`}><b>{r.status}</b><span>{r.root}{r.driveLetter?` · ${r.driveLetter}:`:''}{r.driveType?` · ${r.driveType}`:''}{r.identityChanged?' · VOLUME ID CHANGED':''}{r.rebindCandidate?.root?` · candidate: ${r.rebindCandidate.root}`:''}</span></div>)}{!(resilience.roots||[]).length&&<p>هنوز Root مانیتورشده‌ای وجود ندارد.</p>}</div>}{watchStatus?.needsFullRescan&&<div className="panel note"><b>Index freshness warning</b><p>برای {fmt(watchStatus.dirtyRoots?.length)} Root بخشی از Watch events از دست رفته/ناموفق بوده است. یک Full Persistent Reindex اجرا کن تا Dirty flag بعد از Commit پاک شود.</p></div>}{watches.map(w=><div className="rule" key={w.id}><div><b>{w.title}</b><small>{w.root}</small></div><div className="actions"><button className="danger" onClick={async()=>{await api.watchRemove(w.id);await refreshWatches()}}>Stop Watch</button></div></div>)}</div><div className="panel"><h3>آخرین File Events</h3>{watchEvents.map(e=><div className="file-row" key={e.id}><b>{e.eventType}</b><span>{e.path}</span></div>)}{!watchEvents.length&&<p>هنوز Event ثبت نشده است.</p>}</div></>}
+  {tab==='pdf'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('pdf-intelligence')} disabled={!root||busy}>تحلیل PDFهای Workspace</button><span>Read-only · بدون OCR · Encodingهای پیچیده ممکن است متن کامل ندهند.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{pdfReport&&<div className="panel"><h3>PDF Intelligence</h3><div className="stats"><div><b>{fmt(pdfReport.pdfsFound)}</b><span>PDF found</span></div><div><b>{fmt(pdfReport.processed)}</b><span>Processed</span></div><div><b>{fmt(pdfReport.errorsTotal)}</b><span>Errors</span></div></div>{pdfReport.rows.map(x=><div className="recommend" key={x.path}><div><button className="linkish" onClick={()=>api.showItem(x.path)}>{x.metadata?.title||x.path}</button><small>{fmt(x.pages)} صفحه · {bytes(x.size)} · {x.encrypted?'Encrypted':'Readable base'}</small></div><p>{x.textPreview||'متن پایه استخراج نشد.'}</p><small>{(x.limitations||[]).join(' · ')}</small></div>)}</div>}</>}
+- {tab==='cert'&&<div className="health-grid"><div className="panel wide"><div className="panel-title"><div><h3>Runtime Certification Status</h3><p>این صفحه وضعیت Runtime را نشان می‌دهد؛ Windows Certification رسمی فقط از Harness و UAT واقعی صادر می‌شود.</p></div><button onClick={refreshCert}>Refresh</button></div>{certStatus&&<><div className="mini-stats"><b>{certStatus.lifecycle?.cleanExit===false?'ACTIVE':'-'}</b><span>Session</span><b>{certStatus.resourcePressure?.state||'-'}</b><span>Pressure</span><b>{certStatus.indexHealth?.ok?'OK':'CHECK'}</b><span>SQLite</span><b>{certStatus.journal?.ok?'OK':'CHECK'}</b><span>Journal</span></div><div className="meter"><span>Platform</span><b>{certStatus.platform} / {certStatus.arch}</b></div><div className="meter"><span>Node / Electron</span><b>{certStatus.node} / {certStatus.electron||'-'}</b></div><div className="meter"><span>Session ID</span><b>{certStatus.lifecycle?.sessionId||'-'}</b></div><div className="meter"><span>Last heartbeat</span><b>{certStatus.lifecycle?.lastHeartbeatAt||'-'}</b></div><div className="meter"><span>Free memory</span><b>{certStatus.resourcePressure?`${Math.round((certStatus.resourcePressure.freeMemoryRatio||0)*100)}%`:'-'}</b></div><div className="meter"><span>Event-loop p95</span><b>{certStatus.resourcePressure?`${Math.round(certStatus.resourcePressure.eventLoopP95Ms||0)} ms`:'-'}</b></div><div className="meter"><span>Root states</span><b>{fmt(certStatus.rootResilience?.roots?.length||0)}</b></div><div className="meter"><span>Local AI</span><b>{certStatus.localAI?.enabled?`ON · ${certStatus.localAI.model||'no model'}`:'Disabled'}</b></div><div className="meter"><span>AI Circuit</span><b>{certStatus.localAI?.guard?.circuitOpen?'OPEN':'Closed'}</b></div></>}</div><div className="panel"><h3>Certification Boundary</h3><p>PASS این صفحه فقط Runtime health است؛ v0.9.7: Required SKIP دیگر PASS نیست. Installer/Portable، Authenticode، دو Volume NTFS، Scale و شواهد دستی باید با <code>npm run certify:windows</code> روی Windows واقعی تأیید شوند.</p></div></div>}
+- {tab==='settings'&&<div className="panel"><h3>Backup / Settings Portability</h3><p>Export شامل Automation Ruleها، Managed Zoneها و Watch Rootهاست؛ فایل‌های Workspace و Secretها داخل Bundle قرار نمی‌گیرند.</p><div className="actions"><button className="primary" onClick={async()=>{const r=await api.configExport();if(r?.ok)setConfigPreview({mode:'export',...r})}}>Export Settings</button><button onClick={async()=>{const r=await api.configImportPreview();if(r?.ok)setConfigPreview({mode:'import',...r})}}>Import Preview</button>{configPreview?.mode==='import'&&<button className="primary" onClick={async()=>{const r=await api.configImportApply(configPreview.token);setConfigPreview({mode:'applied',...r});await refreshRules();await refreshZones();await refreshWatches()}}>Apply Import</button>}</div>{configPreview&&<pre className="preview-box">{JSON.stringify(configPreview,null,2)}</pre>}</div>}
++ {tab==='cert'&&<div className="health-grid"><div className="panel wide"><div className="panel-title"><div><h3>RC Self‑Check / Runtime Certification</h3><p>Self‑Check داخلی برای RC، جدا از Windows Certification رسمی است. BLOCK می‌تواند Writeها را Fail‑closed کند.</p></div><div className="actions"><button onClick={refreshCert}>Refresh</button><button className="primary" onClick={async()=>{const r=await api.rcSelfCheck(false);setRcCheck(r);setUpdateGuardState(await api.updateGuardStatus())}}>Run Self‑Check</button></div></div>{rcCheck&&<><div className="mini-stats"><b>{String(rcCheck.overall||'-').toUpperCase()}</b><span>RC status</span><b>{fmt(rcCheck.summary?.pass)}</b><span>Pass</span><b>{fmt(rcCheck.summary?.warn)}</b><span>Warn</span><b>{fmt(rcCheck.summary?.block)}</b><span>Block</span></div>{(rcCheck.checks||[]).map(x=><div className="file-row" key={x.id}><b>{x.status.toUpperCase()} · {x.id}</b><span>{x.code} · {x.summary}</span></div>)}</>}{certStatus&&<><div className="meter"><span>Platform</span><b>{certStatus.platform} / {certStatus.arch}</b></div><div className="meter"><span>Node / Electron</span><b>{certStatus.node} / {certStatus.electron||'-'}</b></div><div className="meter"><span>SQLite / Journal</span><b>{certStatus.indexHealth?.ok?'OK':'CHECK'} / {certStatus.journal?.ok?'OK':'CHECK'}</b></div></>}</div><div className="panel"><h3>Version / Update Guard</h3><div className="meter"><span>Current</span><b>{updateGuardState?.currentVersion||'-'}</b></div><div className="meter"><span>Stable</span><b>{updateGuardState?.stableVersion||'-'}</b></div><div className="meter"><span>Pending</span><b>{updateGuardState?.pending?.targetVersion||'-'}</b></div><div className="meter"><span>Writes</span><b>{updateGuardState?.writeBlocked?'BLOCKED':'Allowed'}</b></div><div className="meter"><span>Rollback</span><b>{updateGuardState?.rollbackRecommended?'RECOMMENDED':'-'}</b></div><p>Windows Certification رسمی، Installer/Portable، Authenticode، دو Volume NTFS، Scale و Evidence دستی همچنان باید روی Windows واقعی اجرا شوند.</p></div></div>}
++ {tab==='settings'&&<><div className="panel"><h3>Backup / Settings Portability</h3><p>Export تنظیمات برای portability است. State Backup داخلی علاوه بر تنظیمات، Local AI settings و metadata ریشه‌های Index را با SHA256 نگه می‌دارد؛ محتوای Workspace، دیتابیس Index و Secret داخل Backup نیست.</p><div className="actions"><button className="primary" onClick={async()=>{const r=await api.configExport();if(r?.ok)setConfigPreview({mode:'export',...r})}}>Export Settings</button><button onClick={async()=>{const r=await api.configImportPreview();if(r?.ok)setConfigPreview({mode:'import',...r})}}>Import Settings Preview</button>{configPreview?.mode==='import'&&<button className="primary" onClick={async()=>{const r=await api.configImportApply(configPreview.token);setConfigPreview({mode:'applied',...r});await refreshRules();await refreshZones();await refreshWatches()}}>Apply Import</button>}<button onClick={async()=>{const r=await api.stateBackupCreate();setBackupPreview({mode:'created',...r});await refreshBackups()}}>Create State Backup</button><button onClick={async()=>{const r=await api.stateBackupRestorePreview();if(r?.ok)setBackupPreview({mode:'restore',...r})}}>Restore Backup Preview</button>{backupPreview?.mode==='restore'&&<button className="danger" onClick={async()=>{const r=await api.stateBackupRestoreApply(backupPreview.token);setBackupPreview({mode:'restored',...r});await refreshBackups();await refreshRules();await refreshZones();await refreshWatches();await refreshAI()}}>Apply Restore</button>}<button onClick={async()=>setDiagResult(await api.diagnosticsExport())}>Export Redacted Diagnostics</button></div>{configPreview&&<pre className="preview-box">{JSON.stringify(configPreview,null,2)}</pre>}{backupPreview&&<pre className="preview-box">{JSON.stringify(backupPreview,null,2)}</pre>}{diagResult&&<pre className="preview-box">{JSON.stringify(diagResult,null,2)}</pre>}</div><div className="panel"><h3>Local State Backups</h3>{backupRows.map(x=><div className="file-row" key={x.name}><b>{x.name}</b><span>{bytes(x.size)} · {x.updatedAt}</span></div>)}{!backupRows.length&&<p>هنوز State Backup داخلی ساخته نشده است.</p>}</div></>}
+  {tab==='cycles'&&<div className="panel"><h3>آخرین چرخه‌ها</h3>{cycles.map(c=><button className="history" key={c.id} onClick={()=>setCycle(c)}><span><b>{c.type}</b><small>{c.id}</small></span><em>{c.status}</em></button>)}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></div>}
+  </main></div>;
+  function Task({title,sub,on,disabled}){return <button className="task" onClick={on} disabled={disabled??(!root||busy)}><b>{title}</b><span>{sub}</span></button>}
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/diagnostics-v098.test.cjs /mnt/data/wa098/tests/diagnostics-v098.test.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/diagnostics-v098.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/tests/diagnostics-v098.test.cjs	2026-08-14 16:19:14.581242708 +0000
+@@ -0,0 +1,9 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const zlib=require('zlib');
++const {DiagnosticsBundleService}=require('../electron/services/diagnostics-bundle-service.cjs');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-diag-'));const file=path.join(dir,'diagnostics.json.gz');
++const svc=new DiagnosticsBundleService({appVersion:'0.9.8',journal:{verify:()=>({ok:true,count:2}),list:()=>[{at:'x',type:'TEST',payload:{password:'secret',root:'C:\\Private\\Docs'}}],append:()=>{}},selfCheckService:{run:()=>({overall:'pass',summary:{pass:9,warn:0,block:0},checks:[]})},persistentFileIndex:{health:()=>({ok:true,dbPath:'C:\\Users\\Alice\\index.sqlite',roots:{completed:1}})},recoveryService:{inspect:()=>[]},watcherService:{status:()=>({dirtyRoots:[{root:'C:\\Private\\Docs'}],blockedRoots:[]})},rootResilienceService:{status:()=>({roots:[{root:'C:\\Private\\Docs',status:'online'}]})},lifecycleState:{status:()=>({sessionId:'s'})},resourcePressureGuard:{snapshot:()=>({state:'normal'})},localAIService:{status:()=>({enabled:true,baseUrl:'http://127.0.0.1:8080/v1',runtime:{modelPath:'D:\\Models\\private.gguf'},token:'bad'})},updateGuard:{status:()=>({currentVersion:'0.9.8'})}});
++const r=svc.saveTo(file);assert.strictEqual(r.ok,true);const text=zlib.gunzipSync(fs.readFileSync(file)).toString('utf8');assert(!text.includes('C:\\\\Private'));assert(!text.includes('Alice'));assert(!text.includes('\"bad\"'));assert(text.includes('\"secretsIncluded\": false'));assert(text.includes('pathsRedacted'));console.log('diagnostics-v098.test.cjs PASS');
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/packaged-app-smoke-v084.cjs /mnt/data/wa098/tests/packaged-app-smoke-v084.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/packaged-app-smoke-v084.cjs	2026-08-13 10:02:23.000000000 +0000
++++ /mnt/data/wa098/tests/packaged-app-smoke-v084.cjs	2026-08-14 16:23:52.071866578 +0000
+@@ -7,4 +7,4 @@
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-cert-smoke-')),out=path.join(tmp,'smoke.json'),userData=path.join(tmp,'userdata');
+ const child=spawn(exe,[`--cert-smoke-output=${out}`,`--cert-user-data=${userData}`],{stdio:'ignore',windowsHide:true});
+ const timer=setTimeout(()=>{try{child.kill()}catch{};console.error('PACKAGED_APP_SMOKE_TIMEOUT');process.exit(3)},45000);
+-child.on('exit',(code)=>{clearTimeout(timer);try{if(code!==0)throw new Error(`PACKAGED_APP_EXIT_${code}`);const r=JSON.parse(fs.readFileSync(out,'utf8'));if(!r.ok)throw new Error('PACKAGED_APP_REPORT_NOT_OK');if(r.platform!=='win32')throw new Error('PACKAGED_APP_WRONG_PLATFORM');if(!r.journal?.ok)throw new Error('PACKAGED_APP_JOURNAL_FAILED');if(r.indexHealth&&!r.indexHealth.ok)throw new Error('PACKAGED_APP_SQLITE_HEALTH_FAILED');console.log(`PASS packaged app smoke v0.8.4 ${r.appVersion} Electron ${r.electron}`);fs.rmSync(tmp,{recursive:true,force:true});process.exit(0);}catch(error){console.error(error.message);try{console.error(fs.readFileSync(out,'utf8'))}catch{}process.exit(4)}});
++child.on('exit',(code)=>{clearTimeout(timer);try{if(code!==0)throw new Error(`PACKAGED_APP_EXIT_${code}`);const r=JSON.parse(fs.readFileSync(out,'utf8'));if(!r.ok)throw new Error('PACKAGED_APP_REPORT_NOT_OK');if(r.platform!=='win32')throw new Error('PACKAGED_APP_WRONG_PLATFORM');if(!r.journal?.ok)throw new Error('PACKAGED_APP_JOURNAL_FAILED');if(r.indexHealth&&!r.indexHealth.ok)throw new Error('PACKAGED_APP_SQLITE_HEALTH_FAILED');if(r.rcSelfCheck?.overall==='block')throw new Error('PACKAGED_APP_RC_SELF_CHECK_BLOCKED');if(r.updateGuard?.writeBlocked)throw new Error('PACKAGED_APP_UPDATE_GUARD_BLOCKED');console.log(`PASS packaged app smoke v0.8.4 ${r.appVersion} Electron ${r.electron}`);fs.rmSync(tmp,{recursive:true,force:true});process.exit(0);}catch(error){console.error(error.message);try{console.error(fs.readFileSync(out,'utf8'))}catch{}process.exit(4)}});
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/rc-self-check-v098.test.cjs /mnt/data/wa098/tests/rc-self-check-v098.test.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/rc-self-check-v098.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/tests/rc-self-check-v098.test.cjs	2026-08-14 16:18:39.255094249 +0000
+@@ -0,0 +1,12 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {RCSelfCheckService}=require('../electron/services/rc-self-check-service.cjs');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-selfcheck-'));
++const base={userData:dir,appVersion:'0.9.8',journal:{verify:()=>({ok:true,count:10}),append:()=>{}},persistentFileIndex:{health:()=>({ok:true,activeScans:0,roots:{completed:1}})},recoveryService:{inspect:()=>[]},watcherService:{status:()=>({dirtyRoots:[],blockedRoots:[],pending:0,watched:1})},rootResilienceService:{status:()=>({roots:[{status:'online',identityChanged:false}]})},lifecycleState:{status:()=>({previousSession:{cleanExit:true}})},resourcePressureGuard:{snapshot:()=>({state:'normal'})},localAIService:{status:()=>({enabled:false})},updateGuard:{status:()=>({writeBlocked:false,pending:null,stableVersion:'0.9.7'})}};
++let s=new RCSelfCheckService(base);let r=s.run();assert.strictEqual(r.overall,'pass');assert.strictEqual(r.summary.block,0);
++s=new RCSelfCheckService({...base,recoveryService:{inspect:()=>[{id:'tx'}]}});r=s.run();assert.strictEqual(r.overall,'warn');assert(r.checks.find(x=>x.id==='recovery'&&x.status==='warn'));
++s=new RCSelfCheckService({...base,journal:{verify:()=>({ok:false,invalidSeq:3}),append:()=>{}}});r=s.run();assert.strictEqual(r.overall,'block');assert(r.checks.find(x=>x.id==='journal'&&x.status==='block'));
++s=new RCSelfCheckService({...base,updateGuard:{status:()=>({writeBlocked:true,blockCode:'UPDATE_SELF_CHECK_BLOCKED',rollbackRecommended:true,pending:{targetVersion:'1.0.0-rc1'}})}});r=s.run();assert.strictEqual(r.overall,'block');
++console.log('rc-self-check-v098.test.cjs PASS');
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/source-tree-fingerprint-v097.test.cjs /mnt/data/wa098/tests/source-tree-fingerprint-v097.test.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/source-tree-fingerprint-v097.test.cjs	2026-08-14 11:15:27.000000000 +0000
++++ /mnt/data/wa098/tests/source-tree-fingerprint-v097.test.cjs	2026-08-14 16:22:04.278403934 +0000
+@@ -3,5 +3,5 @@
+ const path=require('path');
+ const cwd=path.resolve(__dirname,'..');
+ function run(){const s=cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd,encoding:'utf8'}).trim();return JSON.parse(s);}
+-const a=run(),b=run();assert.equal(a.schemaVersion,'workspace-agent-source-fingerprint-v1');assert.equal(a.version,'0.9.7');assert(a.files>100);assert(/^[a-f0-9]{64}$/.test(a.sha256));assert.equal(a.sha256,b.sha256);
++const a=run(),b=run();assert.equal(a.schemaVersion,'workspace-agent-source-fingerprint-v1');assert.equal(a.version,JSON.parse(require('fs').readFileSync(path.join(cwd,'package.json'),'utf8')).version);assert(a.files>100);assert(/^[a-f0-9]{64}$/.test(a.sha256));assert.equal(a.sha256,b.sha256);
+ console.log('source-tree-fingerprint-v097.test.cjs PASS',a);
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/state-backup-v098.test.cjs /mnt/data/wa098/tests/state-backup-v098.test.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/state-backup-v098.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/tests/state-backup-v098.test.cjs	2026-08-14 16:18:39.256388745 +0000
+@@ -0,0 +1,16 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const zlib=require('zlib');
++const {StateBackupService}=require('../electron/services/state-backup-service.cjs');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-backup-'));
++let applied=0,aiUpdated=0;
++const configurationService={exportBundle:()=>({schemaVersion:'workspace-agent-config-v1',automationRules:[{title:'r'}],managedZones:[{title:'z'}],watchRoots:[{root:'C:\\Work'}]}),apply:b=>(applied++,{rules:{added:b.automationRules.length}})};
++const localAIService={settings:()=>({schemaVersion:'workspace-local-ai-config-v2',enabled:true,baseUrl:'http://127.0.0.1:8080/v1',model:'local'}),updateSettings:p=>(aiUpdated++,p)};
++const index={listRoots:()=>[{root:'C:\\Work',status:'completed',generation:2,completedAt:'x',files:10,bytes:20}]};
++const svc=new StateBackupService(dir,{appVersion:'0.9.8',configurationService,localAIService,persistentFileIndex:index,journal:{append:()=>{}}});
++const created=svc.create({reason:'test'});assert(fs.existsSync(created.file));const preview=svc.preview(created.file);assert.strictEqual(preview.summary.rules,1);assert.strictEqual(preview.summary.indexRoots,1);
++const restored=svc.restore(created.file);assert.strictEqual(restored.ok,true);assert.strictEqual(applied,1);assert.strictEqual(aiUpdated,1);assert(restored.report.preRestoreBackup);
++const corrupted=path.join(dir,'bad.json.gz');const b=JSON.parse(zlib.gunzipSync(fs.readFileSync(created.file)).toString('utf8'));b.payload.configuration.automationRules.push({title:'tamper'});fs.writeFileSync(corrupted,zlib.gzipSync(Buffer.from(JSON.stringify(b))));assert.throws(()=>svc.preview(corrupted),e=>e.code==='BACKUP_INTEGRITY_FAILED');
++console.log('state-backup-v098.test.cjs PASS');
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/update-preflight-v098.test.cjs /mnt/data/wa098/tests/update-preflight-v098.test.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/update-preflight-v098.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/tests/update-preflight-v098.test.cjs	2026-08-14 16:23:26.189848146 +0000
+@@ -0,0 +1,8 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const cp=require('child_process');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-update-preflight-'));
++const out=cp.execFileSync(process.execPath,['scripts/prepare-update-v098.cjs',`--user-data=${dir}`,'--current=0.9.8','--target=1.0.0-rc1',`--sha256=${'c'.repeat(64)}`,'--backup=pre-update.json.gz'],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'});
++const j=JSON.parse(out);assert.strictEqual(j.ok,true);assert.strictEqual(j.targetVersion,'1.0.0-rc1');const state=JSON.parse(fs.readFileSync(path.join(dir,'runtime','update-guard.json'),'utf8'));assert.strictEqual(state.pending.backupFile,'pre-update.json.gz');console.log('update-preflight-v098.test.cjs PASS');
+diff -ruN '--exclude=DIFF_v0.9.8.txt' /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/version-update-guard-v098.test.cjs /mnt/data/wa098/tests/version-update-guard-v098.test.cjs
+--- /mnt/data/wa097_work/windows-workspace-agent-v0.9.7-windows-certification/tests/version-update-guard-v098.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa098/tests/version-update-guard-v098.test.cjs	2026-08-14 16:22:45.852235771 +0000
+@@ -0,0 +1,34 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {VersionUpdateGuard,compareVersions}=require('../electron/services/version-update-guard.cjs');
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-update-guard-'));
++assert(compareVersions('1.0.0','0.9.9')>0);
++assert(compareVersions('1.0.0-rc1','1.0.0')<0);
++assert(compareVersions('1.0.0-rc2','1.0.0-rc1')>0);
++let g=new VersionUpdateGuard(dir,{currentVersion:'0.9.8'});
++assert.strictEqual(g.assertWriteAllowed().ok,true);
++g.prepareUpdate({targetVersion:'1.0.0-rc1',artifactSha256:'a'.repeat(64),backupFile:'state.json.gz'});
++assert.strictEqual(g.status().pending.targetVersion,'1.0.0-rc1');
++g=new VersionUpdateGuard(dir,{currentVersion:'1.0.0-rc1'});
++assert.strictEqual(g.status().pending.firstBootAt!=null,true);
++g.recordSelfCheck({at:new Date().toISOString(),overall:'block',summary:{block:1,warn:0}});
++assert.strictEqual(g.assertWriteAllowed().ok,false);
++assert.strictEqual(g.status().rollbackRecommended,true);
++g.clearPending({reason:'test'});
++assert.strictEqual(g.assertWriteAllowed().ok,true);
++g.prepareUpdate({targetVersion:'1.0.0',artifactSha256:'b'.repeat(64)});
++g=new VersionUpdateGuard(dir,{currentVersion:'1.0.0'});
++g.recordSelfCheck({at:new Date().toISOString(),overall:'pass',summary:{block:0,warn:0}});
++assert.strictEqual(g.status().stableVersion,'1.0.0');
++assert.strictEqual(g.status().pending,null);
++g=new VersionUpdateGuard(dir,{currentVersion:'0.9.9'});
++assert.strictEqual(g.assertWriteAllowed().ok,false);
++assert.strictEqual(g.status().blockCode,'APP_DOWNGRADE_DETECTED');
++
++const epochDir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-update-epoch-'));
++fs.mkdirSync(path.join(epochDir,'runtime'),{recursive:true});
++fs.writeFileSync(path.join(epochDir,'runtime','update-guard.json'),JSON.stringify({schemaVersion:'workspace-agent-update-guard-v1',dataEpoch:2,stableVersion:'1.1.0',lastSeenVersion:'1.1.0',pending:null,lastSelfCheck:null,rollbackRecommended:false,writeBlocked:false,blockCode:null,history:[]}));
++const epochGuard=new VersionUpdateGuard(epochDir,{currentVersion:'1.0.0'});assert.strictEqual(epochGuard.status().blockCode,'STATE_DATA_EPOCH_TOO_NEW');assert.strictEqual(epochGuard.assertWriteAllowed().ok,false);
++console.log('version-update-guard-v098.test.cjs PASS');

@@ -1,0 +1,1099 @@
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/README_FA.md /mnt/data/work_cert21/README_FA.md
+--- /mnt/data/work_cert21_audit/README_FA.md	2026-08-16 13:44:42.000000000 +0000
++++ /mnt/data/work_cert21/README_FA.md	2026-08-17 17:07:01.467530621 +0000
+@@ -51,6 +51,14 @@
+ جزئیات در `docs/RC1_ACCEPTANCE_MODEL_FA.md` و `docs/RELEASE_READINESS_v1.0.0-rc1.json` است.
+ 
+ 
++## cert-kit21 — Handoff Transport Trust Boundary
++
++Core همچنان Feature-Frozen است. cert-kit21 trust boundary انتقال Primary/Peer را می‌بندد: Handoff ZIP پیش از هر trust با extractor محدود و fail-closed باز می‌شود؛ incoming lock قبل از هر mutation روی Source در staging verify و به Release Identity bind می‌شود؛ Handoff v3 referenceهای Pointer را declared/regular/realpath-contained می‌خواهد؛ و ExecutionRoot علاوه بر lexical path با projected realpath نیز از Frozen Source جدا می‌شود.
++
++Windows Safe-Handoff UAT نیز به certification lane اجباری اضافه شده است. Source validation این revision: **108/108 tests PASS** و Syntax **253 فایل PASS**؛ Windows واقعی همچنان P0 نهایی است و Safe-Handoff UAT در non-Windows `SKIP/WINDOWS_REQUIRED` می‌ماند.
++
++جزئیات: `docs/HANDOFF_TRANSPORT_TRUST_BOUNDARY_v1.0.0-rc1-cert-kit21_FA.md` و `docs/GAP_AUDIT_v1.0.0-rc1-cert-kit21_FA.md`.
++
+ ## cert-kit20 — Non-Downgradable Stable Policy + Strong Manual Evidence
+ 
+ Core همچنان Feature-Frozen است. cert-kit20 دو شکاف داوری باقی‌مانده را می‌بندد: معیارهای Stable دیگر با flag اپراتور قابل ضعیف‌کردن نیستند و از `stableCertificationPolicy` ثابت می‌آیند؛ همچنین Manual Evidence v4 برای هر پنج PASS attachment hash-bound اجباری می‌خواهد و به Primary Certification Report همان execution bind است.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/CHANGELOG_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md /mnt/data/work_cert21/docs/CHANGELOG_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md
+--- /mnt/data/work_cert21_audit/docs/CHANGELOG_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/docs/CHANGELOG_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md	2026-08-17 17:04:56.341356602 +0000
+@@ -0,0 +1,10 @@
++# Changelog — v1.0.0-rc1 cert-kit21 Handoff Transport Trust
++
++- Handoff schema به v3 ارتقا یافت و Pointer references semantic containment گرفت.
++- untrusted Handoff ZIP با bounded safe extractor استخراج می‌شود؛ raw Expand-Archive حذف شد.
++- incoming package-lock قبل از هر Source mutation در staging verify و به Release Identity bind می‌شود.
++- lock import پس از PASS کامل، staged و atomic است.
++- ExecutionRoot با lexical + projected-realpath isolation کنترل می‌شود.
++- Safe-Handoff Windows UAT به certification lane اضافه شد.
++- Stable policy consistency برای NoBuildArtifacts، Signing و direct RunScale/BuildArtifacts سخت شد.
++- Feature جدیدی به Core اضافه نشد؛ Feature Freeze برقرار است.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit21_FA.md /mnt/data/work_cert21/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit21_FA.md
+--- /mnt/data/work_cert21_audit/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit21_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/docs/GAP_AUDIT_v1.0.0-rc1-cert-kit21_FA.md	2026-08-17 17:04:56.339532029 +0000
+@@ -0,0 +1,25 @@
++# Gap Audit — v1.0.0-rc1 cert-kit21
++
++## شکاف‌های بسته‌شده
++
++### P1 — Source mutation قبل از Handoff verification
++بسته شد. incoming lock ابتدا در staging verify و به Release Identity bind می‌شود؛ import به Source فقط بعد از PASS کامل و به‌صورت atomic انجام می‌شود.
++
++### P1 — Untrusted ZIP extraction
++بسته شد در Source. raw `Expand-Archive` برای Handoff حذف شد و bounded safe extractor traversal/ADS/device-name/case-alias/reparse/archive-bomb classes را fail-closed می‌کند. Windows UAT واقعی هنوز لازم است.
++
++### P1 — Pointer semantic escape
++بسته شد. Handoff v3 تمام path referenceهای Pointer را declared/regular/realpath-contained می‌خواهد و Windows-family pairing را verify می‌کند.
++
++### P1 — ExecutionRoot junction/parent overlap
++بسته شد. lexical و projected-realpath overlap با Frozen Source fail-closed است؛ فقط `rc1-execution` کنترل‌شده مجاز است.
++
++### P1 — Stable policy inconsistency در مسیرهای فرعی
++بسته شد. `windows-rc1-certify.ps1`، direct `windows-certification-v097.ps1` و Execution lane نمی‌توانند artifact/signing/100k+1M requirements را برای RC1 downgrade کنند.
++
++## P0 باقی‌مانده
++
++تنها blocker نهایی، Certification واقعی روی Windows 10 و Windows 11 است: دو NTFS volume واقعی، 100k/1M، reparse/ACL/locks، sleep/resume، USB، disk-full/power-loss، signed NSIS/Portable، upgrade واقعی و evidence نهایی.
++
++## Post-v1
++Background host/tray، CorelDRAW skill pack و DR/UI profiling عمیق همچنان خارج Feature Freeze v1 هستند.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/HANDOFF_TRANSPORT_TRUST_BOUNDARY_v1.0.0-rc1-cert-kit21_FA.md /mnt/data/work_cert21/docs/HANDOFF_TRANSPORT_TRUST_BOUNDARY_v1.0.0-rc1-cert-kit21_FA.md
+--- /mnt/data/work_cert21_audit/docs/HANDOFF_TRANSPORT_TRUST_BOUNDARY_v1.0.0-rc1-cert-kit21_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/docs/HANDOFF_TRANSPORT_TRUST_BOUNDARY_v1.0.0-rc1-cert-kit21_FA.md	2026-08-17 17:04:56.339132111 +0000
+@@ -0,0 +1,50 @@
++# Handoff Transport Trust Boundary — v1.0.0-rc1 cert-kit21
++
++## هدف
++
++cert-kit21 مرز اعتماد انتقال Primary/Peer Handoff را قبل از هر mutation روی Frozen Source می‌بندد. ZIP، lockfile و Pointer ورودی تا زمانی که validation کامل نشده‌اند untrusted هستند.
++
++## Safe archive extraction
++
++`windows-safe-archive-expand.ps1` جای `Expand-Archive` مستقیم روی ورودی untrusted را می‌گیرد. همه entryها پیش از جایگزینی destination بررسی می‌شوند و extraction ابتدا داخل staging sibling انجام می‌شود.
++
++Fail-closed موارد زیر:
++- path traversal، absolute/drive/UNC path و dot segment؛
++- NTFS ADS (`:`)، trailing dot/space و Windows reserved device names؛
++- duplicate case/Unicode-normalized aliases و file/directory collision؛
++- ZIP symlink/reparse attributes؛
++- control characters؛
++- archive/entry/uncompressed-size خارج bounds؛
++- reparse point در tree استخراج‌شده.
++
++Destination موجود فقط پس از extraction و validation کامل جایگزین می‌شود.
++
++## Staged lock verification
++
++ترتیب اعتماد الزامی:
++
++1. safe extract؛
++2. verify Handoff بدون Source identity؛
++3. verify `package-lock.json` در محل staging با `verify-release-inputs --lockfile`؛
++4. verify Handoff با Release Identity محاسبه‌شده از همان staged lock؛
++5. فقط پس از PASS کامل، import اتمیک lockfile به Source؛
++6. verify مجدد Release Inputs محلی.
++
++بنابراین Handoff خراب نمی‌تواند قبل از reject شدن `package-lock.json` سورس را تغییر دهد.
++
++## Handoff schema v3 و Pointer semantics
++
++Handoff v3 علاوه بر hash فایل Pointer، referenceهای داخل Pointer را نیز semantic verify می‌کند. Reference باید relative، بدون `.`/`..`، regular file واقعی، realpath-contained و عضو entries هش‌شده Handoff باشد.
++
++Primary refs: certification report، evidence bundle، release manifest، SHA256SUMS، manual evidence template و package lock.
++Peer refs: certification report، evidence bundle و package lock.
++
++Peer Windows families باید Windows10/Windows11 و متفاوت باشند.
++
++## ExecutionRoot isolation
++
++`path-trust-boundary.cjs` هم lexical overlap و هم projected realpath overlap را بررسی می‌کند. parent-of-source، alias/junction/symlink به Source و مسیر داخل Source رد می‌شوند؛ فقط `source/rc1-execution` استثنای کنترل‌شده است.
++
++## Windows evidence
++
++Source tests این قرارداد را verify می‌کنند. رفتار واقعی ZIP/NTFS روی Windows با `windows-safe-handoff-transport-rc1.uat.cjs` در Certification lane اجباری است و در non-Windows PASS ادعا نمی‌شود.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/RC1_ACCEPTANCE_MODEL_FA.md /mnt/data/work_cert21/docs/RC1_ACCEPTANCE_MODEL_FA.md
+--- /mnt/data/work_cert21_audit/docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-16 13:44:24.000000000 +0000
++++ /mnt/data/work_cert21/docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-17 17:04:58.195178436 +0000
+@@ -1,4 +1,4 @@
+-# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit20
++# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit21
+ 
+ ## قرارداد ثابت RC
+ 
+@@ -26,7 +26,7 @@
+ 8. Authenticode واقعی `Valid` و live thumbprint re-check روی Windows؛
+ 9. Manual Evidence v4 برای هر پنج سناریوی اجباری با attachment hash-bound؛
+ 10. upgrade واقعی `0.9.8 → 1.0.0-rc1` و state preservation؛
+-11. Primary/Peer Evidence Bundle و Handoff v2 بدون reparse escape؛
++11. Primary/Peer Evidence Bundle و Handoff v3 بدون reparse escape؛
+ 12. Final Verdict/Envelope/Stable Decision همگی execution-bound؛
+ 13. Promotion-time rehash/reverification همه leaf evidence؛
+ 14. Final Certification Bundle کاملاً self-contained و independently verifiable.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md /mnt/data/work_cert21/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
+--- /mnt/data/work_cert21_audit/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-16 13:44:42.000000000 +0000
++++ /mnt/data/work_cert21/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-17 17:04:57.545308474 +0000
+@@ -1,12 +1,12 @@
+-# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit20
++# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit21
+ 
+-این revision قابلیت محصولی جدیدی به Core اضافه نمی‌کند. Core همچنان Feature-Frozen است. هدف cert-kit20 این است که اجرای Certification واقعی Windows از یک مجموعه دستور پراکنده به یک **Execution Kit مرحله‌بندی‌شده، قابل انتقال بین دو سیستم‌عامل و قابل Finalize** تبدیل شود.
++این revision قابلیت محصولی جدیدی به Core اضافه نمی‌کند. Core همچنان Feature-Frozen است. هدف cert-kit21 این است که اجرای Certification واقعی Windows از یک مجموعه دستور پراکنده به یک **Execution Kit مرحله‌بندی‌شده، قابل انتقال بین دو سیستم‌عامل و قابل Finalize** تبدیل شود.
+ 
+ ## قرارداد Final PASS
+ 
+ Final PASS فقط وقتی ممکن است که Windows 10 و Windows 11 هر دو با همان Source Fingerprint، همان `package-lock.json` و همان `releaseIdentitySha256` PASS شوند، Scale واقعی 100k و 1M کامل باشد، NSIS و Portable معتبر ساخته شوند، Evidence Bundle هر دو Run سالم باشد، Manual Evidence v3 کامل شود و upgrade واقعی `0.9.8 → 1.0.0-rc1` دقیقاً با NSIS متعلق به Artifact Owner انجام شده باشد.
+ 
+-## مسیر پیشنهادی cert-kit20
++## مسیر پیشنهادی cert-kit21
+ 
+ ### 1) Primary / Artifact Owner
+ 
+@@ -34,7 +34,7 @@
+ 
+ ### Phase Readiness قبل از Handoff
+ 
+-Primary/Peer ممکن است در Orchestrator کلی `INCOMPLETE` باشند چون Final evidence هنوز کامل نیست. cert-kit20 با `rc1-phase-readiness.cjs` بین این incompleteness مورد انتظار و یک blocker واقعی فرق می‌گذارد. Evidence Bundle، Source/Release Identity و دلایل incomplete دوباره verify می‌شوند؛ هر دلیل خارج allowlist یا هر tamper باعث توقف Handoff می‌شود.
++Primary/Peer ممکن است در Orchestrator کلی `INCOMPLETE` باشند چون Final evidence هنوز کامل نیست. cert-kit21 با `rc1-phase-readiness.cjs` بین این incompleteness مورد انتظار و یک blocker واقعی فرق می‌گذارد. Evidence Bundle، Source/Release Identity و دلایل incomplete دوباره verify می‌شوند؛ هر دلیل خارج allowlist یا هر tamper باعث توقف Handoff می‌شود.
+ 
+ ### 2) Manual Evidence
+ 
+@@ -53,7 +53,7 @@
+ 
+ ### 3) Peer Windows Family
+ 
+-همان Source cert-kit20 را روی خانواده دیگر Windows باز کنید و Primary Handoff را منتقل کنید:
++همان Source cert-kit21 را روی خانواده دیگر Windows باز کنید و Primary Handoff را منتقل کنید:
+ 
+ ```powershell
+ npm run certify:execution:rc1 -- `
+@@ -103,7 +103,7 @@
+ 
+ ## Recovery پس از قطع اجرا
+ 
+-cert-kit20 برای Runهای قطع‌شده Modeهای `Recover` و `Resume` دارد. اگر Primary یا Peer Certification کامل PASS شده باشد ولی crash در packaging رخ داده باشد، همان PASS boundary با Release Identity فعلی verify و فقط packaging ادامه داده می‌شود. اگر phase ناقص باشد، partial evidence archive و فقط همان phase rerun می‌شود.
++cert-kit21 برای Runهای قطع‌شده Modeهای `Recover` و `Resume` دارد. اگر Primary یا Peer Certification کامل PASS شده باشد ولی crash در packaging رخ داده باشد، همان PASS boundary با Release Identity فعلی verify و فقط packaging ادامه داده می‌شود. اگر phase ناقص باشد، partial evidence archive و فقط همان phase rerun می‌شود.
+ 
+ ## Status
+ 
+@@ -133,10 +133,15 @@
+ 
+ Execution Kit خودش disk format، disk initialization، USB eject اجباری، پرکردن عمدی کامل دیسک، shutdown/restart ناگهانی یا تغییر ACL سیستم را انجام نمی‌دهد. سناریوهای فیزیکی فقط توسط اپراتور در محیط تست انجام و Evidence آن ثبت می‌شود.
+ 
+-## cert-kit20 — Local AI Runtime provenance input
++## cert-kit21 — Local AI Runtime provenance input
+ پیش از اجرای Certification روی هر Windows، `WA_LLAMA_SERVER_PATH` و `WA_LLAMA_SERVER_EXPECTED_SHA256` باید به یک `llama-server.exe` واقعی اشاره کنند. اگر signer pin نیز در Release Policy لازم است، `WA_LLAMA_SERVER_EXPECTED_SIGNER_THUMBPRINT` را هم تنظیم کنید. نبود این ورودی‌ها Gate `test:windows-local-ai-provenance-rc1-uat` را `INCOMPLETE` می‌کند و Stable promotion مجاز نیست.
+ 
+ 
+-## cert-kit20 — Handoff/Dependency/Final Bundle closure
++## cert-kit21 — Handoff/Dependency/Final Bundle closure
+ 
+ Handoff v2 link/reparse/special-file را fail-closed می‌کند. Dependency Source Policy فقط `https://registry.npmjs.org` را می‌پذیرد و policy hash بخشی از Release Identity است. Stable Promotion پیش از اجازه نهایی Release Manifest/artifacts، Manual attachments و هر دو Evidence Bundle را live reverify می‌کند. Final ZIP از Final Bundle self-contained ساخته می‌شود.
++
++
++## cert-kit21 — Safe transport gate
++
++هر Handoff قبل از import با safe archive extractor و Handoff v3 verify می‌شود. `test:windows-safe-handoff-transport-rc1-uat` در Windows lane اجباری است؛ traversal/ADS/case-alias/resource-boundary classes باید fail-closed باشند. Lockfile تا قبل از PASS کامل staging verification Source را mutate نمی‌کند.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md /mnt/data/work_cert21/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md
+--- /mnt/data/work_cert21_audit/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md	2026-08-16 13:44:42.000000000 +0000
++++ /mnt/data/work_cert21/docs/RC1_WINDOWS_EXECUTION_KIT_v1.0.0-rc1_FA.md	2026-08-17 17:04:57.545714175 +0000
+@@ -1,11 +1,11 @@
+-# Windows Certification Execution Kit — cert-kit20
++# Windows Certification Execution Kit — cert-kit21
+ 
+ هدف: کاهش خطای عملیاتی هنگام انتقال RC1 بین Windows 10 و Windows 11 و جلوگیری از ترکیب شدن Report، lockfile، Release Identity، Artifact یا Manual Evidence متعلق به Runهای متفاوت.
+ 
+ 
+ ## Doctor — قبل از Primary/Peer
+ 
+-برای کاهش خطای اپراتور، cert-kit20 یک preflight مستقل دارد:
++برای کاهش خطای اپراتور، cert-kit21 یک preflight مستقل دارد:
+ 
+ ```powershell
+ npm run certify:execution:rc1 -- -Mode Doctor
+@@ -39,7 +39,7 @@
+ 
+ ## Phase Readiness و `INCOMPLETE` مورد انتظار
+ 
+-`windows-rc1-certify.ps1` قبل از Finalize عمداً می‌تواند exit code 2 بدهد، چون Manual Evidence و/یا خانواده دوم Windows هنوز کامل نشده‌اند. cert-kit20 این وضعیت را کورکورانه failure تلقی نمی‌کند. `rc1-phase-readiness.cjs` فقط وقتی ادامه را مجاز می‌کند که:
++`windows-rc1-certify.ps1` قبل از Finalize عمداً می‌تواند exit code 2 بدهد، چون Manual Evidence و/یا خانواده دوم Windows هنوز کامل نشده‌اند. cert-kit21 این وضعیت را کورکورانه failure تلقی نمی‌کند. `rc1-phase-readiness.cjs` فقط وقتی ادامه را مجاز می‌کند که:
+ 
+ - certification report واقعاً `PASS` باشد؛
+ - Evidence Bundle دوباره hash/aggregate verify شود؛
+@@ -69,11 +69,16 @@
+ این Kit جای Windows UAT را نمی‌گیرد؛ فقط اجرای آن را deterministic‌تر و قابل ممیزی‌تر می‌کند.
+ 
+ 
+-## cert-kit20 transport/final closure
++## cert-kit21 transport/final closure
+ 
+-Primary/Peer Handoff v2 هیچ symlink/reparse یا special file را تحمل نمی‌کند. Finalize بعد از Stable Decision یک Final Bundle self-contained می‌سازد و همان bundle را مستقل verify می‌کند؛ Recovery نیز Final Bundle ثبت‌شده را دوباره verify می‌کند. Registry/lock provenance نیز به policy allowlist و Release Identity bind است.
++Primary/Peer Handoff v3 علاوه بر fail-closed بودن symlink/reparse/special-file، referenceهای Pointer را نیز declared/regular/realpath-contained می‌خواهد. Finalize بعد از Stable Decision یک Final Bundle self-contained می‌سازد و همان bundle را مستقل verify می‌کند؛ Recovery نیز Final Bundle ثبت‌شده را دوباره verify می‌کند. Registry/lock provenance نیز به policy allowlist و Release Identity bind است.
+ 
+ 
+-## cert-kit20 Stable Policy
++## cert-kit21 Stable Policy
+ 
+ در RC1 معیارهای Stable از `package.json > workspaceAgentRelease.stableCertificationPolicy` می‌آیند. نبود `-RequireSigning` امضا را غیرفعال نمی‌کند و `-SkipScale` با matrix اجباری 100k/1M رد می‌شود. Manual Evidence فقط از Primary PASS report prefill می‌شود و هر PASS attachment hash-bound لازم دارد.
++
++
++## cert-kit21 — Handoff transport trust
++
++ZIP ورودی قبل از هر trust با `windows-safe-archive-expand.ps1` در staging استخراج می‌شود. `package-lock.json` ورودی پیش از verify کامل Handoff هرگز داخل Source کپی نمی‌شود؛ ابتدا external-lock validation و Release Identity verification انجام می‌شود و سپس import اتمیک مجاز است. ExecutionRoot نیز با lexical و projected-realpath guard از Frozen Source جدا می‌شود.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/RELEASE_READINESS_v1.0.0-rc1.json /mnt/data/work_cert21/docs/RELEASE_READINESS_v1.0.0-rc1.json
+--- /mnt/data/work_cert21_audit/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-16 13:44:42.000000000 +0000
++++ /mnt/data/work_cert21/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-17 17:07:00.192585632 +0000
+@@ -1,8 +1,8 @@
+ {
+-  "schemaVersion": "workspace-agent-release-readiness-v13",
++  "schemaVersion": "workspace-agent-release-readiness-v14",
+   "version": "1.0.0-rc1",
+   "channel": "rc",
+-  "toolingRevision": "cert-kit20",
++  "toolingRevision": "cert-kit21",
+   "featureFreeze": true,
+   "baselineVersion": "0.9.8",
+   "dataEpoch": 1,
+@@ -29,12 +29,12 @@
+   "authenticode": "PENDING_WINDOWS_SIGNED_ARTIFACTS_POLICY_REQUIRED",
+   "finalDualWindowsEnvelope": "PENDING_WINDOWS_EVIDENCE",
+   "stablePromotion": "BLOCKED_UNTIL_WINDOWS_FINAL_DECISION",
+-  "regression": "PASS_105_105_SINGLE_RUN",
+-  "syntax": "PASS_248_FILES",
++  "regression": "PASS_108_108_SINGLE_RUN",
++  "syntax": "PASS_253_FILES",
+   "jsx": "PASS",
+   "sourceHygiene": "PASS",
+   "dependencyPins": "PASS",
+-  "rc1CertKitSuite": "PASS_CERT_KIT20",
++  "rc1CertKitSuite": "PASS_CERT_KIT21",
+   "windowsNativeUat": "SKIP_NON_WINDOWS",
+   "releaseInputGate": "LOCKFILE_REQUIRED_EXPECTED",
+   "currentValidationRuntime": {
+@@ -87,7 +87,7 @@
+   "authenticodeLiveRecheck": "SOURCE_HARDENED_WINDOWS_REQUIRED_STATUS_AND_THUMBPRINT_RECHECK",
+   "releaseManifestSchema": "workspace-agent-release-v10",
+   "certificationEvidenceBundleSchema": "workspace-agent-certification-evidence-bundle-v2",
+-  "handoffSchema": "workspace-agent-rc1-execution-handoff-v2",
++  "handoffSchema": "workspace-agent-rc1-execution-handoff-v3",
+   "finalCertificationBundleSchema": "workspace-agent-rc1-final-certification-bundle-v1",
+   "handoffReparsePolicy": "SOURCE_HARDENED_FAIL_CLOSED",
+   "promotionLeafReverification": "SOURCE_HARDENED_RELEASE_MANUAL_PRIMARY_PEER_EVIDENCE",
+@@ -99,5 +99,11 @@
+   "stableCertificationPolicySha256": "1330a85819e287c443f877245fa9c24ebcada7fe6aae96eba368dbbfc43daddd",
+   "stableSigningPolicy": "AUTHENTICODE_REQUIRED_OPERATOR_FLAG_CANNOT_DOWNGRADE",
+   "stableScalePolicy": "100K_AND_1M_REQUIRED_SKIP_FORBIDDEN",
+-  "manualEvidencePrimaryBinding": "SOURCE_HARDENED_REPORT_SHA_EVIDENCE_ID_WINDOWS_FAMILY"
++  "manualEvidencePrimaryBinding": "SOURCE_HARDENED_REPORT_SHA_EVIDENCE_ID_WINDOWS_FAMILY",
++  "safeHandoffArchiveExtraction": "SOURCE_HARDENED_BOUNDED_STAGED_WINDOWS_UAT_PENDING",
++  "stagedHandoffLockVerification": "SOURCE_HARDENED_NO_PREVERIFY_SOURCE_MUTATION",
++  "handoffPointerSemanticContainment": "SOURCE_HARDENED_DECLARED_REGULAR_REALPATH_CONTAINED",
++  "executionRootRealpathIsolation": "SOURCE_HARDENED_LEXICAL_AND_PROJECTED_REALPATH",
++  "windowsSafeHandoffTransportUat": "SKIP_NON_WINDOWS_WINDOWS_REQUIRED",
++  "stablePolicyPathConsistency": "SOURCE_HARDENED_PRIMARY_LEGACY_ARTIFACT_PATHS"
+ }
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/docs/VALIDATION_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md /mnt/data/work_cert21/docs/VALIDATION_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md
+--- /mnt/data/work_cert21_audit/docs/VALIDATION_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/docs/VALIDATION_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md	2026-08-17 17:06:59.027530648 +0000
+@@ -0,0 +1,33 @@
++# Validation — v1.0.0-rc1 cert-kit21
++
++این سند نتیجه Source-side validation است و جای Windows Certification واقعی را نمی‌گیرد.
++
++## Source validation
++
++- Source tests: `PASS_108_108_SINGLE_RUN`
++- Syntax: `PASS_253_FILES`
++- JSX: PASS
++- Source Hygiene: PASS
++- Dependency Pins: PASS
++- Dependency Source Policy: PASS
++- Stable Certification Policy: PASS
++- RC1 Source Contract: `PASS_CERT_KIT21`
++- package-lock release gate: `LOCKFILE_REQUIRED_EXPECTED`
++
++## cert-kit21 hardening
++
++- bounded safe Handoff ZIP extraction contract: PASS source tests
++- staged incoming lock verification before Source mutation: PASS dynamic source tests
++- Handoff v3 pointer semantic containment: PASS dynamic tamper tests
++- Peer Windows-family pointer pairing: PASS
++- ExecutionRoot lexical + projected-realpath isolation: PASS dynamic tests
++- Stable policy consistency across primary/legacy/artifact paths: PASS
++- Final Bundle / Recovery / Evidence chain regression: PASS
++
++## Windows-only evidence
++
++- Safe-Handoff Transport UAT: `SKIP_NON_WINDOWS_WINDOWS_REQUIRED`
++- NTFS Metadata UAT: `SKIP_NON_WINDOWS`
++- Local-AI Provenance UAT: `SKIP_NON_WINDOWS_WINDOWS_REQUIRED`
++
++بنابراین هیچ Windows PASS در این محیط ادعا نمی‌شود. Windows 10/11 واقعی همچنان شرط Stable Promotion است.
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/package.json /mnt/data/work_cert21/package.json
+--- /mnt/data/work_cert21_audit/package.json	2026-08-16 13:33:54.000000000 +0000
++++ /mnt/data/work_cert21/package.json	2026-08-17 17:02:29.582938259 +0000
+@@ -74,7 +74,7 @@
+     "verify:manual-evidence:rc1": "node scripts/verify-manual-evidence-rc1.cjs",
+     "certify:envelope:rc1": "node scripts/rc1-certification-envelope.cjs",
+     "certify:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-certify.ps1",
+-    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs && node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/windows-native-edge-hardening-rc1.test.cjs && node tests/certification-evidence-integrity-rc1.test.cjs && node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/runtime-trust-boundary-rc1.test.cjs && node tests/journal-durability-rc1.test.cjs && node tests/durable-state-rc1.test.cjs && node tests/hash-cache-freshness-rc1.test.cjs && node tests/ntfs-metadata-fidelity-rc1.test.cjs && node tests/state-restore-transactional-rc1.test.cjs && node tests/local-ai-runtime-provenance-rc1.test.cjs && node tests/journal-retention-anchor-rc1.test.cjs && node tests/source-fingerprint-lockfile-invariance-rc1.test.cjs && node tests/release-identity-chain-rc1.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs && node tests/rc1-execution-recovery-resume.test.cjs && node tests/rc1-execution-recovery-contract.test.cjs && node tests/rc1-phase-readiness.test.cjs && node tests/rc1-execution-expected-incomplete-gate.test.cjs && node tests/rc1-final-evidence-provenance-contract.test.cjs && node tests/rc1-handoff-reparse-failclosed.test.cjs && node tests/dependency-source-provenance-rc1.test.cjs && node tests/rc1-promotion-leaf-reverification.test.cjs && node tests/rc1-final-bundle-contract.test.cjs && node tests/rc1-final-bundle-e2e.test.cjs && node tests/stable-certification-policy-rc1.test.cjs && node tests/manual-evidence-strength-rc1.test.cjs",
++    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs && node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/windows-native-edge-hardening-rc1.test.cjs && node tests/certification-evidence-integrity-rc1.test.cjs && node tests/rc1-execution-handoff.test.cjs && node tests/rc1-manual-evidence-prefill.test.cjs && node tests/rc1-execution-kit-contract.test.cjs && node tests/rc1-stable-readiness.test.cjs && node tests/runtime-trust-boundary-rc1.test.cjs && node tests/journal-durability-rc1.test.cjs && node tests/durable-state-rc1.test.cjs && node tests/hash-cache-freshness-rc1.test.cjs && node tests/ntfs-metadata-fidelity-rc1.test.cjs && node tests/state-restore-transactional-rc1.test.cjs && node tests/local-ai-runtime-provenance-rc1.test.cjs && node tests/journal-retention-anchor-rc1.test.cjs && node tests/source-fingerprint-lockfile-invariance-rc1.test.cjs && node tests/release-identity-chain-rc1.test.cjs && node tests/rc1-windows-doctor-contract.test.cjs && node tests/rc1-execution-traceability-hardening.test.cjs && node tests/rc1-execution-recovery-resume.test.cjs && node tests/rc1-execution-recovery-contract.test.cjs && node tests/rc1-phase-readiness.test.cjs && node tests/rc1-execution-expected-incomplete-gate.test.cjs && node tests/rc1-final-evidence-provenance-contract.test.cjs && node tests/rc1-handoff-reparse-failclosed.test.cjs && node tests/dependency-source-provenance-rc1.test.cjs && node tests/rc1-promotion-leaf-reverification.test.cjs && node tests/rc1-final-bundle-contract.test.cjs && node tests/rc1-final-bundle-e2e.test.cjs && node tests/stable-certification-policy-rc1.test.cjs && node tests/manual-evidence-strength-rc1.test.cjs && node tests/rc1-staged-handoff-import-rc1.test.cjs && node tests/rc1-handoff-pointer-semantics-rc1.test.cjs && node tests/rc1-execution-root-realpath-guard.test.cjs",
+     "verify:release-manifest:rc1": "node scripts/verify-release-manifest-rc1.cjs",
+     "finalize:rc1": "node scripts/rc1-finalize.cjs",
+     "test:concurrency": "node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs",
+@@ -99,7 +99,8 @@
+     "test:dependency-provenance": "node tests/dependency-source-provenance-rc1.test.cjs",
+     "final:bundle:rc1": "node scripts/rc1-final-bundle.cjs",
+     "check:stable-certification-policy": "node scripts/stable-certification-policy.cjs",
+-    "test:stable-policy": "node tests/stable-certification-policy-rc1.test.cjs && node tests/manual-evidence-strength-rc1.test.cjs"
++    "test:stable-policy": "node tests/stable-certification-policy-rc1.test.cjs && node tests/manual-evidence-strength-rc1.test.cjs",
++    "test:windows-safe-handoff-transport-rc1-uat": "node tests/windows-safe-handoff-transport-rc1.uat.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+@@ -158,7 +159,7 @@
+     "dataEpoch": 1,
+     "releaseCandidate": "rc1",
+     "coreFeatureAdditionsAllowed": false,
+-    "toolingRevision": "cert-kit20",
++    "toolingRevision": "cert-kit21",
+     "dependencySourcePolicy": {
+       "schemaVersion": "workspace-agent-dependency-source-policy-v1",
+       "mode": "allowlist",
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/generate-lockfile.ps1 /mnt/data/work_cert21/scripts/generate-lockfile.ps1
+--- /mnt/data/work_cert21_audit/scripts/generate-lockfile.ps1	2026-08-16 13:43:14.000000000 +0000
++++ /mnt/data/work_cert21/scripts/generate-lockfile.ps1	2026-08-17 16:58:03.634848216 +0000
+@@ -6,7 +6,7 @@
+ if ($LASTEXITCODE -ne 0) { throw 'Top-level dependency pins invalid هستند.' }
+ $pkg=Get-Content package.json -Raw|ConvertFrom-Json
+ $allowed=@($pkg.workspaceAgentRelease.dependencySourcePolicy.allowedRegistryOrigins)
+-if($allowed.Count -ne 1){throw 'cert-kit20 release lock lane requires exactly one approved npm registry origin.'}
++if($allowed.Count -ne 1){throw 'cert-kit21 release lock lane requires exactly one approved npm registry origin.'}
+ $expectedRegistry=([string]$allowed[0]).TrimEnd('/')
+ $configuredRegistry=([string](npm config get registry)).Trim().TrimEnd('/')
+ if($LASTEXITCODE -ne 0 -or $configuredRegistry -ne $expectedRegistry){throw "npm registry provenance mismatch. Expected=$expectedRegistry Actual=$configuredRegistry"}
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/path-trust-boundary.cjs /mnt/data/work_cert21/scripts/path-trust-boundary.cjs
+--- /mnt/data/work_cert21_audit/scripts/path-trust-boundary.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/scripts/path-trust-boundary.cjs	2026-08-17 17:00:53.615534762 +0000
+@@ -0,0 +1,13 @@
++const fs=require('fs');const path=require('path');
++function arg(name){const p=`--${name}=`;const v=process.argv.find(x=>x.startsWith(p));return v?v.slice(p.length):''}
++function insideOrSame(base,target){const rel=path.relative(path.resolve(base),path.resolve(target));return rel===''||(!rel.startsWith('..'+path.sep)&&rel!=='..'&&!path.isAbsolute(rel))}
++function nearestExistingProjectedReal(target){target=path.resolve(target);const tail=[];let cur=target;while(!fs.existsSync(cur)){const parent=path.dirname(cur);if(parent===cur)throw new Error('PATH_EXISTING_ANCESTOR_NOT_FOUND');tail.unshift(path.basename(cur));cur=parent}const st=fs.lstatSync(cur);if(st.isSymbolicLink()&&cur===target){const e=new Error('TARGET_REPARSE_OR_SYMLINK_FORBIDDEN');e.code='TARGET_REPARSE_OR_SYMLINK_FORBIDDEN';throw e}let real=(fs.realpathSync.native?fs.realpathSync.native(cur):fs.realpathSync(cur));for(const seg of tail)real=path.join(real,seg);return path.resolve(real)}
++function evaluateExecutionRoot({sourceRoot,target,allowInsideExact=''}){const errors=[];if(!sourceRoot||!target)return{ok:false,errors:['PATH_ARGUMENT_REQUIRED']};const srcLex=path.resolve(sourceRoot),targetLex=path.resolve(target),allowLex=allowInsideExact?path.resolve(allowInsideExact):'';let srcReal='',targetReal='',allowReal='';try{srcReal=nearestExistingProjectedReal(srcLex);targetReal=nearestExistingProjectedReal(targetLex);if(allowLex)allowReal=nearestExistingProjectedReal(allowLex)}catch(e){errors.push(String(e.code||e.message||'PATH_REALPATH_FAILED'))}
++  const lexicalOverlap=insideOrSame(srcLex,targetLex)||insideOrSame(targetLex,srcLex);const realOverlap=srcReal&&targetReal&&(insideOrSame(srcReal,targetReal)||insideOrSame(targetReal,srcReal));const allowed=Boolean(allowLex&&targetLex===allowLex&&allowReal&&targetReal===allowReal&&insideOrSame(srcReal,targetReal));
++  if((lexicalOverlap||realOverlap)&&!allowed)errors.push('EXECUTION_ROOT_SOURCE_OVERLAP_FORBIDDEN');
++  if(targetLex===srcLex||targetReal===srcReal)errors.push('EXECUTION_ROOT_SOURCE_ROOT_FORBIDDEN');
++  return{ok:errors.length===0,errors,sourceLexical:srcLex,targetLexical:targetLexicalSafe(targetLex),sourceReal:srcReal,targetReal,allowedInsideExact:allowed?allowLex:null,lexicalOverlap,realOverlap};
++}
++function targetLexicalSafe(v){return v}
++function main(){const r=evaluateExecutionRoot({sourceRoot:arg('source-root'),target:arg('target'),allowInsideExact:arg('allow-inside-exact')});console.log(JSON.stringify(r,null,2));if(!r.ok)process.exit(1)}
++if(require.main===module)main();module.exports={insideOrSame,nearestExistingProjectedReal,evaluateExecutionRoot};
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/rc1-execution-handoff.cjs /mnt/data/work_cert21/scripts/rc1-execution-handoff.cjs
+--- /mnt/data/work_cert21_audit/scripts/rc1-execution-handoff.cjs	2026-08-16 13:08:46.000000000 +0000
++++ /mnt/data/work_cert21/scripts/rc1-execution-handoff.cjs	2026-08-17 16:56:28.747537744 +0000
+@@ -4,7 +4,12 @@
+ const cp=require('child_process');
+ const {computeReleaseIdentity}=require('./release-identity.cjs');
+ const root=path.resolve(__dirname,'..');
+-const SCHEMA='workspace-agent-rc1-execution-handoff-v2';
++const SCHEMA='workspace-agent-rc1-execution-handoff-v3';
++const POINTER_SCHEMAS={primary:'workspace-agent-rc1-primary-pointer-v1',peer:'workspace-agent-rc1-peer-pointer-v1'};
++const POINTER_REFS={
++  primary:['certificationReport','evidenceBundle','releaseManifest','sha256Sums','manualEvidenceTemplate','packageLock'],
++  peer:['certificationReport','evidenceBundle','packageLock']
++};
+ function arg(name){const p=`--${name}=`;const v=process.argv.find(x=>x.startsWith(p));return v?v.slice(p.length):''}
+ function has(name){return process.argv.includes(`--${name}`)}
+ function fail(code,message,extra={}){const e={ok:false,code,message,...extra};console.error(JSON.stringify(e,null,2));if(require.main===module)process.exit(1);return e}
+@@ -32,43 +37,55 @@
+   return rows;
+ }
+ function sourceFingerprint(){return JSON.parse(cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd:root,encoding:'utf8'}))}
+-function packageLockMeta(){const p=path.join(root,'package-lock.json');if(!fs.existsSync(p))return null;const s=fs.statSync(p);return{bytes:s.size,sha256:shaFile(p)}}
++function packageLockMeta(lockPath=''){const p=path.resolve(lockPath||path.join(root,'package-lock.json'));if(!fs.existsSync(p))return null;const st=fs.lstatSync(p);if(st.isSymbolicLink()||!st.isFile()){const e=new Error('HANDOFF_PACKAGE_LOCK_REGULAR_FILE_REQUIRED');e.code='HANDOFF_PACKAGE_LOCK_REGULAR_FILE_REQUIRED';throw e;}const s=fs.statSync(p);return{path:p,bytes:s.size,sha256:shaFile(p)}}
+ function fileRows(dir){return walk(path.resolve(dir)).map(({abs,rel})=>{const s=fs.statSync(abs);return{path:rel,bytes:s.size,sha256:shaFile(abs)}})}
+ function aggregateRows(rows){const h=crypto.createHash('sha256');for(const r of rows){h.update(r.path);h.update('\0');h.update(String(r.bytes));h.update('\0');h.update(r.sha256);h.update('\n')}return h.digest('hex')}
+ function validatePointerFile(dir,pointer){const base=path.resolve(dir),p=path.resolve(pointer);if(!inside(base,p)){const e=new Error('HANDOFF_POINTER_OUTSIDE_DIRECTORY');e.code='HANDOFF_POINTER_OUTSIDE_DIRECTORY';throw e}const st=lstatOrdinary(p,path.relative(base,p)||'.');if(!st.isFile()){const e=new Error('HANDOFF_POINTER_NOT_REGULAR_FILE');e.code='HANDOFF_POINTER_NOT_REGULAR_FILE';throw e}assertContainedReal(base,p,path.relative(base,p)||'.');return p}
++function normalizePointerRef(value,label){const raw=String(value||'').replace(/\\/g,'/');if(!raw||raw.includes('\0')||raw.startsWith('/')||raw.startsWith('//')||/^[A-Za-z]:/.test(raw)){const e=new Error(`HANDOFF_POINTER_REF_INVALID:${label}`);e.code='HANDOFF_POINTER_REF_INVALID';throw e;}const parts=raw.split('/');if(parts.some(x=>!x||x==='.'||x==='..')){const e=new Error(`HANDOFF_POINTER_REF_INVALID:${label}`);e.code='HANDOFF_POINTER_REF_INVALID';throw e;}const norm=path.posix.normalize(raw);if(norm!==raw||norm.startsWith('../')||norm==='..'){const e=new Error(`HANDOFF_POINTER_REF_INVALID:${label}`);e.code='HANDOFF_POINTER_REF_INVALID';throw e;}return norm}
++function validatePointerDocument({dir,pointerPath,role,executionId,rows}){
++  const base=path.resolve(dir),p=validatePointerFile(base,pointerPath);let doc;try{doc=JSON.parse(fs.readFileSync(p,'utf8').replace(/^\uFEFF/,''))}catch{const e=new Error('HANDOFF_POINTER_JSON_INVALID');e.code='HANDOFF_POINTER_JSON_INVALID';throw e}
++  if(String(doc.schemaVersion||'')!==POINTER_SCHEMAS[role]){const e=new Error('HANDOFF_POINTER_SCHEMA_MISMATCH');e.code='HANDOFF_POINTER_SCHEMA_MISMATCH';throw e}
++  if(String(doc.executionId||'')!==String(executionId||'')){const e=new Error('HANDOFF_POINTER_EXECUTION_ID_MISMATCH');e.code='HANDOFF_POINTER_EXECUTION_ID_MISMATCH';throw e}
++  const amap=new Map(rows.map(x=>[x.path,x]));const refs={};
++  for(const key of POINTER_REFS[role]){const rel=normalizePointerRef(doc[key],key);const abs=path.join(base,...rel.split('/'));const st=lstatOrdinary(abs,rel);if(!st.isFile()){const e=new Error(`HANDOFF_POINTER_REF_NOT_FILE:${key}`);e.code='HANDOFF_POINTER_REF_NOT_FILE';throw e}assertContainedReal(base,abs,rel);if(!amap.has(rel)){const e=new Error(`HANDOFF_POINTER_REF_NOT_DECLARED:${key}`);e.code='HANDOFF_POINTER_REF_NOT_DECLARED';throw e}refs[key]=rel;}
++  if(role==='peer'){if(!['Windows10','Windows11'].includes(String(doc.windowsFamily||''))||!['Windows10','Windows11'].includes(String(doc.primaryWindowsFamily||''))||String(doc.windowsFamily)===String(doc.primaryWindowsFamily)){const e=new Error('HANDOFF_POINTER_WINDOWS_PAIR_INVALID');e.code='HANDOFF_POINTER_WINDOWS_PAIR_INVALID';throw e}}
++  return{doc,refs};
++}
+ function createHandoff({dir,out,role,executionId,pointer=''}){
+   dir=path.resolve(dir);lstatOrdinary(dir,'.',{directory:true});assertContainedReal(dir,dir,'.');
+   const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+   if(!['primary','peer'].includes(role))throw new Error('HANDOFF_ROLE_INVALID');
++  if(!pointer)throw new Error('HANDOFF_POINTER_REQUIRED');
+   const fp=sourceFingerprint(),lock=packageLockMeta();if(!lock)throw new Error('HANDOFF_PACKAGE_LOCK_REQUIRED');const identity=computeReleaseIdentity(root);
+   const rows=fileRows(dir);const aggregateSha256=aggregateRows(rows);
+-  let pointerMeta=null;if(pointer){const p=validatePointerFile(dir,pointer);const rel=path.relative(dir,p).replace(/\\/g,'/');const row=rows.find(x=>x.path===rel);if(!row)throw new Error('HANDOFF_POINTER_NOT_DECLARED_FILE');pointerMeta={path:rel,bytes:row.bytes,sha256:row.sha256}}
+-  const manifest={schemaVersion:SCHEMA,version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,featureFreeze:pkg.workspaceAgentRelease?.featureFreeze===true,createdAt:new Date().toISOString(),role,executionId:String(executionId||''),sourceFingerprint:{sha256:fp.sha256,files:fp.files},packageLock:lock,releaseIdentitySha256:identity.releaseIdentitySha256,pathPolicy:{symlinkReparse:'FORBIDDEN_FAIL_CLOSED',specialFiles:'FORBIDDEN_FAIL_CLOSED',realpathEscape:'FORBIDDEN_FAIL_CLOSED'},pointer:pointerMeta,files:rows.length,aggregateSha256,entries:rows};
++  const p=validatePointerFile(dir,pointer);const rel=path.relative(dir,p).replace(/\\/g,'/');const row=rows.find(x=>x.path===rel);if(!row)throw new Error('HANDOFF_POINTER_NOT_DECLARED_FILE');const semantic=validatePointerDocument({dir,pointerPath:p,role,executionId,rows});const pointerMeta={path:rel,bytes:row.bytes,sha256:row.sha256,schemaVersion:semantic.doc.schemaVersion,refs:semantic.refs};
++  const manifest={schemaVersion:SCHEMA,version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,featureFreeze:pkg.workspaceAgentRelease?.featureFreeze===true,createdAt:new Date().toISOString(),role,executionId:String(executionId||''),sourceFingerprint:{sha256:fp.sha256,files:fp.files},packageLock:{bytes:lock.bytes,sha256:lock.sha256},releaseIdentitySha256:identity.releaseIdentitySha256,pathPolicy:{symlinkReparse:'FORBIDDEN_FAIL_CLOSED',specialFiles:'FORBIDDEN_FAIL_CLOSED',realpathEscape:'FORBIDDEN_FAIL_CLOSED',pointerReferences:'DECLARED_CONTAINED_REGULAR_FILES_ONLY'},pointer:pointerMeta,files:rows.length,aggregateSha256,entries:rows};
+   manifest.handoffId=crypto.createHash('sha256').update(stable(manifest)).digest('hex');
+   const target=path.resolve(out||path.join(dir,'handoff-manifest.json'));if(!insideOrSame(dir,target))throw new Error('HANDOFF_MANIFEST_OUTSIDE_DIRECTORY');fs.writeFileSync(target,JSON.stringify(manifest,null,2));return{ok:true,manifest:target,handoffId:manifest.handoffId,role,executionId:manifest.executionId,files:rows.length,aggregateSha256,sourceFingerprint:fp.sha256,packageLockSha256:lock.sha256,releaseIdentitySha256:identity.releaseIdentitySha256};
+ }
+-function verifyHandoff({dir,manifestPath,requireCurrentSource=true}){
++function verifyHandoff({dir,manifestPath,requireCurrentSource=true,lockPath=''}){
+   const target=path.resolve(manifestPath||path.join(dir||'.','handoff-manifest.json'));if(!fs.existsSync(target))return{ok:false,errors:['HANDOFF_MANIFEST_MISSING']};
+   const base=path.resolve(dir||path.dirname(target));const errors=[];
+   try{lstatOrdinary(base,'.',{directory:true});assertContainedReal(base,base,'.');const mst=lstatOrdinary(target,'handoff-manifest.json');if(!mst.isFile())errors.push('HANDOFF_MANIFEST_NOT_REGULAR_FILE');assertContainedReal(base,target,'handoff-manifest.json');if(!insideOrSame(base,target))errors.push('HANDOFF_MANIFEST_OUTSIDE_DIRECTORY')}catch(e){errors.push(String(e.code||e.message||'HANDOFF_PATH_POLICY_FAILED'))}
+-  let m;try{m=JSON.parse(fs.readFileSync(target,'utf8'))}catch{return{ok:false,errors:[...errors,'HANDOFF_MANIFEST_INVALID_JSON']}}
++  let m;try{m=JSON.parse(fs.readFileSync(target,'utf8').replace(/^\uFEFF/,''))}catch{return{ok:false,errors:[...errors,'HANDOFF_MANIFEST_INVALID_JSON']}}
+   if(m.schemaVersion!==SCHEMA)errors.push('HANDOFF_SCHEMA_MISMATCH');
+   const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+   if(String(m.version)!==String(pkg.version))errors.push('HANDOFF_VERSION_MISMATCH');
+   if(String(m.toolingRevision)!==String(pkg.workspaceAgentRelease?.toolingRevision||''))errors.push('HANDOFF_TOOLING_MISMATCH');
+   if(m.featureFreeze!==true)errors.push('HANDOFF_FEATURE_FREEZE_MISMATCH');
+-  if(String(m.pathPolicy?.symlinkReparse||'')!=='FORBIDDEN_FAIL_CLOSED')errors.push('HANDOFF_PATH_POLICY_MISSING');
++  if(!['primary','peer'].includes(String(m.role||'')))errors.push('HANDOFF_ROLE_INVALID');
++  if(String(m.pathPolicy?.symlinkReparse||'')!=='FORBIDDEN_FAIL_CLOSED'||String(m.pathPolicy?.pointerReferences||'')!=='DECLARED_CONTAINED_REGULAR_FILES_ONLY')errors.push('HANDOFF_PATH_POLICY_MISSING');
+   let actual=[];try{actual=fileRows(base)}catch(e){errors.push(String(e.code||e.message||'HANDOFF_TREE_SCAN_FAILED'))}
+   const declared=Array.isArray(m.entries)?m.entries:[];const amap=new Map(actual.map(x=>[x.path,x]));const seen=new Set();
+   if(Number(m.files)!==declared.length||declared.length!==actual.length)errors.push('HANDOFF_FILE_COUNT_MISMATCH');
+   for(const r of declared){const rp=String(r.path||'');if(!rp||path.posix.isAbsolute(rp)||rp.split('/').includes('..')||path.posix.normalize(rp)!==rp){errors.push(`HANDOFF_DECLARED_PATH_INVALID:${rp}`);continue}if(seen.has(rp)){errors.push(`HANDOFF_DECLARED_DUPLICATE:${rp}`);continue}seen.add(rp);const a=amap.get(rp);if(!a)errors.push(`HANDOFF_FILE_MISSING:${rp}`);else if(Number(r.bytes)!==a.bytes||String(r.sha256).toLowerCase()!==a.sha256)errors.push(`HANDOFF_FILE_TAMPERED:${rp}`)}
+   for(const a of actual){if(!seen.has(a.path))errors.push(`HANDOFF_UNDECLARED_FILE:${a.path}`)}
+   if(aggregateRows(actual)!==String(m.aggregateSha256||''))errors.push('HANDOFF_AGGREGATE_MISMATCH');
+-  if(m.pointer){try{const pp=validatePointerFile(base,path.resolve(base,String(m.pointer.path||'')));const rel=path.relative(base,pp).replace(/\\/g,'/');const a=amap.get(rel);if(!a)errors.push('HANDOFF_POINTER_NOT_DECLARED_FILE');else{if(Number(m.pointer.bytes)!==a.bytes)errors.push('HANDOFF_POINTER_BYTES_MISMATCH');if(String(m.pointer.sha256||'').toLowerCase()!==a.sha256)errors.push('HANDOFF_POINTER_SHA256_MISMATCH')}}catch(e){errors.push(String(e.code||e.message||'HANDOFF_POINTER_INVALID'))}}
++  if(m.pointer){try{const pp=validatePointerFile(base,path.join(base,...normalizePointerRef(m.pointer.path,'pointer.path').split('/')));const rel=path.relative(base,pp).replace(/\\/g,'/');const a=amap.get(rel);if(!a)errors.push('HANDOFF_POINTER_NOT_DECLARED_FILE');else{if(Number(m.pointer.bytes)!==a.bytes)errors.push('HANDOFF_POINTER_BYTES_MISMATCH');if(String(m.pointer.sha256||'').toLowerCase()!==a.sha256)errors.push('HANDOFF_POINTER_SHA256_MISMATCH')}const semantic=validatePointerDocument({dir:base,pointerPath:pp,role:String(m.role||''),executionId:String(m.executionId||''),rows:actual});if(String(m.pointer.schemaVersion||'')!==String(semantic.doc.schemaVersion||''))errors.push('HANDOFF_POINTER_SCHEMA_BINDING_MISMATCH');const declaredRefs=m.pointer.refs||{};for(const [k,v] of Object.entries(semantic.refs))if(String(declaredRefs[k]||'')!==String(v))errors.push(`HANDOFF_POINTER_REF_BINDING_MISMATCH:${k}`)}catch(e){errors.push(String(e.code||e.message||'HANDOFF_POINTER_INVALID'))}}else errors.push('HANDOFF_POINTER_REQUIRED');
+   const copy={...m};delete copy.handoffId;const id=crypto.createHash('sha256').update(stable(copy)).digest('hex');if(id!==String(m.handoffId||''))errors.push('HANDOFF_ID_MISMATCH');
+-  if(requireCurrentSource){let fp;try{fp=sourceFingerprint()}catch{fp=null}const lock=packageLockMeta();let identity=null;try{identity=computeReleaseIdentity(root)}catch{}if(!fp||String(m.sourceFingerprint?.sha256||'')!==String(fp.sha256||''))errors.push('HANDOFF_CURRENT_SOURCE_FINGERPRINT_MISMATCH');if(!lock||String(m.packageLock?.sha256||'').toLowerCase()!==String(lock.sha256||'').toLowerCase())errors.push('HANDOFF_CURRENT_LOCK_MISMATCH');if(!identity||String(m.releaseIdentitySha256||'').toLowerCase()!==String(identity.releaseIdentitySha256||'').toLowerCase())errors.push('HANDOFF_CURRENT_RELEASE_IDENTITY_MISMATCH')}
++  if(requireCurrentSource){let fp;try{fp=sourceFingerprint()}catch{fp=null}let lock=null;try{lock=packageLockMeta(lockPath)}catch(e){errors.push(String(e.code||'HANDOFF_CURRENT_LOCK_INVALID'))}let identity=null;try{identity=computeReleaseIdentity(root,{lockPath:lockPath||path.join(root,'package-lock.json')})}catch{}if(!fp||String(m.sourceFingerprint?.sha256||'')!==String(fp.sha256||''))errors.push('HANDOFF_CURRENT_SOURCE_FINGERPRINT_MISMATCH');if(!lock||String(m.packageLock?.sha256||'').toLowerCase()!==String(lock.sha256||'').toLowerCase())errors.push('HANDOFF_CURRENT_LOCK_MISMATCH');if(!identity||String(m.releaseIdentitySha256||'').toLowerCase()!==String(identity.releaseIdentitySha256||'').toLowerCase())errors.push('HANDOFF_CURRENT_RELEASE_IDENTITY_MISMATCH')}
+   return{ok:errors.length===0,errors,manifest:target,role:m.role,executionId:m.executionId,handoffId:m.handoffId,files:actual.length,aggregateSha256:aggregateRows(actual)};
+ }
+-function main(){const mode=has('create')?'create':has('verify')?'verify':'';if(!mode)return fail('HANDOFF_MODE_REQUIRED','Use --create or --verify.');try{if(mode==='create'){const res=createHandoff({dir:path.resolve(arg('dir')||'.'),out:arg('out'),role:arg('role'),executionId:arg('execution-id'),pointer:arg('pointer')});console.log(JSON.stringify(res,null,2));return}const res=verifyHandoff({dir:arg('dir')?path.resolve(arg('dir')):'',manifestPath:arg('manifest'),requireCurrentSource:!has('no-source-check')});console.log(JSON.stringify(res,null,2));if(!res.ok)process.exit(1)}catch(e){fail(e.code||'HANDOFF_OPERATION_FAILED',String(e.message||e))}}
++function main(){const mode=has('create')?'create':has('verify')?'verify':'';if(!mode)return fail('HANDOFF_MODE_REQUIRED','Use --create or --verify.');try{if(mode==='create'){const res=createHandoff({dir:path.resolve(arg('dir')||'.'),out:arg('out'),role:arg('role'),executionId:arg('execution-id'),pointer:arg('pointer')});console.log(JSON.stringify(res,null,2));return}const res=verifyHandoff({dir:arg('dir')?path.resolve(arg('dir')):'',manifestPath:arg('manifest'),requireCurrentSource:!has('no-source-check'),lockPath:arg('lockfile')});console.log(JSON.stringify(res,null,2));if(!res.ok)process.exit(1)}catch(e){fail(e.code||'HANDOFF_OPERATION_FAILED',String(e.message||e))}}
+ if(require.main===module)main();
+-module.exports={SCHEMA,shaFile,fileRows,aggregateRows,createHandoff,verifyHandoff,insideOrSame,validatePointerFile};
++module.exports={SCHEMA,POINTER_SCHEMAS,POINTER_REFS,shaFile,fileRows,aggregateRows,createHandoff,verifyHandoff,insideOrSame,validatePointerFile,validatePointerDocument,normalizePointerRef};
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/rc1-finalize.cjs /mnt/data/work_cert21/scripts/rc1-finalize.cjs
+--- /mnt/data/work_cert21_audit/scripts/rc1-finalize.cjs	2026-08-16 13:36:02.000000000 +0000
++++ /mnt/data/work_cert21/scripts/rc1-finalize.cjs	2026-08-17 16:58:03.634375701 +0000
+@@ -26,7 +26,7 @@
+   return{manifest:meta(mp),handoffId:String(manifest.handoffId||''),pointer:meta(pointerPath),role,executionId};
+ }
+ const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+-if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit20'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT20_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit20 معتبر است.');const stablePolicy=validateStablePolicy(pkg);if(!stablePolicy.ok)fail('STABLE_CERTIFICATION_POLICY_INVALID','Stable certification policy invalid.',{errors:stablePolicy.errors});
++if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit21'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT21_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit21 معتبر است.');const stablePolicy=validateStablePolicy(pkg);if(!stablePolicy.ok)fail('STABLE_CERTIFICATION_POLICY_INVALID','Stable certification policy invalid.',{errors:stablePolicy.errors});
+ const artifactReport=arg('artifact-report'),peerReport=arg('peer-report'),releaseManifest=arg('release-manifest'),manualEvidence=arg('manual-evidence'),executionId=arg('execution-id'),primaryHandoffManifest=arg('primary-handoff-manifest'),peerHandoffManifest=arg('peer-handoff-manifest');
+ for(const [name,value] of Object.entries({artifactReport,peerReport,releaseManifest,manualEvidence,primaryHandoffManifest,peerHandoffManifest}))if(!value||!fs.existsSync(path.resolve(root,value)))fail('FINALIZATION_INPUT_REQUIRED',`${name} معتبر لازم است.`,{name,value});
+ if(!validExecutionId(executionId))fail('FINALIZATION_EXECUTION_ID_REQUIRED','--execution-id معتبر برای Finalization لازم است.',{executionId});
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/rc1-stable-readiness.cjs /mnt/data/work_cert21/scripts/rc1-stable-readiness.cjs
+--- /mnt/data/work_cert21_audit/scripts/rc1-stable-readiness.cjs	2026-08-16 13:36:24.000000000 +0000
++++ /mnt/data/work_cert21/scripts/rc1-stable-readiness.cjs	2026-08-17 16:58:03.634993968 +0000
+@@ -11,7 +11,7 @@
+ function validExecutionId(v){return typeof v==='string'&&v.length>0&&v.length<=128&&/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v)&&v!=='.'&&v!=='..'}
+ function hex64(v){return /^[a-f0-9]{64}$/i.test(String(v||''))}
+ function verifyMeta(m,label){const errors=[];if(!m||!m.path||!hex64(m.sha256)){errors.push(`${label}_META_MISSING`);return errors}const p=path.resolve(root,String(m.path));if(!fs.existsSync(p)){errors.push(`${label}_FILE_MISSING`);return errors}const lst=fs.lstatSync(p);if(lst.isSymbolicLink()){errors.push(`${label}_SYMLINK_REPARSE_FORBIDDEN`);return errors}if(!lst.isFile()){errors.push(`${label}_NOT_REGULAR_FILE`);return errors}const st=fs.statSync(p);if(Number(m.bytes)!==st.size)errors.push(`${label}_BYTES_MISMATCH`);if(String(m.sha256).toLowerCase()!==shaFile(p))errors.push(`${label}_SHA256_MISMATCH`);return errors}
+-function evaluateVerdict(verdict,{expectedVersion='1.0.0-rc1',expectedTooling='cert-kit20',envelope=null,currentFingerprint='',currentReleaseIdentity='',stablePolicy=null}={}){const reasons=[];if(!verdict||verdict.overall!=='PASS')reasons.push('FINAL_VERDICT_NOT_PASS');if(String(verdict?.schemaVersion||'')!=='workspace-agent-rc1-final-verdict-v4')reasons.push('FINAL_VERDICT_SCHEMA_MISMATCH');if(String(verdict?.version||'')!==expectedVersion)reasons.push('FINAL_VERDICT_VERSION_MISMATCH');if(String(verdict?.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_VERDICT_TOOLING_MISMATCH');if(!validExecutionId(String(verdict?.executionId||'')))reasons.push('FINAL_VERDICT_EXECUTION_ID_INVALID');const copy=verdict?{...verdict}:{};delete copy.finalizationId;const id=crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');if(!verdict?.finalizationId||id!==String(verdict.finalizationId))reasons.push('FINALIZATION_ID_MISMATCH');if(!hex64(verdict?.handoffs?.primary?.handoffId)||!hex64(verdict?.handoffs?.peer?.handoffId))reasons.push('FINAL_HANDOFF_IDS_REQUIRED');if(stablePolicy){if(stablePolicy.policy.requireAuthenticode===true&&verdict?.signingRequired!==true)reasons.push('FINAL_SIGNING_POLICY_DOWNGRADE');if(stablePolicy.policy.requireFinalBundle===true&&verdict?.finalBundleRequired!==true)reasons.push('FINAL_BUNDLE_POLICY_REQUIRED');if(String(verdict?.stableCertificationPolicySha256||'').toLowerCase()!==String(stablePolicy.sha256||'').toLowerCase())reasons.push('FINAL_STABLE_POLICY_HASH_MISMATCH');}if(envelope){if(envelope.overall!=='PASS')reasons.push('FINAL_ENVELOPE_NOT_PASS');if(String(envelope.version||'')!==expectedVersion)reasons.push('FINAL_ENVELOPE_VERSION_MISMATCH');if(String(envelope.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_ENVELOPE_TOOLING_MISMATCH');if(String(envelope.execution?.executionId||'')!==String(verdict?.executionId||''))reasons.push('FINAL_ENVELOPE_EXECUTION_ID_MISMATCH');if(envelope.execution?.bindingRequired!==true)reasons.push('FINAL_ENVELOPE_EXECUTION_BINDING_REQUIRED');if(currentFingerprint&&String(envelope.source?.fingerprint||'')!==String(currentFingerprint))reasons.push('FINAL_ENVELOPE_SOURCE_MISMATCH');if(currentReleaseIdentity&&String(envelope.releaseIdentity?.sha256||'')!==String(currentReleaseIdentity))reasons.push('FINAL_ENVELOPE_RELEASE_IDENTITY_MISMATCH')}return{ok:reasons.length===0,decision:reasons.length?'BLOCKED':'PROMOTE_ALLOWED',reasons,executionId:verdict?.executionId||null,finalizationId:verdict?.finalizationId||null,evidenceId:envelope?.evidenceId||verdict?.envelope?.evidenceId||null,primaryHandoffId:verdict?.handoffs?.primary?.handoffId||null,peerHandoffId:verdict?.handoffs?.peer?.handoffId||null}}
++function evaluateVerdict(verdict,{expectedVersion='1.0.0-rc1',expectedTooling='cert-kit21',envelope=null,currentFingerprint='',currentReleaseIdentity='',stablePolicy=null}={}){const reasons=[];if(!verdict||verdict.overall!=='PASS')reasons.push('FINAL_VERDICT_NOT_PASS');if(String(verdict?.schemaVersion||'')!=='workspace-agent-rc1-final-verdict-v4')reasons.push('FINAL_VERDICT_SCHEMA_MISMATCH');if(String(verdict?.version||'')!==expectedVersion)reasons.push('FINAL_VERDICT_VERSION_MISMATCH');if(String(verdict?.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_VERDICT_TOOLING_MISMATCH');if(!validExecutionId(String(verdict?.executionId||'')))reasons.push('FINAL_VERDICT_EXECUTION_ID_INVALID');const copy=verdict?{...verdict}:{};delete copy.finalizationId;const id=crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');if(!verdict?.finalizationId||id!==String(verdict.finalizationId))reasons.push('FINALIZATION_ID_MISMATCH');if(!hex64(verdict?.handoffs?.primary?.handoffId)||!hex64(verdict?.handoffs?.peer?.handoffId))reasons.push('FINAL_HANDOFF_IDS_REQUIRED');if(stablePolicy){if(stablePolicy.policy.requireAuthenticode===true&&verdict?.signingRequired!==true)reasons.push('FINAL_SIGNING_POLICY_DOWNGRADE');if(stablePolicy.policy.requireFinalBundle===true&&verdict?.finalBundleRequired!==true)reasons.push('FINAL_BUNDLE_POLICY_REQUIRED');if(String(verdict?.stableCertificationPolicySha256||'').toLowerCase()!==String(stablePolicy.sha256||'').toLowerCase())reasons.push('FINAL_STABLE_POLICY_HASH_MISMATCH');}if(envelope){if(envelope.overall!=='PASS')reasons.push('FINAL_ENVELOPE_NOT_PASS');if(String(envelope.version||'')!==expectedVersion)reasons.push('FINAL_ENVELOPE_VERSION_MISMATCH');if(String(envelope.toolingRevision||'')!==expectedTooling)reasons.push('FINAL_ENVELOPE_TOOLING_MISMATCH');if(String(envelope.execution?.executionId||'')!==String(verdict?.executionId||''))reasons.push('FINAL_ENVELOPE_EXECUTION_ID_MISMATCH');if(envelope.execution?.bindingRequired!==true)reasons.push('FINAL_ENVELOPE_EXECUTION_BINDING_REQUIRED');if(currentFingerprint&&String(envelope.source?.fingerprint||'')!==String(currentFingerprint))reasons.push('FINAL_ENVELOPE_SOURCE_MISMATCH');if(currentReleaseIdentity&&String(envelope.releaseIdentity?.sha256||'')!==String(currentReleaseIdentity))reasons.push('FINAL_ENVELOPE_RELEASE_IDENTITY_MISMATCH')}return{ok:reasons.length===0,decision:reasons.length?'BLOCKED':'PROMOTE_ALLOWED',reasons,executionId:verdict?.executionId||null,finalizationId:verdict?.finalizationId||null,evidenceId:envelope?.evidenceId||verdict?.envelope?.evidenceId||null,primaryHandoffId:verdict?.handoffs?.primary?.handoffId||null,peerHandoffId:verdict?.handoffs?.peer?.handoffId||null}}
+ function spawnVerifier(args){const r=cp.spawnSync(process.execPath,args,{cwd:root,encoding:'utf8'});return{ok:r.status===0,status:r.status,stdout:String(r.stdout||''),stderr:String(r.stderr||'')}}
+ function reverifyLeafEvidence(verdict){
+   const errors=[],checks={};const release=verdict?.inputs?.releaseManifest,manual=verdict?.inputs?.manualEvidence,primaryReport=verdict?.inputs?.artifactReport;const executionId=String(verdict?.executionId||'');
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/release-identity.cjs /mnt/data/work_cert21/scripts/release-identity.cjs
+--- /mnt/data/work_cert21_audit/scripts/release-identity.cjs	2026-08-16 13:34:02.000000000 +0000
++++ /mnt/data/work_cert21/scripts/release-identity.cjs	2026-08-17 16:55:42.746859943 +0000
+@@ -8,8 +8,8 @@
+ function shaFile(file){return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}
+ function canonical(v){if(Array.isArray(v))return v.map(canonical);if(v&&typeof v==='object'){const o={};for(const k of Object.keys(v).sort())o[k]=canonical(v[k]);return o}return v}
+ function stable(v){return JSON.stringify(canonical(v))}
+-function computeReleaseIdentity(base=root){
+-  base=path.resolve(base);const pkg=JSON.parse(fs.readFileSync(path.join(base,'package.json'),'utf8'));const lock=path.join(base,'package-lock.json');
++function computeReleaseIdentity(base=root,{lockPath=''}={}){
++  base=path.resolve(base);const pkg=JSON.parse(fs.readFileSync(path.join(base,'package.json'),'utf8'));const lock=path.resolve(lockPath||path.join(base,'package-lock.json'));
+   if(!fs.existsSync(lock)){const e=new Error('PACKAGE_LOCK_REQUIRED');e.code='PACKAGE_LOCK_REQUIRED';throw e}
+   const lockLstat=fs.lstatSync(lock);if(lockLstat.isSymbolicLink()||!lockLstat.isFile()){const e=new Error('PACKAGE_LOCK_REGULAR_FILE_REQUIRED');e.code='PACKAGE_LOCK_REGULAR_FILE_REQUIRED';throw e}
+   const policy=validatePolicy(pkg);if(!policy.ok){const e=new Error('DEPENDENCY_SOURCE_POLICY_INVALID');e.code='DEPENDENCY_SOURCE_POLICY_INVALID';e.errors=policy.errors;throw e}
+@@ -17,6 +17,6 @@
+   const fp=computeFingerprint(base);const payload={schemaVersion:'workspace-agent-release-identity-v3',version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,featureFreeze:pkg.workspaceAgentRelease?.featureFreeze===true,sourceFingerprint:{schemaVersion:fp.schemaVersion,scope:fp.scope,sha256:fp.sha256,files:fp.files},packageLock:{sha256:shaFile(lock),bytes:fs.statSync(lock).size},runtimePins:{node:pkg.engines?.node||null,npm:pkg.engines?.npm||null,packageManager:pkg.packageManager||null},dependencySourcePolicy:{...policy.policy,sha256:policy.sha256},stableCertificationPolicy:{...stablePolicy.policy,sha256:stablePolicy.sha256},architecture:'x64'};
+   payload.releaseIdentitySha256=crypto.createHash('sha256').update(stable(payload)).digest('hex');return payload
+ }
+-function main(){try{const report=computeReleaseIdentity(root);const outArg=process.argv.find(x=>x.startsWith('--out='));if(outArg){const out=path.resolve(root,outArg.slice(6));fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(report,null,2))}console.log(JSON.stringify(report,null,2))}catch(e){console.error(JSON.stringify({ok:false,code:e.code||'RELEASE_IDENTITY_FAILED',message:String(e.message||e),errors:e.errors||undefined},null,2));process.exit(1)}}
++function main(){try{const lockArg=process.argv.find(x=>x.startsWith('--lockfile='));const report=computeReleaseIdentity(root,{lockPath:lockArg?lockArg.slice(11):''});const outArg=process.argv.find(x=>x.startsWith('--out='));if(outArg){const out=path.resolve(root,outArg.slice(6));fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(report,null,2))}console.log(JSON.stringify(report,null,2))}catch(e){console.error(JSON.stringify({ok:false,code:e.code||'RELEASE_IDENTITY_FAILED',message:String(e.message||e),errors:e.errors||undefined},null,2));process.exit(1)}}
+ if(require.main===module)main();
+ module.exports={computeReleaseIdentity,stable};
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/verify-rc1-source.cjs /mnt/data/work_cert21/scripts/verify-rc1-source.cjs
+--- /mnt/data/work_cert21_audit/scripts/verify-rc1-source.cjs	2026-08-16 13:45:50.000000000 +0000
++++ /mnt/data/work_cert21/scripts/verify-rc1-source.cjs	2026-08-17 17:02:29.583261294 +0000
+@@ -8,14 +8,14 @@
+ const rc=pkg.workspaceAgentRelease||{};
+ if(pkg.version!=='1.0.0-rc1')fail('RC1_VERSION_REQUIRED','Source candidate باید دقیقاً version=1.0.0-rc1 باشد.',{version:pkg.version});
+ if(rc.channel!=='rc'||rc.releaseCandidate!=='rc1'||rc.featureFreeze!==true||rc.coreFeatureAdditionsAllowed!==false)fail('RC1_FREEZE_CONTRACT_INVALID','RC channel / feature-freeze contract نامعتبر است.',{workspaceAgentRelease:rc});
+-if(rc.toolingRevision!=='cert-kit20')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit20 باشد.',{toolingRevision:rc.toolingRevision});
++if(rc.toolingRevision!=='cert-kit21')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit21 باشد.',{toolingRevision:rc.toolingRevision});
+ if(rc.baselineVersion!=='0.9.8'||compareVersions(pkg.version,rc.baselineVersion)<=0)fail('RC1_BASELINE_INVALID','Baseline باید 0.9.8 و RC جدیدتر از آن باشد.',{baseline:rc.baselineVersion,version:pkg.version});
+ if(Number(rc.dataEpoch)!==Number(DATA_EPOCH))fail('RC1_DATA_EPOCH_MISMATCH','Data Epoch package با Update Guard تطابق ندارد.',{packageEpoch:rc.dataEpoch,runtimeEpoch:DATA_EPOCH});
+ if(pkg.build?.appId!=='com.workspaceagent.windows')fail('RC1_APP_ID_CHANGED','App ID در RC نباید تغییر کند.',{appId:pkg.build?.appId});
+ if(pkg.engines?.node!=='24.14.1'||pkg.engines?.npm!=='11.11.0'||pkg.packageManager!=='npm@11.11.0')fail('RC1_RUNTIME_PINS_CHANGED','Runtime pins RC با lane مصوب تطابق ندارد.',{engines:pkg.engines,packageManager:pkg.packageManager});
+ const dsp=rc.dependencySourcePolicy||{};if(dsp.schemaVersion!=='workspace-agent-dependency-source-policy-v1'||dsp.mode!=='allowlist'||JSON.stringify(dsp.allowedRegistryOrigins)!==JSON.stringify(['https://registry.npmjs.org'])||JSON.stringify(dsp.allowedResolvedProtocols)!==JSON.stringify(['https:'])||dsp.forbidLinks!==true||dsp.forbidGit!==true||dsp.forbidFile!==true||dsp.requireIntegrityForRegistryArtifacts!==true)fail('RC1_DEPENDENCY_SOURCE_POLICY_INVALID','RC1 dependency source provenance policy نامعتبر است.',{dependencySourcePolicy:dsp});
+ const stablePolicyCheck=validateStablePolicy(pkg);if(!stablePolicyCheck.ok)fail('RC1_STABLE_CERTIFICATION_POLICY_INVALID','Stable certification policy must remain fail-closed and immutable for RC1.',{errors:stablePolicyCheck.errors});
+-for(const file of ['scripts/stable-certification-policy.cjs','scripts/dependency-source-policy.cjs','scripts/rc1-final-bundle.cjs','scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/rc1-finalize.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/verify-release-manifest-rc1.cjs','scripts/check-source-syntax.cjs','scripts/certification-evidence-bundle.cjs','scripts/run-source-tests.cjs','scripts/windows-rc1-execution.ps1','scripts/windows-rc1-doctor.ps1','scripts/rc1-execution-handoff.cjs','scripts/prefill-manual-evidence-rc1.cjs','scripts/rc1-stable-readiness.cjs','scripts/release-identity.cjs','scripts/rc1-execution-recovery.cjs','scripts/rc1-phase-readiness.cjs','tests/windows-native-edge-hardening-rc1.test.cjs','tests/windows-native-edge-rc1.uat.cjs','tests/runtime-trust-boundary-rc1.test.cjs','tests/local-ai-runtime-provenance-rc1.test.cjs','tests/windows-local-ai-provenance-rc1.uat.cjs','tests/journal-durability-rc1.test.cjs','tests/journal-retention-anchor-rc1.test.cjs','tests/durable-state-rc1.test.cjs','tests/hash-cache-freshness-rc1.test.cjs','tests/ntfs-metadata-fidelity-rc1.test.cjs','tests/state-restore-transactional-rc1.test.cjs','tests/windows-ntfs-metadata-rc1.uat.cjs','electron/services/windows-ntfs-metadata.cjs','electron/services/runtime-trust-policy.cjs','electron/services/local-ai-runtime-provenance.cjs','electron/services/durable-state.cjs','docs/LOCAL_AI_RUNTIME_PROVENANCE_v1.0.0-rc1-cert-kit14_FA.md','docs/JOURNAL_RETENTION_MODEL_v1.0.0-rc1-cert-kit14_FA.md','docs/V1_PRODUCT_CONTRACTS_v1.0.0-rc1-cert-kit14_FA.md','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json','docs/RELEASE_IDENTITY_CHAIN_v1.0.0-rc1-cert-kit15_FA.md','docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit17_FA.md','docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md','docs/CERTIFICATION_CHAIN_CLOSURE_v1.0.0-rc1-cert-kit19_FA.md','docs/DEPENDENCY_SOURCE_PROVENANCE_v1.0.0-rc1-cert-kit19_FA.md','docs/GAP_AUDIT_v1.0.0-rc1-cert-kit19_FA.md','docs/CHANGELOG_v1.0.0-rc1-cert-kit19-certification-chain-closure_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit19-certification-chain-closure_FA.md','docs/STABLE_CERTIFICATION_POLICY_v1.0.0-rc1-cert-kit20_FA.md','docs/MANUAL_EVIDENCE_STRENGTH_v1.0.0-rc1-cert-kit20_FA.md','docs/GAP_AUDIT_v1.0.0-rc1-cert-kit20_FA.md','docs/CHANGELOG_v1.0.0-rc1-cert-kit20-stable-policy-evidence-strength_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit20-stable-policy-evidence-strength_FA.md','docs/DIFF_v1.0.0-rc1-cert-kit19_to_cert-kit20.txt','docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit20.txt','tests/rc1-final-evidence-provenance-contract.test.cjs','tests/rc1-handoff-reparse-failclosed.test.cjs','tests/dependency-source-provenance-rc1.test.cjs','tests/rc1-promotion-leaf-reverification.test.cjs','tests/rc1-final-bundle-contract.test.cjs','tests/rc1-final-bundle-e2e.test.cjs','tests/rc1-execution-recovery-resume.test.cjs','tests/rc1-execution-recovery-contract.test.cjs','tests/rc1-phase-readiness.test.cjs','tests/rc1-execution-expected-incomplete-gate.test.cjs','tests/source-fingerprint-lockfile-invariance-rc1.test.cjs','tests/release-identity-chain-rc1.test.cjs','tests/stable-certification-policy-rc1.test.cjs','tests/manual-evidence-strength-rc1.test.cjs'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
+-for(const s of ['check:stable-certification-policy','check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','finalize:rc1','verify:manual-evidence:rc1','verify:release-manifest:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit','test:windows-native-edge-rc1-uat','test:windows-ntfs-metadata-rc1-uat','test:windows-local-ai-provenance-rc1-uat','test:ntfs-metadata','test:state-restore','verify:cert-evidence:rc1','certify:execution:rc1','handoff:rc1','manual:prefill:rc1','stable:decision:rc1','doctor:windows:rc1','test:rc1-execution','test:runtime-trust-integrity','release:identity','test:release-identity','recover:execution:rc1','resume:execution:rc1','test:dependency-provenance','final:bundle:rc1','test:stable-policy'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
++for(const file of ['scripts/stable-certification-policy.cjs','scripts/dependency-source-policy.cjs','scripts/rc1-final-bundle.cjs','scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/rc1-finalize.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/verify-release-manifest-rc1.cjs','scripts/check-source-syntax.cjs','scripts/certification-evidence-bundle.cjs','scripts/run-source-tests.cjs','scripts/windows-rc1-execution.ps1','scripts/windows-safe-archive-expand.ps1','scripts/path-trust-boundary.cjs','scripts/windows-rc1-doctor.ps1','scripts/rc1-execution-handoff.cjs','scripts/prefill-manual-evidence-rc1.cjs','scripts/rc1-stable-readiness.cjs','scripts/release-identity.cjs','scripts/rc1-execution-recovery.cjs','scripts/rc1-phase-readiness.cjs','tests/windows-native-edge-hardening-rc1.test.cjs','tests/windows-native-edge-rc1.uat.cjs','tests/windows-safe-handoff-transport-rc1.uat.cjs','tests/runtime-trust-boundary-rc1.test.cjs','tests/local-ai-runtime-provenance-rc1.test.cjs','tests/windows-local-ai-provenance-rc1.uat.cjs','tests/journal-durability-rc1.test.cjs','tests/journal-retention-anchor-rc1.test.cjs','tests/durable-state-rc1.test.cjs','tests/hash-cache-freshness-rc1.test.cjs','tests/ntfs-metadata-fidelity-rc1.test.cjs','tests/state-restore-transactional-rc1.test.cjs','tests/windows-ntfs-metadata-rc1.uat.cjs','electron/services/windows-ntfs-metadata.cjs','electron/services/runtime-trust-policy.cjs','electron/services/local-ai-runtime-provenance.cjs','electron/services/durable-state.cjs','docs/LOCAL_AI_RUNTIME_PROVENANCE_v1.0.0-rc1-cert-kit14_FA.md','docs/JOURNAL_RETENTION_MODEL_v1.0.0-rc1-cert-kit14_FA.md','docs/V1_PRODUCT_CONTRACTS_v1.0.0-rc1-cert-kit14_FA.md','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json','docs/RELEASE_IDENTITY_CHAIN_v1.0.0-rc1-cert-kit15_FA.md','docs/WINDOWS_RC1_DOCTOR_v1.0.0-rc1-cert-kit17_FA.md','docs/RC1_EXECUTION_RECOVERY_v1.0.0-rc1-cert-kit17_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit17-execution-recovery-resume_FA.md','docs/CERTIFICATION_CHAIN_CLOSURE_v1.0.0-rc1-cert-kit19_FA.md','docs/DEPENDENCY_SOURCE_PROVENANCE_v1.0.0-rc1-cert-kit19_FA.md','docs/GAP_AUDIT_v1.0.0-rc1-cert-kit19_FA.md','docs/CHANGELOG_v1.0.0-rc1-cert-kit19-certification-chain-closure_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit19-certification-chain-closure_FA.md','docs/STABLE_CERTIFICATION_POLICY_v1.0.0-rc1-cert-kit20_FA.md','docs/MANUAL_EVIDENCE_STRENGTH_v1.0.0-rc1-cert-kit20_FA.md','docs/GAP_AUDIT_v1.0.0-rc1-cert-kit20_FA.md','docs/HANDOFF_TRANSPORT_TRUST_BOUNDARY_v1.0.0-rc1-cert-kit21_FA.md','docs/GAP_AUDIT_v1.0.0-rc1-cert-kit21_FA.md','docs/CHANGELOG_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit21-handoff-transport-trust_FA.md','docs/DIFF_v1.0.0-rc1-cert-kit20_to_cert-kit21.txt','docs/CHANGELOG_v1.0.0-rc1-cert-kit20-stable-policy-evidence-strength_FA.md','docs/VALIDATION_v1.0.0-rc1-cert-kit20-stable-policy-evidence-strength_FA.md','docs/DIFF_v1.0.0-rc1-cert-kit19_to_cert-kit20.txt','docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit20.txt','docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit21.txt','tests/rc1-final-evidence-provenance-contract.test.cjs','tests/rc1-handoff-reparse-failclosed.test.cjs','tests/dependency-source-provenance-rc1.test.cjs','tests/rc1-promotion-leaf-reverification.test.cjs','tests/rc1-final-bundle-contract.test.cjs','tests/rc1-final-bundle-e2e.test.cjs','tests/rc1-execution-recovery-resume.test.cjs','tests/rc1-execution-recovery-contract.test.cjs','tests/rc1-phase-readiness.test.cjs','tests/rc1-execution-expected-incomplete-gate.test.cjs','tests/source-fingerprint-lockfile-invariance-rc1.test.cjs','tests/release-identity-chain-rc1.test.cjs','tests/stable-certification-policy-rc1.test.cjs','tests/manual-evidence-strength-rc1.test.cjs','tests/rc1-staged-handoff-import-rc1.test.cjs','tests/rc1-handoff-pointer-semantics-rc1.test.cjs','tests/rc1-execution-root-realpath-guard.test.cjs'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
++for(const s of ['check:stable-certification-policy','check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','finalize:rc1','verify:manual-evidence:rc1','verify:release-manifest:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit','test:windows-native-edge-rc1-uat','test:windows-safe-handoff-transport-rc1-uat','test:windows-ntfs-metadata-rc1-uat','test:windows-local-ai-provenance-rc1-uat','test:ntfs-metadata','test:state-restore','verify:cert-evidence:rc1','certify:execution:rc1','handoff:rc1','manual:prefill:rc1','stable:decision:rc1','doctor:windows:rc1','test:rc1-execution','test:runtime-trust-integrity','release:identity','test:release-identity','recover:execution:rc1','resume:execution:rc1','test:dependency-provenance','final:bundle:rc1','test:stable-policy'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
+ if(compareVersions('1.0.0-rc1','1.0.0')>=0)fail('RC1_SEMVER_ORDER_INVALID','RC باید از نسخه stable همان ورژن کوچک‌تر باشد.');
+ console.log('verify-rc1-source PASS',{version:pkg.version,channel:rc.channel,featureFreeze:rc.featureFreeze,baseline:rc.baselineVersion,dataEpoch:DATA_EPOCH,toolingRevision:rc.toolingRevision,lockfile:fs.existsSync(path.join(root,'package-lock.json'))?'present':'pending'});
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/verify-release-inputs.cjs /mnt/data/work_cert21/scripts/verify-release-inputs.cjs
+--- /mnt/data/work_cert21_audit/scripts/verify-release-inputs.cjs	2026-08-16 13:17:58.000000000 +0000
++++ /mnt/data/work_cert21/scripts/verify-release-inputs.cjs	2026-08-17 16:55:42.747253895 +0000
+@@ -4,7 +4,8 @@
+ const {validatePolicy,validateLockSources}=require('./dependency-source-policy.cjs');
+ const root=path.resolve(__dirname,'..');
+ const pkgPath=path.join(root,'package.json');
+-const lockPath=path.join(root,'package-lock.json');
++const lockArg=process.argv.find(x=>x.startsWith('--lockfile='));
++const lockPath=path.resolve(lockArg?lockArg.slice(11):path.join(root,'package-lock.json'));
+ const pinsOnly=process.argv.includes('--pins-only');
+ function fail(code,message,extra={}){console.error(JSON.stringify({ok:false,code,message,...extra},null,2));process.exit(1)}
+ function exactVersion(v){return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(String(v||''))}
+@@ -17,7 +18,7 @@
+ if(!/^npm@\d+\.\d+\.\d+$/.test(String(pkg.packageManager||'')))fail('PACKAGE_MANAGER_NOT_PINNED','packageManager باید npm@x.y.z دقیق باشد.');
+ const unpack=new Set(pkg.build?.asarUnpack||[]);for(const required of ['electron/services/hash-worker.cjs','electron/services/windows-path-utils.cjs'])if(!unpack.has(required))fail('PACKAGED_WORKER_DEP_MISSING','Worker و dependency محلی آن باید asarUnpack شوند.',{required});
+ if(pinsOnly){console.log(JSON.stringify({ok:true,status:'PASS_PINS_ONLY',version:pkg.version,packageManager:pkg.packageManager,pinned:Object.values(groups).reduce((n,g)=>n+Object.keys(g).length,0),dependencySourcePolicy:policyCheck.policy,dependencySourcePolicySha256:policyCheck.sha256},null,2));process.exit(0)}
+-if(!fs.existsSync(lockPath))fail('LOCKFILE_REQUIRED','package-lock.json برای Release رسمی اجباری است. ابتدا npm run release:lock را روی محیط آنلاین اجرا و lockfile را commit کنید.');
++if(!fs.existsSync(lockPath))fail('LOCKFILE_REQUIRED','package-lock.json برای Release رسمی اجباری است. ابتدا npm run release:lock را روی محیط آنلاین اجرا و lockfile را commit کنید.',{lockPath});
+ const lockLstat=fs.lstatSync(lockPath);if(lockLstat.isSymbolicLink()||!lockLstat.isFile())fail('LOCKFILE_REGULAR_FILE_REQUIRED','package-lock.json باید regular file واقعی و غیر-reparse باشد.');
+ const lock=JSON.parse(fs.readFileSync(lockPath,'utf8'));if(![2,3].includes(Number(lock.lockfileVersion)))fail('LOCKFILE_VERSION_UNSUPPORTED','lockfileVersion باید 2 یا 3 باشد.',{lockfileVersion:lock.lockfileVersion});
+ const rootPkg=lock.packages?.[''];if(!rootPkg)fail('LOCKFILE_ROOT_MISSING','Root package در package-lock.json وجود ندارد.');
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/windows-certification-v097.ps1 /mnt/data/work_cert21/scripts/windows-certification-v097.ps1
+--- /mnt/data/work_cert21_audit/scripts/windows-certification-v097.ps1	2026-08-16 13:34:58.000000000 +0000
++++ /mnt/data/work_cert21/scripts/windows-certification-v097.ps1	2026-08-17 17:02:29.583148739 +0000
+@@ -18,6 +18,7 @@
+ $stablePolicy=$pkg.workspaceAgentRelease.stableCertificationPolicy
+ $EffectiveRequireSigning=[bool]$RequireSigning -or [bool]$stablePolicy.requireAuthenticode
+ $RequiredScaleMatrix=@($stablePolicy.requiredScaleMatrix|ForEach-Object{[int]$_})
++if($pkg.version -eq '1.0.0-rc1'){if($RequiredScaleMatrix.Count -gt 0 -and -not $RunScale){throw 'STABLE_POLICY_RUN_SCALE_REQUIRED'};if([bool]$stablePolicy.requireArtifacts -and -not $BuildArtifacts){throw 'STABLE_POLICY_BUILD_ARTIFACTS_REQUIRED'}}
+ $stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss-fff')+'-'+$PID
+ $out=Join-Path (Get-Location) (Join-Path $OutputDir $stamp);New-Item -ItemType Directory -Path $out -Force | Out-Null
+ $gates=New-Object System.Collections.Generic.List[object]
+@@ -62,6 +63,8 @@
+ Run-NpmGate 'test:windows-certification-v097-uat' $true $uatEnv | Out-Null
+ $nativeEnv=@{WA_CERT_STRICT='1';WA_CERT_ROOT_A=$RootA;WA_CERT_ROOT_B=$RootB;WA_CERT_RESULT=(Join-Path $out 'windows-native-edge-rc1-uat.json')}
+ Run-NpmGate 'test:windows-native-edge-rc1-uat' $true $nativeEnv | Out-Null
++$transportEnv=@{WA_CERT_STRICT='1';WA_CERT_SAFE_HANDOFF_RESULT=(Join-Path $out 'windows-safe-handoff-transport-rc1-uat.json')}
++Run-NpmGate 'test:windows-safe-handoff-transport-rc1-uat' $true $transportEnv | Out-Null
+ $ntfsEnv=@{WA_CERT_STRICT='1';WA_CERT_ROOT_A=$RootA;WA_CERT_ROOT_B=$RootB;WA_CERT_NTFS_RESULT=(Join-Path $out 'windows-ntfs-metadata-rc1-uat.json')}
+ Run-NpmGate 'test:windows-ntfs-metadata-rc1-uat' $true $ntfsEnv | Out-Null
+ $aiProvEnv=@{WA_CERT_STRICT='1';WA_LLAMA_SERVER_PATH=$env:WA_LLAMA_SERVER_PATH;WA_LLAMA_SERVER_EXPECTED_SHA256=$env:WA_LLAMA_SERVER_EXPECTED_SHA256;WA_LLAMA_SERVER_EXPECTED_SIGNER_THUMBPRINT=$env:WA_LLAMA_SERVER_EXPECTED_SIGNER_THUMBPRINT;WA_CERT_LOCAL_AI_PROVENANCE_RESULT=(Join-Path $out 'windows-local-ai-provenance-rc1-uat.json')}
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/windows-rc1-certify.ps1 /mnt/data/work_cert21/scripts/windows-rc1-certify.ps1
+--- /mnt/data/work_cert21_audit/scripts/windows-rc1-certify.ps1	2026-08-16 13:41:06.000000000 +0000
++++ /mnt/data/work_cert21/scripts/windows-rc1-certify.ps1	2026-08-17 16:57:51.047148016 +0000
+@@ -22,6 +22,7 @@
+ $RequiredScaleMatrix=@($stablePolicy.requiredScaleMatrix|ForEach-Object{[int]$_})
+ if($stablePolicy.mode -ne 'fail-closed' -or -not [bool]$stablePolicy.requireArtifacts -or -not [bool]$stablePolicy.requireDualWindows -or -not [bool]$stablePolicy.requireManualEvidence -or -not [bool]$stablePolicy.requireFinalBundle){throw 'Stable certification policy نامعتبر است.'}
+ if($SkipScale -and $RequiredScaleMatrix.Count -gt 0){throw 'STABLE_POLICY_SKIP_SCALE_FORBIDDEN'}
++if($NoBuildArtifacts -and [bool]$stablePolicy.requireArtifacts){throw 'STABLE_POLICY_NO_BUILD_ARTIFACTS_FORBIDDEN'}
+ $stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss-fff')+'-'+$PID
+ $sessionRel=Join-Path $OutputDir $stamp
+ $session=Join-Path (Get-Location) $sessionRel
+@@ -114,13 +115,13 @@
+   $certStatus=[string]$certJson.overall
+   Add-Check 'windows-certification' $certStatus @{exitCode=$certCode;report=$report.FullName;evidenceId=$certJson.evidenceId;windowsFamily=$certJson.windowsFamily}
+   $releaseManifest=Join-Path (Get-Location) 'release\release-manifest.json'
+-  if(-not $NoBuildArtifacts){$rmArgs=@('scripts/verify-release-manifest-rc1.cjs');if($RequireSigning){$rmArgs+='--require-signing'};$rmLines=& node @rmArgs 2>&1;$rmCode=$LASTEXITCODE;$rmLines|Set-Content (Join-Path $session 'release-manifest-verification.log') -Encoding utf8;if($rmCode -ne 0){Add-Check 'release-manifest' 'FAIL' @{file=$releaseManifest};throw 'Release manifest/artifact contract verification failed in RC1 orchestrator.'};Add-Check 'release-manifest' 'PASS' @{file=$releaseManifest}}
++  if(-not $NoBuildArtifacts){$rmArgs=@('scripts/verify-release-manifest-rc1.cjs');if($EffectiveRequireSigning){$rmArgs+='--require-signing'};$rmLines=& node @rmArgs 2>&1;$rmCode=$LASTEXITCODE;$rmLines|Set-Content (Join-Path $session 'release-manifest-verification.log') -Encoding utf8;if($rmCode -ne 0){Add-Check 'release-manifest' 'FAIL' @{file=$releaseManifest};throw 'Release manifest/artifact contract verification failed in RC1 orchestrator.'};Add-Check 'release-manifest' 'PASS' @{file=$releaseManifest}}
+   $envOut=Join-Path $session 'rc1-certification-envelope.json'
+   $envArgs=@('scripts/rc1-certification-envelope.cjs',"--report=$($report.FullName)","--out=$envOut",'--require-dual-windows')
+   if(-not $NoBuildArtifacts){$envArgs+="--release-manifest=$releaseManifest"}
+   if($PeerWindowsReport){$envArgs+="--peer-report=$PeerWindowsReport"}
+   if(-not $NoBuildArtifacts){$envArgs+='--require-artifacts'}
+-  if($RequireSigning){$envArgs+='--require-signing'}
++  if($EffectiveRequireSigning){$envArgs+='--require-signing'}
+   if($ManualEvidenceFile){$envArgs+="--manual-evidence=$ManualEvidenceFile"}
+   $envArgs+='--require-manual-evidence'
+   $envLines=& node @envArgs 2>&1;$envCode=$LASTEXITCODE;$envLines|Set-Content (Join-Path $session 'envelope.log') -Encoding utf8
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/windows-rc1-doctor.ps1 /mnt/data/work_cert21/scripts/windows-rc1-doctor.ps1
+--- /mnt/data/work_cert21_audit/scripts/windows-rc1-doctor.ps1	2026-08-16 13:43:14.000000000 +0000
++++ /mnt/data/work_cert21/scripts/windows-rc1-doctor.ps1	2026-08-17 16:58:03.635082245 +0000
+@@ -15,7 +15,7 @@
+ $EffectiveRequireSigning=[bool]$RequireSigning -or [bool]$stablePolicy.requireAuthenticode
+ $RequiredScaleMatrix=@($stablePolicy.requiredScaleMatrix|ForEach-Object{[int]$_})
+ if($SkipScale -and $RequiredScaleMatrix.Count -gt 0){throw 'STABLE_POLICY_SKIP_SCALE_FORBIDDEN'}
+-if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit20'){throw 'Doctor فقط برای v1.0.0-rc1 / cert-kit20 معتبر است.'}
++if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit21'){throw 'Doctor فقط برای v1.0.0-rc1 / cert-kit21 معتبر است.'}
+ $checks=New-Object System.Collections.Generic.List[object]
+ function Add-Check([string]$name,[string]$status,[object]$detail=$null){
+   $checks.Add([pscustomobject]@{name=$name;status=$status;detail=$detail})
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/windows-rc1-execution.ps1 /mnt/data/work_cert21/scripts/windows-rc1-execution.ps1
+--- /mnt/data/work_cert21_audit/scripts/windows-rc1-execution.ps1	2026-08-16 13:36:02.000000000 +0000
++++ /mnt/data/work_cert21/scripts/windows-rc1-execution.ps1	2026-08-17 17:00:54.185063134 +0000
+@@ -19,7 +19,7 @@
+ Set-Location (Split-Path -Parent $PSScriptRoot)
+ $project=(Get-Location).Path
+ $pkg=Get-Content package.json -Raw|ConvertFrom-Json
+-if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit20'){throw 'Execution Kit فقط برای v1.0.0-rc1 / cert-kit20 معتبر است.'}
++if($pkg.version -ne '1.0.0-rc1' -or $pkg.workspaceAgentRelease.toolingRevision -ne 'cert-kit21'){throw 'Execution Kit فقط برای v1.0.0-rc1 / cert-kit21 معتبر است.'}
+ $stablePolicy=$pkg.workspaceAgentRelease.stableCertificationPolicy
+ $EffectiveRequireSigning=[bool]$RequireSigning -or [bool]$stablePolicy.requireAuthenticode
+ $RequiredScaleMatrix=@($stablePolicy.requiredScaleMatrix|ForEach-Object{[int]$_})
+@@ -30,10 +30,9 @@
+ function Resolve-ExecutionRoot([string]$value){
+   if(-not $value){$value='rc1-execution'}
+   $candidate=if([IO.Path]::IsPathRooted($value)){[IO.Path]::GetFullPath($value)}else{[IO.Path]::GetFullPath((Join-Path $project $value))}
+-  $projectFull=[IO.Path]::GetFullPath($project).TrimEnd('\');$candidateFull=$candidate.TrimEnd('\')
+-  $inside=$candidateFull.StartsWith($projectFull+'\',[StringComparison]::OrdinalIgnoreCase)
+-  if($inside -and -not $candidateFull.Equals((Join-Path $project 'rc1-execution'),[StringComparison]::OrdinalIgnoreCase)){throw 'ExecutionRoot داخل Source tree فقط می‌تواند rc1-execution باشد؛ برای مسیر سفارشی از مسیر absolute خارج Source استفاده کنید.'}
+-  if($candidateFull.Equals($projectFull,[StringComparison]::OrdinalIgnoreCase)){throw 'ExecutionRoot نمی‌تواند خود Source root باشد.'}
++  $projectFull=[IO.Path]::GetFullPath($project).TrimEnd('\');$candidateFull=$candidate.TrimEnd('\');$allowedInside=Join-Path $project 'rc1-execution'
++  $guardLines=& node scripts/path-trust-boundary.cjs "--source-root=$projectFull" "--target=$candidateFull" "--allow-inside-exact=$allowedInside" 2>&1;$guardCode=$LASTEXITCODE
++  if($guardCode -ne 0){throw "ExecutionRoot trust-boundary failed: $($guardLines|Out-String)"}
+   return $candidateFull
+ }
+ function Write-State([string]$dir,[string]$stage,[string]$overall,[string]$next,[hashtable]$paths=@{},[object]$detail=$null){
+@@ -51,8 +50,33 @@
+   & powershell.exe @args;return $LASTEXITCODE
+ }
+ function Zip-Directory([string]$source,[string]$zip){if(Test-Path $zip){Remove-Item $zip -Force};Compress-Archive -Path (Join-Path $source '*') -DestinationPath $zip -CompressionLevel Optimal -Force;$hash=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant();Set-Content ($zip+'.sha256') "$hash  $(Split-Path -Leaf $zip)" -Encoding ascii;return $hash}
+-function Expand-Clean([string]$zip,[string]$dest){if(-not (Test-Path -LiteralPath $zip)){throw "ZIP پیدا نشد: $zip"};if(Test-Path $dest){Remove-Item $dest -Recurse -Force};New-Item -ItemType Directory -Path $dest -Force|Out-Null;Expand-Archive -LiteralPath $zip -DestinationPath $dest -Force}
+-function Ensure-ImportedLock([string]$importDir){$incoming=Join-Path $importDir 'package-lock.json';if(-not (Test-Path $incoming)){throw 'Handoff package-lock.json ندارد.'};$target=Join-Path $project 'package-lock.json';if(Test-Path $target){$a=(Get-FileHash $incoming -Algorithm SHA256).Hash;$b=(Get-FileHash $target -Algorithm SHA256).Hash;if($a -ne $b){throw 'package-lock موجود با Handoff یکسان نیست.'}}else{Copy-Item $incoming $target -Force};node scripts/verify-release-inputs.cjs|Out-Host;if($LASTEXITCODE -ne 0){throw 'Imported package-lock release-input gate را پاس نکرد.'}}
++function Expand-Clean([string]$zip,[string]$dest){
++  if(-not (Test-Path -LiteralPath $zip -PathType Leaf)){throw "ZIP پیدا نشد: $zip"}
++  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/windows-safe-archive-expand.ps1 -Archive $zip -Destination $dest|Out-Host
++  if($LASTEXITCODE -ne 0){throw 'Safe Handoff ZIP expansion failed before trust verification.'}
++}
++function Verify-Staged-Handoff([string]$dir){
++  $manifest=Join-Path $dir 'handoff-manifest.json';$incoming=Join-Path $dir 'package-lock.json'
++  if(-not(Test-Path -LiteralPath $incoming -PathType Leaf)){throw 'Handoff package-lock.json ندارد.'}
++  node scripts/rc1-execution-handoff.cjs --verify "--dir=$dir" "--manifest=$manifest" --no-source-check|Out-Host
++  if($LASTEXITCODE -ne 0){throw 'Handoff internal integrity/pointer verification failed before any Source mutation.'}
++  node scripts/verify-release-inputs.cjs "--lockfile=$incoming"|Out-Host
++  if($LASTEXITCODE -ne 0){throw 'Staged Handoff package-lock release-input gate را پاس نکرد.'}
++  node scripts/rc1-execution-handoff.cjs --verify "--dir=$dir" "--manifest=$manifest" "--lockfile=$incoming"|Out-Host
++  if($LASTEXITCODE -ne 0){throw 'Handoff source/release identity verification with staged lock failed before Source mutation.'}
++}
++function Ensure-ImportedLock([string]$importDir){
++  $incoming=Join-Path $importDir 'package-lock.json';if(-not (Test-Path -LiteralPath $incoming -PathType Leaf)){throw 'Handoff package-lock.json ندارد.'}
++  $target=Join-Path $project 'package-lock.json'
++  if(Test-Path -LiteralPath $target){
++    $ti=Get-Item -LiteralPath $target -Force;if(($ti.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw 'Source package-lock.json نمی‌تواند reparse/symlink باشد.'}
++    $a=(Get-FileHash -LiteralPath $incoming -Algorithm SHA256).Hash;$b=(Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash;if($a -ne $b){throw 'package-lock موجود با Handoff یکسان نیست.'}
++  }else{
++    $tmp=Join-Path $project ('.package-lock.importing-'+[guid]::NewGuid().ToString('N')+'.json')
++    try{Copy-Item -LiteralPath $incoming -Destination $tmp -Force;node scripts/verify-release-inputs.cjs "--lockfile=$tmp"|Out-Host;if($LASTEXITCODE -ne 0){throw 'Atomic staged package-lock validation failed.'};Move-Item -LiteralPath $tmp -Destination $target -Force}finally{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue}
++  }
++  node scripts/verify-release-inputs.cjs|Out-Host;if($LASTEXITCODE -ne 0){throw 'Imported package-lock release-input gate را پاس نکرد.'}
++}
+ function Verify-Handoff([string]$dir){node scripts/rc1-execution-handoff.cjs --verify "--dir=$dir" "--manifest=$(Join-Path $dir 'handoff-manifest.json')"|Out-Host;if($LASTEXITCODE -ne 0){throw 'Handoff integrity/source verification failed.'}}
+ function Find-Pointer([string]$dir,[string]$name){$p=Join-Path $dir $name;if(-not(Test-Path $p)){throw "Pointer پیدا نشد: $p"};return (Get-Content $p -Raw|ConvertFrom-Json)}
+ function Rel([string]$base,[string]$target){$b=[IO.Path]::GetFullPath($base);if(-not $b.EndsWith('\')){$b+='\'};$t=[IO.Path]::GetFullPath($target);$bu=New-Object -TypeName System.Uri -ArgumentList $b;$tu=New-Object -TypeName System.Uri -ArgumentList $t;return [Uri]::UnescapeDataString($bu.MakeRelativeUri($tu).ToString()).Replace('/','\')}
+@@ -149,11 +173,11 @@
+ }
+ 
+ if($Mode -eq 'PrepareEvidence'){
+-  if(-not $HandoffZip){throw '-HandoffZip primary handoff لازم است.'};$bootstrap=Join-Path $rootAbs ('evidence-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$p=Find-Pointer $bootstrap 'primary-pointer.json';if(-not $ExecutionId){$ExecutionId=[string]$p.executionId};Assert-ExecutionId $ExecutionId|Out-Null;if([string]$p.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'};$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$import=Join-Path $exec 'evidence-primary-import';if(Test-Path $import){Remove-Item $import -Recurse -Force};Move-Item $bootstrap $import;$p=Find-Pointer $import 'primary-pointer.json';$manifest=Join-Path $import ([string]$p.releaseManifest);$primaryReport=Join-Path $import ([string]$p.certificationReport);if(-not $EvidenceOut){$EvidenceOut=Join-Path $exec 'MANUAL_EVIDENCE.prefilled.json'};$args=@('scripts/prefill-manual-evidence-rc1.cjs',"--release-manifest=$manifest","--primary-report=$primaryReport","--out=$EvidenceOut","--execution-id=$ExecutionId");if($Operator){$args+="--operator=$Operator"};& node @args|Out-Host;if($LASTEXITCODE -ne 0){throw 'Prefill failed.'};Write-State $exec 'MANUAL_EVIDENCE_PREPARED' 'INCOMPLETE' 'Perform each real manual test; mark PASS only with observedAt and a hash-bound attachment.' @{evidence=$EvidenceOut;primaryHandoff=$HandoffZip} $null|Out-Null;exit 0
++  if(-not $HandoffZip){throw '-HandoffZip primary handoff لازم است.'};$bootstrap=Join-Path $rootAbs ('evidence-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Verify-Staged-Handoff $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$p=Find-Pointer $bootstrap 'primary-pointer.json';if(-not $ExecutionId){$ExecutionId=[string]$p.executionId};Assert-ExecutionId $ExecutionId|Out-Null;if([string]$p.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'};$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$import=Join-Path $exec 'evidence-primary-import';if(Test-Path $import){Remove-Item $import -Recurse -Force};Move-Item $bootstrap $import;$p=Find-Pointer $import 'primary-pointer.json';$manifest=Join-Path $import ([string]$p.releaseManifest);$primaryReport=Join-Path $import ([string]$p.certificationReport);if(-not $EvidenceOut){$EvidenceOut=Join-Path $exec 'MANUAL_EVIDENCE.prefilled.json'};$args=@('scripts/prefill-manual-evidence-rc1.cjs',"--release-manifest=$manifest","--primary-report=$primaryReport","--out=$EvidenceOut","--execution-id=$ExecutionId");if($Operator){$args+="--operator=$Operator"};& node @args|Out-Host;if($LASTEXITCODE -ne 0){throw 'Prefill failed.'};Write-State $exec 'MANUAL_EVIDENCE_PREPARED' 'INCOMPLETE' 'Perform each real manual test; mark PASS only with observedAt and a hash-bound attachment.' @{evidence=$EvidenceOut;primaryHandoff=$HandoffZip} $null|Out-Null;exit 0
+ }
+ 
+ if($Mode -eq 'Peer'){
+-  if(-not $HandoffZip){throw '-HandoffZip primary handoff لازم است.'};$bootstrap=Join-Path $rootAbs ('peer-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$primaryPointer=Find-Pointer $bootstrap 'primary-pointer.json';if(-not $ExecutionId){$ExecutionId=[string]$primaryPointer.executionId};Assert-ExecutionId $ExecutionId|Out-Null;if([string]$primaryPointer.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'};$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$import=Join-Path $exec 'primary-import';if(Test-Path $import){Remove-Item $import -Recurse -Force};Move-Item $bootstrap $import
++  if(-not $HandoffZip){throw '-HandoffZip primary handoff لازم است.'};$bootstrap=Join-Path $rootAbs ('peer-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Verify-Staged-Handoff $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$primaryPointer=Find-Pointer $bootstrap 'primary-pointer.json';if(-not $ExecutionId){$ExecutionId=[string]$primaryPointer.executionId};Assert-ExecutionId $ExecutionId|Out-Null;if([string]$primaryPointer.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'};$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$import=Join-Path $exec 'primary-import';if(Test-Path $import){Remove-Item $import -Recurse -Force};Move-Item $bootstrap $import
+   $primaryPointer=Find-Pointer $import 'primary-pointer.json';if([string]$primaryPointer.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'};$primaryReport=Join-Path $import ([string]$primaryPointer.certificationReport);$primaryJson=Get-Content $primaryReport -Raw|ConvertFrom-Json;$currentFamily=Get-WindowsFamily;if($currentFamily -eq [string]$primaryJson.windowsFamily){throw "Peer باید Windows family متفاوت باشد. Primary=$($primaryJson.windowsFamily), Current=$currentFamily"}
+   $doctorReport=Join-Path $exec 'doctor-peer.json'
+   if($resumeAction -eq 'RESUME_PEER_RETURN'){Write-State $exec 'PEER_CERTIFICATION_REUSED' 'PASS' 'Reuse the already complete Peer PASS boundary; rebuild only peer return packaging.' @{primaryHandoff=$HandoffZip;primaryReport=$primaryReport} @{recovery=$true}|Out-Null}
+@@ -172,10 +196,10 @@
+ 
+ if($Mode -eq 'Finalize'){
+   if(-not $HandoffZip){throw '-HandoffZip primary handoff لازم است.'};if(-not $PeerReturnZip){throw '-PeerReturnZip لازم است.'};if(-not $ManualEvidenceFile -or -not(Test-Path $ManualEvidenceFile)){throw '-ManualEvidenceFile کامل لازم است.'}
+-  if(-not $ExecutionId){$bootstrap=Join-Path $rootAbs ('finalize-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$bootPointer=Find-Pointer $bootstrap 'primary-pointer.json';$ExecutionId=[string]$bootPointer.executionId;Assert-ExecutionId $ExecutionId|Out-Null;$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$primaryImport=Join-Path $exec 'final-primary-import';if(Test-Path $primaryImport){Remove-Item $primaryImport -Recurse -Force};Move-Item $bootstrap $primaryImport}else{$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$primaryImport=Join-Path $exec 'final-primary-import';Expand-Clean $HandoffZip $primaryImport;Ensure-ImportedLock $primaryImport;Verify-Handoff $primaryImport}
++  if(-not $ExecutionId){$bootstrap=Join-Path $rootAbs ('finalize-bootstrap-'+[guid]::NewGuid().ToString('N'));Expand-Clean $HandoffZip $bootstrap;Verify-Staged-Handoff $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap;$bootPointer=Find-Pointer $bootstrap 'primary-pointer.json';$ExecutionId=[string]$bootPointer.executionId;Assert-ExecutionId $ExecutionId|Out-Null;$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$primaryImport=Join-Path $exec 'final-primary-import';if(Test-Path $primaryImport){Remove-Item $primaryImport -Recurse -Force};Move-Item $bootstrap $primaryImport}else{$exec=Join-Path $rootAbs $ExecutionId;New-Item -ItemType Directory -Path $exec -Force|Out-Null;$primaryImport=Join-Path $exec 'final-primary-import';Expand-Clean $HandoffZip $primaryImport;Verify-Staged-Handoff $primaryImport;Ensure-ImportedLock $primaryImport;Verify-Handoff $primaryImport}
+   Assert-ExecutionId $ExecutionId|Out-Null
+   Write-State $exec 'FINALIZE_RUNNING' 'INCOMPLETE' 'Verify immutable Primary/Peer/manual evidence and compute final Stable decision.' @{primaryHandoff=$HandoffZip;peerReturn=$PeerReturnZip;manualEvidence=$ManualEvidenceFile} @{recovery=$($resumeAction -eq 'RESUME_FINALIZE')}|Out-Null
+-  $peerImport=Join-Path $exec 'final-peer-import';Expand-Clean $PeerReturnZip $peerImport;Verify-Handoff $peerImport
++  $peerImport=Join-Path $exec 'final-peer-import';Expand-Clean $PeerReturnZip $peerImport;Verify-Staged-Handoff $peerImport;Verify-Handoff $peerImport
+   $pp=Find-Pointer $primaryImport 'primary-pointer.json';$qp=Find-Pointer $peerImport 'peer-pointer.json';if([string]$pp.executionId -ne [string]$qp.executionId){throw 'Primary/Peer executionId mismatch.'};if([string]$pp.executionId -ne [string]$ExecutionId){throw 'ExecutionId با Primary handoff تطابق ندارد.'}
+   $primaryReport=Join-Path $primaryImport ([string]$pp.certificationReport);$peerReport=Join-Path $peerImport ([string]$qp.certificationReport);$releaseManifest=Join-Path $primaryImport ([string]$pp.releaseManifest)
+   & node scripts/verify-manual-evidence-rc1.cjs $ManualEvidenceFile --require-all --require-artifact-binding "--release-manifest=$releaseManifest" "--primary-report=$primaryReport" "--execution-id=$ExecutionId"|Out-Host;if($LASTEXITCODE -ne 0){Write-State $exec 'FINALIZE_BLOCKED_MANUAL' 'FAIL' 'Correct manual evidence; do not promote Stable.' @{manualEvidence=$ManualEvidenceFile} $null|Out-Null;exit 1}
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/windows-release.ps1 /mnt/data/work_cert21/scripts/windows-release.ps1
+--- /mnt/data/work_cert21_audit/scripts/windows-release.ps1	2026-08-16 13:43:48.000000000 +0000
++++ /mnt/data/work_cert21/scripts/windows-release.ps1	2026-08-17 16:58:03.635156171 +0000
+@@ -26,7 +26,7 @@
+ if ($LASTEXITCODE -ne 0) { throw 'RC1 source contract verification failed.' }
+ node scripts/verify-release-inputs.cjs
+ if ($LASTEXITCODE -ne 0) { throw 'Release inputs/lockfile verification failed.' }
+-$allowedRegistries=@($pkg.workspaceAgentRelease.dependencySourcePolicy.allowedRegistryOrigins);if($allowedRegistries.Count -ne 1){throw 'cert-kit20 requires exactly one approved npm registry origin.'}
++$allowedRegistries=@($pkg.workspaceAgentRelease.dependencySourcePolicy.allowedRegistryOrigins);if($allowedRegistries.Count -ne 1){throw 'cert-kit21 requires exactly one approved npm registry origin.'}
+ $approvedRegistry=([string]$allowedRegistries[0]).TrimEnd('/');$configuredRegistry=([string](npm config get registry)).Trim().TrimEnd('/');if($LASTEXITCODE -ne 0 -or $configuredRegistry -ne $approvedRegistry){throw "npm registry provenance mismatch. Expected=$approvedRegistry Actual=$configuredRegistry"}
+ node scripts/lockfile-provenance.cjs --out=certification/lockfile-provenance.json
+ if($LASTEXITCODE -ne 0){throw 'Lockfile dependency provenance verification failed.'}
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/scripts/windows-safe-archive-expand.ps1 /mnt/data/work_cert21/scripts/windows-safe-archive-expand.ps1
+--- /mnt/data/work_cert21_audit/scripts/windows-safe-archive-expand.ps1	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/scripts/windows-safe-archive-expand.ps1	2026-08-17 16:57:11.299537265 +0000
+@@ -0,0 +1,87 @@
++param(
++  [Parameter(Mandatory=$true)][string]$Archive,
++  [Parameter(Mandatory=$true)][string]$Destination,
++  [int]$MaxEntries=20000,
++  [Int64]$MaxArchiveBytes=4294967296,
++  [Int64]$MaxTotalUncompressedBytes=8589934592,
++  [Int64]$MaxSingleEntryBytes=2147483648
++)
++$ErrorActionPreference='Stop'
++if($env:OS -ne 'Windows_NT'){Write-Error 'Safe archive expansion فقط روی Windows اجرا می‌شود.';exit 3}
++Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
++Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
++function Fail([string]$code,[string]$message,[object]$detail=$null){
++  $e=[ordered]@{ok=$false;code=$code;message=$message;detail=$detail};$e|ConvertTo-Json -Depth 8|Write-Error;throw $code
++}
++function Is-Reparse([IO.FileSystemInfo]$item){return (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)}
++function Is-Reserved([string]$segment){
++  $base=($segment.TrimEnd(' ','.').Split('.')[0]).ToUpperInvariant()
++  if($base -in @('CON','PRN','AUX','NUL')){return $true}
++  if($base -match '^COM[1-9]$' -or $base -match '^LPT[1-9]$'){return $true}
++  return $false
++}
++function Normalize-EntryName([string]$name,[bool]$isDirectory){
++  if($null -eq $name){Fail 'ARCHIVE_ENTRY_NAME_INVALID' 'ZIP entry name is null.'}
++  $n=$name.Replace('\','/')
++  if($n.IndexOf([char]0) -ge 0 -or $n -match '[\x00-\x1F]'){Fail 'ARCHIVE_ENTRY_CONTROL_CHAR_FORBIDDEN' 'ZIP entry contains a control character.' @{entry=$name}}
++  if($n.StartsWith('/') -or $n.StartsWith('//') -or $n -match '^[A-Za-z]:'){Fail 'ARCHIVE_ENTRY_ABSOLUTE_PATH_FORBIDDEN' 'Absolute/drive/UNC ZIP paths are forbidden.' @{entry=$name}}
++  if($isDirectory){$n=$n.TrimEnd('/')}
++  if(-not $n){Fail 'ARCHIVE_ENTRY_EMPTY_PATH_FORBIDDEN' 'Empty/root ZIP entries are forbidden.' @{entry=$name}}
++  $parts=@($n.Split('/'))
++  foreach($part in $parts){
++    if(-not $part -or $part -eq '.' -or $part -eq '..'){Fail 'ARCHIVE_ENTRY_TRAVERSAL_FORBIDDEN' 'ZIP traversal/dot/empty segments are forbidden.' @{entry=$name;segment=$part}}
++    if($part.Length -gt 255){Fail 'ARCHIVE_ENTRY_SEGMENT_TOO_LONG' 'ZIP path segment exceeds 255 characters.' @{entry=$name;segmentLength=$part.Length}}
++    if($part.EndsWith(' ') -or $part.EndsWith('.')){Fail 'ARCHIVE_ENTRY_WINDOWS_ALIAS_FORBIDDEN' 'Trailing dot/space Windows aliases are forbidden.' @{entry=$name;segment=$part}}
++    if($part.Contains(':')){Fail 'ARCHIVE_ENTRY_ADS_FORBIDDEN' 'NTFS ADS/colon paths are forbidden.' @{entry=$name;segment=$part}}
++    if(Is-Reserved $part){Fail 'ARCHIVE_ENTRY_DEVICE_NAME_FORBIDDEN' 'Windows device names are forbidden in ZIP paths.' @{entry=$name;segment=$part}}
++  }
++  if($n.Length -gt 2048){Fail 'ARCHIVE_ENTRY_PATH_TOO_LONG' 'ZIP relative path exceeds certification bound.' @{entry=$name;length=$n.Length}}
++  return $n
++}
++$archiveFull=[IO.Path]::GetFullPath($Archive);$destFull=[IO.Path]::GetFullPath($Destination)
++if(-not(Test-Path -LiteralPath $archiveFull -PathType Leaf)){Fail 'ARCHIVE_NOT_FOUND' 'Input archive must be an existing file.' @{archive=$archiveFull}}
++$archiveItem=Get-Item -LiteralPath $archiveFull -Force
++if(Is-Reparse $archiveItem){Fail 'ARCHIVE_REPARSE_FORBIDDEN' 'Input archive cannot be a reparse/symlink file.' @{archive=$archiveFull}}
++if([Int64]$archiveItem.Length -gt $MaxArchiveBytes){Fail 'ARCHIVE_COMPRESSED_SIZE_LIMIT' 'Archive exceeds compressed-size certification limit.' @{bytes=[Int64]$archiveItem.Length;limit=$MaxArchiveBytes}}
++if(Test-Path -LiteralPath $destFull){$di=Get-Item -LiteralPath $destFull -Force;if(Is-Reparse $di){Fail 'DESTINATION_REPARSE_FORBIDDEN' 'Destination cannot be a reparse point.' @{destination=$destFull}}}
++$zip=$null;$rows=New-Object System.Collections.Generic.List[object];$keys=@{};$total=[Int64]0
++try{
++  $zip=[IO.Compression.ZipFile]::OpenRead($archiveFull)
++  if($zip.Entries.Count -gt $MaxEntries){Fail 'ARCHIVE_ENTRY_COUNT_LIMIT' 'Archive contains too many entries.' @{entries=$zip.Entries.Count;limit=$MaxEntries}}
++  foreach($entry in $zip.Entries){
++    $raw=[string]$entry.FullName;$isDir=$raw.EndsWith('/') -or $raw.EndsWith('\')
++    $rel=Normalize-EntryName $raw $isDir
++    $key=$rel.Normalize([Text.NormalizationForm]::FormC).ToLowerInvariant()
++    if($keys.ContainsKey($key)){Fail 'ARCHIVE_DUPLICATE_CANONICAL_PATH' 'Duplicate/case-alias ZIP path is forbidden.' @{entry=$raw;previous=$keys[$key].raw}}
++    $unixMode=(($entry.ExternalAttributes -shr 16) -band 0xFFFF);$unixType=($unixMode -band 0xF000)
++    if($unixType -eq 0xA000 -or (($entry.ExternalAttributes -band [int][IO.FileAttributes]::ReparsePoint) -ne 0)){Fail 'ARCHIVE_LINK_REPARSE_ENTRY_FORBIDDEN' 'Archive symlink/reparse entries are forbidden.' @{entry=$raw;externalAttributes=$entry.ExternalAttributes}}
++    if(-not $isDir){
++      if([Int64]$entry.Length -gt $MaxSingleEntryBytes){Fail 'ARCHIVE_SINGLE_ENTRY_SIZE_LIMIT' 'Archive entry exceeds size limit.' @{entry=$raw;bytes=[Int64]$entry.Length;limit=$MaxSingleEntryBytes}}
++      $total=[Int64]($total+[Int64]$entry.Length);if($total -gt $MaxTotalUncompressedBytes){Fail 'ARCHIVE_TOTAL_SIZE_LIMIT' 'Archive exceeds total uncompressed-size limit.' @{bytes=$total;limit=$MaxTotalUncompressedBytes}}
++    }
++    $row=[pscustomobject]@{raw=$raw;rel=$rel;key=$key;isDirectory=[bool]$isDir;length=[Int64]$entry.Length;compressedLength=[Int64]$entry.CompressedLength;entry=$entry};$rows.Add($row);$keys[$key]=$row
++  }
++  foreach($row in $rows){
++    $parts=@($row.rel.Split('/'));if($parts.Count -gt 1){for($i=1;$i -lt $parts.Count;$i++){$parent=([string]::Join('/', $parts[0..($i-1)])).Normalize([Text.NormalizationForm]::FormC).ToLowerInvariant();if($keys.ContainsKey($parent) -and -not [bool]$keys[$parent].isDirectory){Fail 'ARCHIVE_FILE_DIRECTORY_COLLISION' 'A file shadows a parent directory path.' @{entry=$row.raw;parent=$keys[$parent].raw}}}}
++  }
++  $parent=Split-Path -Parent $destFull;if(-not $parent){Fail 'DESTINATION_PARENT_INVALID' 'Destination parent is invalid.' @{destination=$destFull}}
++  New-Item -ItemType Directory -Path $parent -Force|Out-Null
++  $stage=Join-Path $parent ((Split-Path -Leaf $destFull)+'.extracting-'+[guid]::NewGuid().ToString('N'))
++  New-Item -ItemType Directory -Path $stage -Force|Out-Null
++  try{
++    $stagePrefix=[IO.Path]::GetFullPath($stage).TrimEnd('\')+'\'
++    foreach($row in $rows){
++      $target=[IO.Path]::GetFullPath((Join-Path $stage ($row.rel.Replace('/','\'))))
++      if(-not $target.StartsWith($stagePrefix,[StringComparison]::OrdinalIgnoreCase)){Fail 'ARCHIVE_TARGET_ESCAPE' 'Calculated extraction target escaped staging directory.' @{entry=$row.raw;target=$target}}
++      if($row.isDirectory){New-Item -ItemType Directory -Path $target -Force|Out-Null;continue}
++      $td=Split-Path -Parent $target;if($td){New-Item -ItemType Directory -Path $td -Force|Out-Null}
++      $input=$null;$output=$null
++      try{$input=$row.entry.Open();$output=New-Object IO.FileStream($target,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None);$input.CopyTo($output)}finally{if($output){$output.Dispose()};if($input){$input.Dispose()}}
++      $written=Get-Item -LiteralPath $target -Force;if(Is-Reparse $written){Fail 'ARCHIVE_EXTRACTED_REPARSE_FORBIDDEN' 'Extractor produced a reparse point unexpectedly.' @{entry=$row.raw}};if([Int64]$written.Length -ne [Int64]$row.length){Fail 'ARCHIVE_EXTRACTED_LENGTH_MISMATCH' 'Extracted file length differs from central directory.' @{entry=$row.raw;expected=$row.length;actual=[Int64]$written.Length}}
++    }
++    foreach($item in Get-ChildItem -LiteralPath $stage -Force -Recurse){if(Is-Reparse $item){Fail 'ARCHIVE_EXTRACTED_REPARSE_FORBIDDEN' 'Extracted tree contains a reparse point.' @{path=$item.FullName}}}
++    if(Test-Path -LiteralPath $destFull){Remove-Item -LiteralPath $destFull -Recurse -Force}
++    Move-Item -LiteralPath $stage -Destination $destFull -Force
++  }catch{if($stage -and (Test-Path -LiteralPath $stage)){Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue};throw}
++}finally{if($zip){$zip.Dispose()}}
++[ordered]@{ok=$true;status='SAFE_ARCHIVE_EXPAND_PASS';archive=$archiveFull;destination=$destFull;entries=$rows.Count;totalUncompressedBytes=$total;limits=[ordered]@{maxEntries=$MaxEntries;maxArchiveBytes=$MaxArchiveBytes;maxTotalUncompressedBytes=$MaxTotalUncompressedBytes;maxSingleEntryBytes=$MaxSingleEntryBytes}}|ConvertTo-Json -Depth 6
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/manual-evidence-rc1.test.cjs /mnt/data/work_cert21/tests/manual-evidence-rc1.test.cjs
+--- /mnt/data/work_cert21_audit/tests/manual-evidence-rc1.test.cjs	2026-08-16 13:39:20.000000000 +0000
++++ /mnt/data/work_cert21/tests/manual-evidence-rc1.test.cjs	2026-08-17 16:58:08.828835284 +0000
+@@ -12,7 +12,7 @@
+ const installerSha='a'.repeat(64),source='b'.repeat(64),lock='c'.repeat(64),rid='d'.repeat(64),evidenceId='e'.repeat(64),executionId='exec-20260816-win11';
+ function makeAttachment(key){const name=`${key}.txt`,p=path.join(dir,name);fs.writeFileSync(p,`hash-bound physical evidence for ${key}`);return{status:'PASS',observedAt:now(),notes:'Observed on controlled Windows certification hardware.',attachment:name,attachmentSha256:sha(p),attachmentBytes:fs.statSync(p).size}}
+ try{
+-  const manifestData={schemaVersion:'workspace-agent-release-v10',version:'1.0.0-rc1',toolingRevision:'cert-kit20',sourceFingerprint:source,packageLockSha256:lock,releaseIdentitySha256:rid,artifacts:[{kind:'nsis',file:'Workspace-Agent-Setup-1.0.0-rc1-x64.exe',sha256:installerSha}]};
++  const manifestData={schemaVersion:'workspace-agent-release-v10',version:'1.0.0-rc1',toolingRevision:'cert-kit21',sourceFingerprint:source,packageLockSha256:lock,releaseIdentitySha256:rid,artifacts:[{kind:'nsis',file:'Workspace-Agent-Setup-1.0.0-rc1-x64.exe',sha256:installerSha}]};
+   fs.writeFileSync(manifest,JSON.stringify(manifestData));
+   fs.writeFileSync(primaryReport,JSON.stringify({overall:'PASS',evidenceId,windowsFamily:'Windows11',sourceFingerprint:{sha256:source},packageLockSha256:lock,releaseIdentitySha256:rid}));
+   const base={schemaVersion:'workspace-agent-manual-evidence-rc1-v4',version:'1.0.0-rc1',executionId,operator:'qa-operator',machine:'win11-cert',createdAt:now(),binding:{sourceFingerprint:source,packageLockSha256:lock,releaseIdentitySha256:rid,releaseManifestSha256:sha(manifest),installerSha256:installerSha,primaryCertificationReportSha256:sha(primaryReport),primaryCertificationEvidenceId:evidenceId,primaryWindowsFamily:'Windows11'},evidence:{physicalUsbDisconnectReconnect:makeAttachment('usb'),actualDiskFullRecovery:makeAttachment('disk-full'),realAclReadOnlyRecovery:makeAttachment('acl'),uncleanShutdownPowerLoss:makeAttachment('power-loss'),realUpgradeFrom0_9_8:{...makeAttachment('upgrade'),fromVersion:'0.9.8',toVersion:'1.0.0-rc1',installerSha256:installerSha,preSelfCheckOverall:'pass',postSelfCheckOverall:'pass',statePreserved:true}}};
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-execution-handoff.test.cjs /mnt/data/work_cert21/tests/rc1-execution-handoff.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-execution-handoff.test.cjs	2026-08-16 13:38:50.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-execution-handoff.test.cjs	2026-08-17 16:58:44.573837215 +0000
+@@ -9,8 +9,8 @@
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-rc1-handoff-'));
+ try{
+   if(!had)fs.writeFileSync(lock,JSON.stringify({name:'windows-workspace-agent',version:'1.0.0-rc1',lockfileVersion:3,requires:true,packages:{}},null,2));
+-  fs.writeFileSync(path.join(tmp,'payload.txt'),'primary evidence\n');
+-  const pointer=path.join(tmp,'primary-pointer.json');fs.writeFileSync(pointer,JSON.stringify({executionId:'exec-test',certificationReport:'payload.txt'}));
++  fs.writeFileSync(path.join(tmp,'payload.txt'),'primary evidence\n');fs.copyFileSync(lock,path.join(tmp,'package-lock.json'));
++  const pointer=path.join(tmp,'primary-pointer.json');fs.writeFileSync(pointer,JSON.stringify({schemaVersion:'workspace-agent-rc1-primary-pointer-v1',executionId:'exec-test',certificationReport:'payload.txt',evidenceBundle:'payload.txt',releaseManifest:'payload.txt',sha256Sums:'payload.txt',manualEvidenceTemplate:'payload.txt',packageLock:'package-lock.json'}));
+   const manifest=path.join(tmp,'handoff-manifest.json');
+   const created=createHandoff({dir:tmp,out:manifest,role:'primary',executionId:'exec-test',pointer});
+   assert(created.ok);assert.equal(created.role,'primary');assert.equal(created.executionId,'exec-test');assert(/^[a-f0-9]{64}$/.test(created.handoffId));assert(/^[a-f0-9]{64}$/.test(created.releaseIdentitySha256));
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-execution-kit-contract.test.cjs /mnt/data/work_cert21/tests/rc1-execution-kit-contract.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-execution-kit-contract.test.cjs	2026-08-16 13:38:50.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-execution-kit-contract.test.cjs	2026-08-17 16:58:08.831031577 +0000
+@@ -1,5 +1,5 @@
+ const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+-const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit20');
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit21');
+ for(const s of ['certify:execution:rc1','handoff:rc1','manual:prefill:rc1','stable:decision:rc1','test:rc1-execution'])assert(pkg.scripts[s],s);
+ const ps=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');for(const mode of ["'Primary'","'Peer'","'PrepareEvidence'","'Finalize'","'Status'"])assert(ps.includes(mode),mode);for(const token of ['PRIMARY_READY','PEER_READY','PROMOTE_ALLOWED','rc1-execution-handoff.cjs','prefill-manual-evidence-rc1.cjs','rc1-stable-readiness.cjs','--require-artifact-binding'])assert(ps.includes(token),token);
+ const fp=fs.readFileSync(path.join(root,'scripts/source-tree-fingerprint.cjs'),'utf8');assert(fp.includes("'rc1-execution'"));assert(fp.includes("'final-certification'"));assert(fp.includes('PRIMARY-HANDOFF'));assert(fp.includes('MANUAL_EVIDENCE'));
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-execution-recovery-contract.test.cjs /mnt/data/work_cert21/tests/rc1-execution-recovery-contract.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-execution-recovery-contract.test.cjs	2026-08-16 13:38:50.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-execution-recovery-contract.test.cjs	2026-08-17 16:58:08.826941358 +0000
+@@ -1,5 +1,5 @@
+ const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+-const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit20');
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit21');
+ assert(pkg.scripts['recover:execution:rc1']);assert(pkg.scripts['resume:execution:rc1']);
+ const js=fs.readFileSync(path.join(root,'scripts/rc1-execution-recovery.cjs'),'utf8');
+ for(const t of ['workspace-agent-rc1-execution-recovery-plan-v1','BLOCK_STATE_CHAIN_INVALID','RESUME_PRIMARY_HANDOFF','RERUN_PRIMARY_CERTIFICATION','RESUME_PEER_RETURN','RERUN_PEER_CERTIFICATION','RESUME_FINALIZE','PROMOTION_COMPLETE'])assert(js.includes(t),t);
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-execution-root-realpath-guard.test.cjs /mnt/data/work_cert21/tests/rc1-execution-root-realpath-guard.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-execution-root-realpath-guard.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-execution-root-realpath-guard.test.cjs	2026-08-17 17:01:05.079498832 +0000
+@@ -0,0 +1,14 @@
++const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');
++const {evaluateExecutionRoot}=require('../scripts/path-trust-boundary.cjs');
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-exec-root-guard-'));
++try{
++  const source=path.join(tmp,'source'),outside=path.join(tmp,'outside');fs.mkdirSync(source);fs.mkdirSync(outside);const allowed=path.join(source,'rc1-execution');
++  let r=evaluateExecutionRoot({sourceRoot:source,target:allowed,allowInsideExact:allowed});assert(r.ok,JSON.stringify(r.errors));
++  r=evaluateExecutionRoot({sourceRoot:source,target:path.join(source,'other-execution'),allowInsideExact:allowed});assert(!r.ok);assert(r.errors.includes('EXECUTION_ROOT_SOURCE_OVERLAP_FORBIDDEN'));
++  r=evaluateExecutionRoot({sourceRoot:source,target:tmp,allowInsideExact:allowed});assert(!r.ok);assert(r.errors.includes('EXECUTION_ROOT_SOURCE_OVERLAP_FORBIDDEN'));
++  r=evaluateExecutionRoot({sourceRoot:source,target:path.join(outside,'execution'),allowInsideExact:allowed});assert(r.ok,JSON.stringify(r.errors));
++  let linkMade=false;const link=path.join(tmp,'outside-alias');try{fs.symlinkSync(source,link,'dir');linkMade=true}catch(e){if(!['EPERM','EACCES','ENOTSUP'].includes(e.code))throw e}
++  if(linkMade){r=evaluateExecutionRoot({sourceRoot:source,target:path.join(link,'rc1-execution'),allowInsideExact:allowed});assert(!r.ok);assert(r.errors.includes('EXECUTION_ROOT_SOURCE_OVERLAP_FORBIDDEN'))}
++  const exec=fs.readFileSync(path.join(__dirname,'..','scripts/windows-rc1-execution.ps1'),'utf8');assert(exec.includes('path-trust-boundary.cjs'));assert(exec.includes('--allow-inside-exact='));
++  console.log('rc1-execution-root-realpath-guard PASS',{parentOverlapBlocked:true,realpathAliasBlocked:linkMade,defaultAllowed:true});
++}finally{fs.rmSync(tmp,{recursive:true,force:true})}
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-final-bundle-e2e.test.cjs /mnt/data/work_cert21/tests/rc1-final-bundle-e2e.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-final-bundle-e2e.test.cjs	2026-08-16 13:40:26.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-final-bundle-e2e.test.cjs	2026-08-17 16:58:44.573973651 +0000
+@@ -10,8 +10,8 @@
+ try{
+  const rootLock={name:pkg.name,version:pkg.version,lockfileVersion:3,requires:true,packages:{'':{name:pkg.name,version:pkg.version}}};fs.writeFileSync(lockPath,JSON.stringify(rootLock,null,2));
+  const primary=path.join(tmp,'primary'),peer=path.join(tmp,'peer');fs.mkdirSync(primary);fs.mkdirSync(peer);fs.copyFileSync(lockPath,path.join(primary,'package-lock.json'));fs.copyFileSync(lockPath,path.join(peer,'package-lock.json'));
+- const pEvidence=writeRawEvidence(path.join(primary,'primary-evidence'),'primary','Windows10'),qEvidence=writeRawEvidence(path.join(peer,'peer-evidence'),'peer','Windows11'),release=writeRelease(primary);
+- const pPointer={schemaVersion:'workspace-agent-rc1-primary-pointer-v1',executionId,windowsFamily:'Windows10',createdAt:new Date().toISOString(),certificationReport:'primary-evidence/certification-report.json',evidenceBundle:'primary-evidence/evidence-bundle.json',releaseManifest:'release/release-manifest.json',sha256Sums:'release/SHA256SUMS.txt',packageLock:'package-lock.json',certificationEvidenceId:pEvidence.report.evidenceId};
++ const pEvidence=writeRawEvidence(path.join(primary,'primary-evidence'),'primary','Windows10'),qEvidence=writeRawEvidence(path.join(peer,'peer-evidence'),'peer','Windows11'),release=writeRelease(primary);fs.writeFileSync(path.join(primary,'MANUAL_EVIDENCE.prefilled.json'),'{}\n');
++ const pPointer={schemaVersion:'workspace-agent-rc1-primary-pointer-v1',executionId,windowsFamily:'Windows10',createdAt:new Date().toISOString(),certificationReport:'primary-evidence/certification-report.json',evidenceBundle:'primary-evidence/evidence-bundle.json',releaseManifest:'release/release-manifest.json',sha256Sums:'release/SHA256SUMS.txt',manualEvidenceTemplate:'MANUAL_EVIDENCE.prefilled.json',packageLock:'package-lock.json',certificationEvidenceId:pEvidence.report.evidenceId};
+  const qPointer={schemaVersion:'workspace-agent-rc1-peer-pointer-v1',executionId,windowsFamily:'Windows11',primaryWindowsFamily:'Windows10',createdAt:new Date().toISOString(),certificationReport:'peer-evidence/certification-report.json',evidenceBundle:'peer-evidence/evidence-bundle.json',certificationEvidenceId:qEvidence.report.evidenceId,packageLock:'package-lock.json'};
+  const pPointerPath=path.join(primary,'primary-pointer.json'),qPointerPath=path.join(peer,'peer-pointer.json');fs.writeFileSync(pPointerPath,JSON.stringify(pPointer,null,2));fs.writeFileSync(qPointerPath,JSON.stringify(qPointer,null,2));const ph=createHandoff({dir:primary,out:path.join(primary,'handoff-manifest.json'),role:'primary',executionId,pointer:pPointerPath}),qh=createHandoff({dir:peer,out:path.join(peer,'handoff-manifest.json'),role:'peer',executionId,pointer:qPointerPath});assert(ph.ok&&qh.ok);
+  const fp=computeFingerprint(root),rid=computeReleaseIdentity(root),manualPath=makeManual(path.join(tmp,'manual'),{fp,rid,release,primaryReport:pEvidence});
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-final-evidence-provenance-contract.test.cjs /mnt/data/work_cert21/tests/rc1-final-evidence-provenance-contract.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-final-evidence-provenance-contract.test.cjs	2026-08-16 13:41:34.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-final-evidence-provenance-contract.test.cjs	2026-08-17 16:58:08.825551304 +0000
+@@ -1,5 +1,5 @@
+ const assert=require('assert');const fs=require('fs');const path=require('path');const root=path.resolve(__dirname,'..');
+-const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit20');
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit21');
+ const verifier=fs.readFileSync(path.join(root,'scripts/verify-manual-evidence-rc1.cjs'),'utf8');for(const token of ['workspace-agent-manual-evidence-rc1-v4','MANUAL_EVIDENCE_EXECUTION_ID_MISMATCH','MANUAL_EVIDENCE_RELEASE_BINDING_MISMATCH','ATTACHMENT_SHA256_MISMATCH','MANUAL_EVIDENCE_ATTACHMENT_REQUIRED','MANUAL_EVIDENCE_PRIMARY_REPORT_BINDING_MISMATCH'])assert(verifier.includes(token),token);
+ const prefill=fs.readFileSync(path.join(root,'scripts/prefill-manual-evidence-rc1.cjs'),'utf8');for(const token of ['--execution-id','primary-report','releaseManifestSha256','releaseIdentitySha256','primaryCertificationReportSha256','Do not reuse'])assert(prefill.includes(token),token);
+ const finalizer=fs.readFileSync(path.join(root,'scripts/rc1-finalize.cjs'),'utf8');for(const token of ['primary-handoff-manifest','peer-handoff-manifest','verifyHandoff','HANDOFF_REPORT_BINDING_MISMATCH','workspace-agent-rc1-final-verdict-v4','--require-execution-binding','finalBundleRequired:true'])assert(finalizer.includes(token),token);
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-handoff-pointer-semantics-rc1.test.cjs /mnt/data/work_cert21/tests/rc1-handoff-pointer-semantics-rc1.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-handoff-pointer-semantics-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-handoff-pointer-semantics-rc1.test.cjs	2026-08-17 16:59:16.357846556 +0000
+@@ -0,0 +1,15 @@
++const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');
++const {fileRows,validatePointerDocument,normalizePointerRef}=require('../scripts/rc1-execution-handoff.cjs');
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-pointer-semantics-'));
++try{
++  for(const f of ['payload.txt','package-lock.json'])fs.writeFileSync(path.join(tmp,f),'x\n');
++  const pointer=path.join(tmp,'primary-pointer.json');
++  const base={schemaVersion:'workspace-agent-rc1-primary-pointer-v1',executionId:'exec-pointer',certificationReport:'payload.txt',evidenceBundle:'payload.txt',releaseManifest:'payload.txt',sha256Sums:'payload.txt',manualEvidenceTemplate:'payload.txt',packageLock:'package-lock.json'};
++  fs.writeFileSync(pointer,JSON.stringify(base));let rows=fileRows(tmp);let r=validatePointerDocument({dir:tmp,pointerPath:pointer,role:'primary',executionId:'exec-pointer',rows});assert.equal(r.refs.certificationReport,'payload.txt');
++  fs.writeFileSync(pointer,JSON.stringify({...base,certificationReport:'../outside.json'}));rows=fileRows(tmp);assert.throws(()=>validatePointerDocument({dir:tmp,pointerPath:pointer,role:'primary',executionId:'exec-pointer',rows}),/HANDOFF_POINTER_REF_INVALID/);
++  fs.writeFileSync(pointer,JSON.stringify({...base,certificationReport:'C:\\outside\\report.json'}));rows=fileRows(tmp);assert.throws(()=>validatePointerDocument({dir:tmp,pointerPath:pointer,role:'primary',executionId:'exec-pointer',rows}),/HANDOFF_POINTER_REF_INVALID/);
++  fs.writeFileSync(pointer,JSON.stringify({...base,certificationReport:'missing.json'}));rows=fileRows(tmp);assert.throws(()=>validatePointerDocument({dir:tmp,pointerPath:pointer,role:'primary',executionId:'exec-pointer',rows}),/(ENOENT|HANDOFF_POINTER_REF_NOT_DECLARED)/);
++  const peer=path.join(tmp,'peer-pointer.json');fs.writeFileSync(peer,JSON.stringify({schemaVersion:'workspace-agent-rc1-peer-pointer-v1',executionId:'exec-pointer',windowsFamily:'Windows11',primaryWindowsFamily:'Windows11',certificationReport:'payload.txt',evidenceBundle:'payload.txt',packageLock:'package-lock.json'}));rows=fileRows(tmp);assert.throws(()=>validatePointerDocument({dir:tmp,pointerPath:peer,role:'peer',executionId:'exec-pointer',rows}),/HANDOFF_POINTER_WINDOWS_PAIR_INVALID/);
++  assert.throws(()=>normalizePointerRef('folder/../escape.txt','x'),/HANDOFF_POINTER_REF_INVALID/);
++  console.log('rc1-handoff-pointer-semantics-rc1 PASS',{traversalBlocked:true,absoluteBlocked:true,undeclaredBlocked:true,peerPairBound:true});
++}finally{fs.rmSync(tmp,{recursive:true,force:true})}
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-handoff-reparse-failclosed.test.cjs /mnt/data/work_cert21/tests/rc1-handoff-reparse-failclosed.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-handoff-reparse-failclosed.test.cjs	2026-08-16 13:38:50.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-handoff-reparse-failclosed.test.cjs	2026-08-17 16:58:44.573914948 +0000
+@@ -3,7 +3,7 @@
+ const lock=path.join(root,'package-lock.json'),had=fs.existsSync(lock),old=had?fs.readFileSync(lock):null,tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-handoff-link-')),outside=fs.mkdtempSync(path.join(os.tmpdir(),'wa-handoff-out-'));
+ try{
+   if(!had)fs.writeFileSync(lock,JSON.stringify({name:'windows-workspace-agent',version:'1.0.0-rc1',lockfileVersion:3,packages:{}}));
+-  fs.writeFileSync(path.join(tmp,'payload.txt'),'inside\n');const pointer=path.join(tmp,'primary-pointer.json');fs.writeFileSync(pointer,JSON.stringify({executionId:'exec-link',certificationReport:'payload.txt'}));const manifest=path.join(tmp,'handoff-manifest.json');createHandoff({dir:tmp,out:manifest,role:'primary',executionId:'exec-link',pointer});assert(verifyHandoff({dir:tmp,manifestPath:manifest,requireCurrentSource:true}).ok);
++  fs.writeFileSync(path.join(tmp,'payload.txt'),'inside\n');fs.copyFileSync(lock,path.join(tmp,'package-lock.json'));const pointer=path.join(tmp,'primary-pointer.json');fs.writeFileSync(pointer,JSON.stringify({schemaVersion:'workspace-agent-rc1-primary-pointer-v1',executionId:'exec-link',certificationReport:'payload.txt',evidenceBundle:'payload.txt',releaseManifest:'payload.txt',sha256Sums:'payload.txt',manualEvidenceTemplate:'payload.txt',packageLock:'package-lock.json'}));const manifest=path.join(tmp,'handoff-manifest.json');createHandoff({dir:tmp,out:manifest,role:'primary',executionId:'exec-link',pointer});assert(verifyHandoff({dir:tmp,manifestPath:manifest,requireCurrentSource:true}).ok);
+   fs.writeFileSync(path.join(outside,'outside.txt'),'outside\n');let symlinkCreated=false;try{fs.unlinkSync(path.join(tmp,'payload.txt'));fs.symlinkSync(path.join(outside,'outside.txt'),path.join(tmp,'payload.txt'),'file');symlinkCreated=true}catch(e){if(!['EPERM','EACCES','ENOTSUP'].includes(e.code))throw e}
+   if(symlinkCreated){const v=verifyHandoff({dir:tmp,manifestPath:manifest,requireCurrentSource:true});assert(!v.ok);assert(v.errors.some(x=>String(x).includes('HANDOFF_REPARSE_OR_SYMLINK_FORBIDDEN')));fs.unlinkSync(path.join(tmp,'payload.txt'));fs.writeFileSync(path.join(tmp,'payload.txt'),'inside\n')}
+   assert.throws(()=>createHandoff({dir:tmp,out:manifest,role:'primary',executionId:'exec-link',pointer:path.join(outside,'outside.txt')}),/HANDOFF_POINTER_OUTSIDE_DIRECTORY/);
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-manual-evidence-prefill.test.cjs /mnt/data/work_cert21/tests/rc1-manual-evidence-prefill.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-manual-evidence-prefill.test.cjs	2026-08-16 13:39:14.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-manual-evidence-prefill.test.cjs	2026-08-17 16:58:08.824570289 +0000
+@@ -2,7 +2,7 @@
+ const root=path.resolve(__dirname,'..');const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-manual-prefill-'));const sha=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+ try{
+   const hash='a'.repeat(64),source='b'.repeat(64),lock='c'.repeat(64),rid='d'.repeat(64),evidenceId='e'.repeat(64);const manifest=path.join(tmp,'release-manifest.json'),primary=path.join(tmp,'primary-report.json'),out=path.join(tmp,'manual.json'),executionId='exec-20260816-win11';
+-  fs.writeFileSync(manifest,JSON.stringify({schemaVersion:'workspace-agent-release-v10',version:'1.0.0-rc1',toolingRevision:'cert-kit20',sourceFingerprint:source,packageLockSha256:lock,releaseIdentitySha256:rid,artifacts:[{kind:'nsis',file:'Workspace-Agent-Setup-1.0.0-rc1-x64.exe',sha256:hash,bytes:123}]}));
++  fs.writeFileSync(manifest,JSON.stringify({schemaVersion:'workspace-agent-release-v10',version:'1.0.0-rc1',toolingRevision:'cert-kit21',sourceFingerprint:source,packageLockSha256:lock,releaseIdentitySha256:rid,artifacts:[{kind:'nsis',file:'Workspace-Agent-Setup-1.0.0-rc1-x64.exe',sha256:hash,bytes:123}]}));
+   fs.writeFileSync(primary,JSON.stringify({overall:'PASS',evidenceId,windowsFamily:'Windows11',sourceFingerprint:{sha256:source},packageLockSha256:lock,releaseIdentitySha256:rid}));
+   const r=cp.spawnSync(process.execPath,['scripts/prefill-manual-evidence-rc1.cjs',`--release-manifest=${manifest}`,`--primary-report=${primary}`,`--out=${out}`,`--execution-id=${executionId}`,'--operator=Test Operator','--machine=WIN-TEST'],{cwd:root,encoding:'utf8'});assert.equal(r.status,0,r.stderr||r.stdout);
+   const d=JSON.parse(fs.readFileSync(out,'utf8'));assert.equal(d.schemaVersion,'workspace-agent-manual-evidence-rc1-v4');assert.equal(d.executionId,executionId);assert.equal(d.operator,'Test Operator');assert.equal(d.machine,'WIN-TEST');assert.equal(d.binding.sourceFingerprint,source);assert.equal(d.binding.packageLockSha256,lock);assert.equal(d.binding.releaseIdentitySha256,rid);assert.equal(d.binding.primaryCertificationReportSha256,sha(primary));assert.equal(d.binding.primaryCertificationEvidenceId,evidenceId);assert.equal(d.binding.primaryWindowsFamily,'Windows11');assert.equal(d.evidence.realUpgradeFrom0_9_8.status,'PENDING_MANUAL');assert(d.prefill.note.includes('Do not reuse'));
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-promotion-leaf-reverification.test.cjs /mnt/data/work_cert21/tests/rc1-promotion-leaf-reverification.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-promotion-leaf-reverification.test.cjs	2026-08-16 13:40:46.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-promotion-leaf-reverification.test.cjs	2026-08-17 16:58:08.830749980 +0000
+@@ -4,7 +4,7 @@
+ try{
+  const rootLock={name:pkg.name,version:pkg.version,lockfileVersion:3,requires:true,packages:{'':{name:pkg.name,version:pkg.version}}};fs.writeFileSync(lockPath,JSON.stringify(rootLock,null,2));
+  const release=path.join(tmp,'release');fs.mkdirSync(release);const nsis=path.join(release,`Workspace-Agent-Setup-${pkg.version}-x64.exe`),portable=path.join(release,`Workspace-Agent-Portable-${pkg.version}-x64.exe`);fs.writeFileSync(nsis,'nsis-bytes');fs.writeFileSync(portable,'portable-bytes');const fp=computeFingerprint(root),rid=computeReleaseIdentity(root),pv=validatePolicy(pkg),sp=validateStablePolicy(pkg);assert(pv.ok);assert(sp.ok);
+- const artifacts=[{kind:'nsis',arch:'x64',file:path.basename(nsis),bytes:fs.statSync(nsis).size,sha256:sha(nsis)},{kind:'portable',arch:'x64',file:path.basename(portable),bytes:fs.statSync(portable).size,sha256:sha(portable)}],thumb='B'.repeat(40);const manifest={schemaVersion:'workspace-agent-release-v10',version:pkg.version,toolingRevision:'cert-kit20',featureFreeze:true,createdAt:new Date().toISOString(),packageLockSha256:sha(lockPath),sourceFingerprint:fp.sha256,sourceFiles:fp.files,releaseIdentitySha256:rid.releaseIdentitySha256,dependencySourcePolicy:pv.policy,dependencySourcePolicySha256:pv.sha256,stableCertificationPolicy:sp.policy,stableCertificationPolicySha256:sp.sha256,resolvedRegistryOrigins:[],scaleMatrix:sp.policy.requiredScaleMatrix,architecture:'x64',signingRequired:true,artifacts,signatures:artifacts.map(x=>({file:x.file,status:'Valid',subject:'CN=Fixture',thumbprint:thumb}))};const manifestPath=path.join(release,'release-manifest.json');fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2));fs.writeFileSync(path.join(release,'SHA256SUMS.txt'),artifacts.map(x=>`${x.sha256}  ${x.file}`).join('\n')+'\n');
++ const artifacts=[{kind:'nsis',arch:'x64',file:path.basename(nsis),bytes:fs.statSync(nsis).size,sha256:sha(nsis)},{kind:'portable',arch:'x64',file:path.basename(portable),bytes:fs.statSync(portable).size,sha256:sha(portable)}],thumb='B'.repeat(40);const manifest={schemaVersion:'workspace-agent-release-v10',version:pkg.version,toolingRevision:'cert-kit21',featureFreeze:true,createdAt:new Date().toISOString(),packageLockSha256:sha(lockPath),sourceFingerprint:fp.sha256,sourceFiles:fp.files,releaseIdentitySha256:rid.releaseIdentitySha256,dependencySourcePolicy:pv.policy,dependencySourcePolicySha256:pv.sha256,stableCertificationPolicy:sp.policy,stableCertificationPolicySha256:sp.sha256,resolvedRegistryOrigins:[],scaleMatrix:sp.policy.requiredScaleMatrix,architecture:'x64',signingRequired:true,artifacts,signatures:artifacts.map(x=>({file:x.file,status:'Valid',subject:'CN=Fixture',thumbprint:thumb}))};const manifestPath=path.join(release,'release-manifest.json');fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2));fs.writeFileSync(path.join(release,'SHA256SUMS.txt'),artifacts.map(x=>`${x.sha256}  ${x.file}`).join('\n')+'\n');
+  const executionId='exec-leaf-test',evidenceId='c'.repeat(64),primaryReport=path.join(tmp,'primary-report.json');fs.writeFileSync(primaryReport,JSON.stringify({overall:'PASS',evidenceId,windowsFamily:'Windows10',sourceFingerprint:{sha256:fp.sha256},packageLockSha256:sha(lockPath),releaseIdentitySha256:rid.releaseIdentitySha256}));
+  const manualDir=path.join(tmp,'manual');fs.mkdirSync(manualDir);const now=new Date().toISOString(),evidence={};for(const key of sp.policy.requiredManualEvidenceKeys){const name=`${key}.txt`,p=path.join(manualDir,name);fs.writeFileSync(p,`proof bytes ${key}`);evidence[key]={status:'PASS',observedAt:now,notes:'Observed on certification hardware.',attachment:name,attachmentSha256:sha(p),attachmentBytes:fs.statSync(p).size}}evidence.realUpgradeFrom0_9_8={...evidence.realUpgradeFrom0_9_8,fromVersion:'0.9.8',toVersion:pkg.version,installerSha256:artifacts[0].sha256,preSelfCheckOverall:'pass',postSelfCheckOverall:'pass',statePreserved:true};const manual={schemaVersion:'workspace-agent-manual-evidence-rc1-v4',version:pkg.version,executionId,operator:'tester',machine:'machine',createdAt:now,binding:{sourceFingerprint:fp.sha256,packageLockSha256:sha(lockPath),releaseIdentitySha256:rid.releaseIdentitySha256,releaseManifestSha256:sha(manifestPath),installerSha256:artifacts[0].sha256,primaryCertificationReportSha256:sha(primaryReport),primaryCertificationEvidenceId:evidenceId,primaryWindowsFamily:'Windows10'},evidence};const manualPath=path.join(manualDir,'MANUAL_EVIDENCE.json');fs.writeFileSync(manualPath,JSON.stringify(manual,null,2));
+  const pSession=path.join(tmp,'primary-session'),qSession=path.join(tmp,'peer-session');fs.mkdirSync(pSession);fs.mkdirSync(qSession);fs.writeFileSync(path.join(pSession,'gate.log'),'primary');fs.writeFileSync(path.join(qSession,'gate.log'),'peer');const pb=createBundle(pSession,path.join(pSession,'evidence-bundle.json')),qb=createBundle(qSession,path.join(qSession,'evidence-bundle.json'));
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-release-matrix-contract.test.cjs /mnt/data/work_cert21/tests/rc1-release-matrix-contract.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-release-matrix-contract.test.cjs	2026-08-16 13:41:12.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-release-matrix-contract.test.cjs	2026-08-17 16:58:08.827282805 +0000
+@@ -5,10 +5,10 @@
+ const {detectWindowsFamily,validatePeerPair,MANUAL_KEYS}=require('../scripts/rc1-certification-envelope.cjs');
+ assert.equal(detectWindowsFamily({windowsFamily:'Windows10'}),'Windows10');
+ assert.equal(detectWindowsFamily({os:{caption:'Microsoft Windows 11 Pro',build:'26100'}}),'Windows11');
+-const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit20',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
+-const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit20',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
+-let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit20'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit20'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
+-pair=validatePeerPair(current,{...peer,releaseIdentitySha256:'other'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit20'});assert(!pair.ok&&pair.reasons.includes('PEER_RELEASE_IDENTITY_MISMATCH'));
++const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit21',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
++const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit21',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
++let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit21'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit21'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
++pair=validatePeerPair(current,{...peer,releaseIdentitySha256:'other'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit21'});assert(!pair.ok&&pair.reasons.includes('PEER_RELEASE_IDENTITY_MISMATCH'));
+ assert(MANUAL_KEYS.includes('realUpgradeFrom0_9_8'),'real packaged upgrade evidence must be required');
+ const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');
+ for(const token of ['PeerWindowsReport','--require-dual-windows','$RequiredScaleMatrix','STABLE_POLICY_SKIP_SCALE_FORBIDDEN','yyyyMMdd-HHmmss-fff','windows-runs'])assert(orchestrator.includes(token),`missing RC1 matrix invariant: ${token}`);
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-source-contract.test.cjs /mnt/data/work_cert21/tests/rc1-source-contract.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-source-contract.test.cjs	2026-08-16 13:38:50.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-source-contract.test.cjs	2026-08-17 16:58:08.822400297 +0000
+@@ -8,7 +8,7 @@
+ assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+ assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+ assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+-assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit20');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
++assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit21');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
+ const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+ assert(/PASS/.test(out));
+ console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-stable-readiness.test.cjs /mnt/data/work_cert21/tests/rc1-stable-readiness.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-stable-readiness.test.cjs	2026-08-16 13:38:50.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-stable-readiness.test.cjs	2026-08-17 16:58:08.822846312 +0000
+@@ -1,6 +1,6 @@
+ const assert=require('assert');const crypto=require('crypto');const {evaluateVerdict}=require('../scripts/rc1-stable-readiness.cjs');
+-const executionId='exec-20260816-win11';const envelope={overall:'PASS',version:'1.0.0-rc1',toolingRevision:'cert-kit20',source:{fingerprint:'fp'},releaseIdentity:{sha256:'rid'},evidenceId:'ev',execution:{bindingRequired:true,executionId}};
+-const verdict={schemaVersion:'workspace-agent-rc1-final-verdict-v4',version:'1.0.0-rc1',toolingRevision:'cert-kit20',createdAt:'2026-08-15T00:00:00.000Z',executionId,overall:'PASS',envelope:{path:'/tmp/e.json',sha256:'x',evidenceId:'ev'},inputs:{},handoffs:{primary:{handoffId:'a'.repeat(64)},peer:{handoffId:'b'.repeat(64)}},windowsFamilies:{current:'Windows11',peer:'Windows10'},signingRequired:false};verdict.finalizationId=crypto.createHash('sha256').update(JSON.stringify(verdict)).digest('hex');
++const executionId='exec-20260816-win11';const envelope={overall:'PASS',version:'1.0.0-rc1',toolingRevision:'cert-kit21',source:{fingerprint:'fp'},releaseIdentity:{sha256:'rid'},evidenceId:'ev',execution:{bindingRequired:true,executionId}};
++const verdict={schemaVersion:'workspace-agent-rc1-final-verdict-v4',version:'1.0.0-rc1',toolingRevision:'cert-kit21',createdAt:'2026-08-15T00:00:00.000Z',executionId,overall:'PASS',envelope:{path:'/tmp/e.json',sha256:'x',evidenceId:'ev'},inputs:{},handoffs:{primary:{handoffId:'a'.repeat(64)},peer:{handoffId:'b'.repeat(64)}},windowsFamilies:{current:'Windows11',peer:'Windows10'},signingRequired:false};verdict.finalizationId=crypto.createHash('sha256').update(JSON.stringify(verdict)).digest('hex');
+ let r=evaluateVerdict(verdict,{envelope,currentFingerprint:'fp',currentReleaseIdentity:'rid'});assert(r.ok);assert.equal(r.decision,'PROMOTE_ALLOWED');assert.equal(r.executionId,executionId);
+ r=evaluateVerdict({...verdict,overall:'FAIL'},{envelope,currentFingerprint:'fp',currentReleaseIdentity:'rid'});assert(!r.ok);assert(r.reasons.includes('FINAL_VERDICT_NOT_PASS'));
+ r=evaluateVerdict(verdict,{envelope:{...envelope,source:{fingerprint:'other'}},currentFingerprint:'fp',currentReleaseIdentity:'rid'});assert(!r.ok);assert(r.reasons.includes('FINAL_ENVELOPE_SOURCE_MISMATCH'));
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-staged-handoff-import-rc1.test.cjs /mnt/data/work_cert21/tests/rc1-staged-handoff-import-rc1.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-staged-handoff-import-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-staged-handoff-import-rc1.test.cjs	2026-08-17 16:59:16.355535857 +0000
+@@ -0,0 +1,20 @@
++const assert=require('assert');
++const fs=require('fs');const os=require('os');const path=require('path');const cp=require('child_process');
++const root=path.resolve(__dirname,'..');const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
++const {createHandoff,verifyHandoff}=require('../scripts/rc1-execution-handoff.cjs');
++const lockPath=path.join(root,'package-lock.json'),had=fs.existsSync(lockPath),old=had?fs.readFileSync(lockPath):null,tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-staged-handoff-'));
++function lockFixture(){const rp={name:pkg.name,version:pkg.version};for(const g of ['dependencies','devDependencies','optionalDependencies'])if(pkg[g]&&Object.keys(pkg[g]).length)rp[g]=pkg[g];return{name:pkg.name,version:pkg.version,lockfileVersion:3,requires:true,packages:{'':rp}}}
++try{
++  fs.writeFileSync(lockPath,JSON.stringify(lockFixture(),null,2));
++  fs.copyFileSync(lockPath,path.join(tmp,'package-lock.json'));fs.writeFileSync(path.join(tmp,'payload.txt'),'trusted staged payload\n');
++  const pointer=path.join(tmp,'primary-pointer.json');fs.writeFileSync(pointer,JSON.stringify({schemaVersion:'workspace-agent-rc1-primary-pointer-v1',executionId:'exec-staged',certificationReport:'payload.txt',evidenceBundle:'payload.txt',releaseManifest:'payload.txt',sha256Sums:'payload.txt',manualEvidenceTemplate:'payload.txt',packageLock:'package-lock.json'},null,2));
++  const manifest=path.join(tmp,'handoff-manifest.json');createHandoff({dir:tmp,out:manifest,role:'primary',executionId:'exec-staged',pointer});
++  fs.rmSync(lockPath,{force:true});assert(!fs.existsSync(lockPath),'source lock must be absent before staged verification');
++  const stagedLock=path.join(tmp,'package-lock.json');
++  const gate=cp.spawnSync(process.execPath,['scripts/verify-release-inputs.cjs',`--lockfile=${stagedLock}`],{cwd:root,encoding:'utf8'});assert.equal(gate.status,0,gate.stderr||gate.stdout);
++  let v=verifyHandoff({dir:tmp,manifestPath:manifest,requireCurrentSource:true,lockPath:stagedLock});assert(v.ok,JSON.stringify(v.errors));assert(!fs.existsSync(lockPath),'staged verification must not mutate source package-lock');
++  const bad=lockFixture();bad.identityMutation=true;fs.writeFileSync(stagedLock,JSON.stringify(bad,null,2));v=verifyHandoff({dir:tmp,manifestPath:manifest,requireCurrentSource:true,lockPath:stagedLock});assert(!v.ok);assert(v.errors.includes('HANDOFF_CURRENT_LOCK_MISMATCH'));assert(v.errors.includes('HANDOFF_CURRENT_RELEASE_IDENTITY_MISMATCH'));assert(!fs.existsSync(lockPath),'failed staged verification must remain side-effect free');
++  const exec=fs.readFileSync(path.join(root,'scripts/windows-rc1-execution.ps1'),'utf8');assert(exec.includes('windows-safe-archive-expand.ps1'));assert(!exec.includes('Expand-Archive -LiteralPath $zip'));assert(exec.includes('Verify-Staged-Handoff $bootstrap;Ensure-ImportedLock $bootstrap;Verify-Handoff $bootstrap'));assert(exec.includes('Verify-Staged-Handoff $primaryImport;Ensure-ImportedLock $primaryImport;Verify-Handoff $primaryImport'));assert(exec.includes('Verify-Staged-Handoff $peerImport;Verify-Handoff $peerImport'));assert(exec.includes('.package-lock.importing-'));
++  const safe=fs.readFileSync(path.join(root,'scripts/windows-safe-archive-expand.ps1'),'utf8');for(const token of ['ZipFile]::OpenRead','ARCHIVE_ENTRY_TRAVERSAL_FORBIDDEN','ARCHIVE_ENTRY_ADS_FORBIDDEN','ARCHIVE_ENTRY_DEVICE_NAME_FORBIDDEN','ARCHIVE_DUPLICATE_CANONICAL_PATH','ARCHIVE_LINK_REPARSE_ENTRY_FORBIDDEN','ARCHIVE_TOTAL_SIZE_LIMIT','.extracting-','CreateNew'])assert(safe.includes(token),token);
++  console.log('rc1-staged-handoff-import-rc1 PASS',{preverifySourceMutationBlocked:true,externalLockIdentity:true,safeArchiveBoundary:true});
++}finally{fs.rmSync(tmp,{recursive:true,force:true});if(had)fs.writeFileSync(lockPath,old);else fs.rmSync(lockPath,{force:true})}
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/rc1-windows-doctor-contract.test.cjs /mnt/data/work_cert21/tests/rc1-windows-doctor-contract.test.cjs
+--- /mnt/data/work_cert21_audit/tests/rc1-windows-doctor-contract.test.cjs	2026-08-16 13:38:50.000000000 +0000
++++ /mnt/data/work_cert21/tests/rc1-windows-doctor-contract.test.cjs	2026-08-17 17:05:56.279923732 +0000
+@@ -3,7 +3,7 @@
+ const path=require('path');
+ const root=path.resolve(__dirname,'..');
+ const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+-assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit20');
++assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit21');
+ assert(pkg.scripts['doctor:windows:rc1']);
+ const doctor=fs.readFileSync(path.join(root,'scripts/windows-rc1-doctor.ps1'),'utf8');
+ for(const token of [
+@@ -30,8 +30,9 @@
+   'previousStateSha256',
+   'execution-history.jsonl',
+   "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+-  'ExecutionRoot داخل Source tree فقط می‌تواند rc1-execution باشد',
++  'path-trust-boundary.cjs',
+   "PRIMARY_INCOMPLETE",
+   "PEER_INCOMPLETE"
+ ])assert(exec.includes(token),token);
++const pathGuard=fs.readFileSync(path.join(root,'scripts','path-trust-boundary.cjs'),'utf8');assert(pathGuard.includes('EXECUTION_ROOT_SOURCE_OVERLAP_FORBIDDEN'));assert(pathGuard.includes('nearestExistingProjectedReal'));
+ console.log('rc1-windows-doctor-contract PASS');
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/release-identity-chain-rc1.test.cjs /mnt/data/work_cert21/tests/release-identity-chain-rc1.test.cjs
+--- /mnt/data/work_cert21_audit/tests/release-identity-chain-rc1.test.cjs	2026-08-16 13:39:48.000000000 +0000
++++ /mnt/data/work_cert21/tests/release-identity-chain-rc1.test.cjs	2026-08-17 16:58:08.829126419 +0000
+@@ -7,7 +7,7 @@
+ const dependencySourcePolicy={schemaVersion:'workspace-agent-dependency-source-policy-v1',mode:'allowlist',allowedRegistryOrigins:['https://registry.npmjs.org'],allowedResolvedProtocols:['https:'],forbidLinks:true,forbidGit:true,forbidFile:true,requireIntegrityForRegistryArtifacts:true};
+ const stableCertificationPolicy={schemaVersion:'workspace-agent-stable-certification-policy-v1',mode:'fail-closed',requireAuthenticode:true,requireArtifacts:true,requireDualWindows:true,requireManualEvidence:true,requireFinalBundle:true,requiredScaleMatrix:[100000,1000000],requireHashBoundAttachmentForManualPass:true,requiredManualEvidenceKeys:['physicalUsbDisconnectReconnect','actualDiskFullRecovery','realAclReadOnlyRecovery','uncleanShutdownPowerLoss','realUpgradeFrom0_9_8']};
+ try{
+-  const pkg={version:'1.0.0-rc1',workspaceAgentRelease:{toolingRevision:'cert-kit20',featureFreeze:true,dependencySourcePolicy,stableCertificationPolicy},engines:{node:'24.14.1',npm:'11.11.0'},packageManager:'npm@11.11.0'};
++  const pkg={version:'1.0.0-rc1',workspaceAgentRelease:{toolingRevision:'cert-kit21',featureFreeze:true,dependencySourcePolicy,stableCertificationPolicy},engines:{node:'24.14.1',npm:'11.11.0'},packageManager:'npm@11.11.0'};
+   fs.writeFileSync(path.join(tmp,'package.json'),JSON.stringify(pkg));fs.mkdirSync(path.join(tmp,'src'));fs.writeFileSync(path.join(tmp,'src','a.js'),'x\n');
+   fs.writeFileSync(path.join(tmp,'package-lock.json'),JSON.stringify({name:'x',version:'1.0.0-rc1',lockfileVersion:3,packages:{}}));
+   const a=computeReleaseIdentity(tmp),b=computeReleaseIdentity(tmp);assert.equal(a.schemaVersion,'workspace-agent-release-identity-v3');assert.equal(a.releaseIdentitySha256,b.releaseIdentitySha256);assert.equal(a.sourceFingerprint.scope,'frozen-source-excluding-release-lockfile');assert(/^[a-f0-9]{64}$/.test(a.dependencySourcePolicy.sha256));assert(/^[a-f0-9]{64}$/.test(a.stableCertificationPolicy.sha256));assert.equal(a.stableCertificationPolicy.requireAuthenticode,true);
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/stable-certification-policy-rc1.test.cjs /mnt/data/work_cert21/tests/stable-certification-policy-rc1.test.cjs
+--- /mnt/data/work_cert21_audit/tests/stable-certification-policy-rc1.test.cjs	2026-08-16 13:39:48.000000000 +0000
++++ /mnt/data/work_cert21/tests/stable-certification-policy-rc1.test.cjs	2026-08-17 17:04:24.917981349 +0000
+@@ -3,10 +3,12 @@
+ const {validate}=require('../scripts/stable-certification-policy.cjs');const {evaluateVerdict}=require('../scripts/rc1-stable-readiness.cjs');
+ const policy=validate(pkg);assert(policy.ok,policy.errors.join('|'));assert.equal(policy.policy.requireAuthenticode,true);assert.equal(policy.policy.requireArtifacts,true);assert.equal(policy.policy.requireDualWindows,true);assert.equal(policy.policy.requireManualEvidence,true);assert.equal(policy.policy.requireFinalBundle,true);assert.deepEqual(policy.policy.requiredScaleMatrix,[100000,1000000]);assert.equal(policy.policy.requireHashBoundAttachmentForManualPass,true);assert.equal(policy.policy.requiredManualEvidenceKeys.length,5);
+ function finalize(v){const copy={...v};delete copy.finalizationId;v.finalizationId=crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');return v}
+-const base={schemaVersion:'workspace-agent-rc1-final-verdict-v4',version:pkg.version,toolingRevision:'cert-kit20',createdAt:new Date().toISOString(),executionId:'exec-policy-test',overall:'PASS',envelope:{evidenceId:'e'.repeat(64)},inputs:{},handoffs:{primary:{handoffId:'a'.repeat(64)},peer:{handoffId:'b'.repeat(64)}},windowsFamilies:{current:'Windows11',peer:'Windows10'},signingRequired:false,finalBundleRequired:true,stableCertificationPolicySha256:policy.sha256};
++const base={schemaVersion:'workspace-agent-rc1-final-verdict-v4',version:pkg.version,toolingRevision:'cert-kit21',createdAt:new Date().toISOString(),executionId:'exec-policy-test',overall:'PASS',envelope:{evidenceId:'e'.repeat(64)},inputs:{},handoffs:{primary:{handoffId:'a'.repeat(64)},peer:{handoffId:'b'.repeat(64)}},windowsFamilies:{current:'Windows11',peer:'Windows10'},signingRequired:false,finalBundleRequired:true,stableCertificationPolicySha256:policy.sha256};
+ let r=evaluateVerdict(finalize({...base}),{stablePolicy:policy});assert(!r.ok);assert(r.reasons.includes('FINAL_SIGNING_POLICY_DOWNGRADE'));
+ r=evaluateVerdict(finalize({...base,signingRequired:true}),{stablePolicy:policy});assert(r.ok,r.reasons.join('|'));
+ r=evaluateVerdict(finalize({...base,signingRequired:true,finalBundleRequired:false}),{stablePolicy:policy});assert(!r.ok&&r.reasons.includes('FINAL_BUNDLE_POLICY_REQUIRED'));
+ r=evaluateVerdict(finalize({...base,signingRequired:true,stableCertificationPolicySha256:'0'.repeat(64)}),{stablePolicy:policy});assert(!r.ok&&r.reasons.includes('FINAL_STABLE_POLICY_HASH_MISMATCH'));
+ const execScript=fs.readFileSync(path.join(root,'scripts','windows-rc1-execution.ps1'),'utf8');assert(execScript.includes('STABLE_POLICY_SKIP_SCALE_FORBIDDEN'));assert(execScript.includes('$EffectiveRequireSigning=[bool]$RequireSigning -or [bool]$stablePolicy.requireAuthenticode'));
+-console.log('stable-certification-policy-rc1 PASS',{nonDowngradableSigning:true,scaleSkipBlocked:true,finalBundleRequired:true,policyHashBound:true});
++const certifyScript=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');assert(certifyScript.includes('STABLE_POLICY_NO_BUILD_ARTIFACTS_FORBIDDEN'));assert(certifyScript.includes('$EffectiveRequireSigning'));assert(certifyScript.includes("$envArgs+='--require-signing'"));
++const legacyCertScript=fs.readFileSync(path.join(root,'scripts','windows-certification-v097.ps1'),'utf8');assert(legacyCertScript.includes('STABLE_POLICY_RUN_SCALE_REQUIRED'));assert(legacyCertScript.includes('STABLE_POLICY_BUILD_ARTIFACTS_REQUIRED'));assert(legacyCertScript.includes('test:windows-safe-handoff-transport-rc1-uat'));
++console.log('stable-certification-policy-rc1 PASS',{nonDowngradableSigning:true,scaleSkipBlocked:true,artifactSkipBlocked:true,directRcScaleAndArtifactsRequired:true,finalBundleRequired:true,policyHashBound:true});
+diff -ruN '--exclude=node_modules' '--exclude=package-lock.json' '--exclude=rc1-execution' '--exclude=release' '--exclude=dist' /mnt/data/work_cert21_audit/tests/windows-safe-handoff-transport-rc1.uat.cjs /mnt/data/work_cert21/tests/windows-safe-handoff-transport-rc1.uat.cjs
+--- /mnt/data/work_cert21_audit/tests/windows-safe-handoff-transport-rc1.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/work_cert21/tests/windows-safe-handoff-transport-rc1.uat.cjs	2026-08-17 17:02:19.959533790 +0000
+@@ -0,0 +1,18 @@
++const fs=require('fs');const os=require('os');const path=require('path');const cp=require('child_process');
++const strict=process.env.WA_CERT_STRICT==='1';
++function finish(status,detail={},code=status==='PASS'?0:status==='INCOMPLETE'?3:1){const out={schemaVersion:'workspace-agent-windows-safe-handoff-transport-uat-v1',createdAt:new Date().toISOString(),platform:process.platform,status,...detail};const file=process.env.WA_CERT_SAFE_HANDOFF_RESULT;if(file){fs.mkdirSync(path.dirname(path.resolve(file)),{recursive:true});fs.writeFileSync(path.resolve(file),JSON.stringify(out,null,2));}console.log(JSON.stringify(out,null,2));process.exit(code)}
++if(process.platform!=='win32')finish(strict?'INCOMPLETE':'SKIP',{code:'WINDOWS_REQUIRED'},strict?3:0);
++const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-safe-handoff-'));
++const ps='powershell.exe';
++function run(args){return cp.spawnSync(ps,args,{cwd:root,encoding:'utf8'});}
++function safeExpand(zip,dest,extra=[]){return run(['-NoProfile','-ExecutionPolicy','Bypass','-File','scripts/windows-safe-archive-expand.ps1','-Archive',zip,'-Destination',dest,...extra]);}
++function quotePs(s){return `'${String(s).replace(/'/g,"''")}'`}
++function makeZip(entries,zip){const body=entries.map(([name,data])=>`$e=$z.CreateEntry(${quotePs(name)});$w=New-Object IO.StreamWriter($e.Open());$w.Write(${quotePs(data)});$w.Dispose();`).join('');const cmd=`Add-Type -AssemblyName System.IO.Compression;Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue;$z=[IO.Compression.ZipFile]::Open(${quotePs(zip)},[IO.Compression.ZipArchiveMode]::Create);try{${body}}finally{$z.Dispose()}`;const r=run(['-NoProfile','-Command',cmd]);if(r.status!==0)throw new Error(`ZIP_FIXTURE_FAILED:${r.stderr||r.stdout}`)}
++try{
++  const safeSrc=path.join(tmp,'safe-src'),safeZip=path.join(tmp,'safe.zip'),safeDest=path.join(tmp,'safe-out');fs.mkdirSync(safeSrc);fs.writeFileSync(path.join(safeSrc,'evidence.txt'),'safe-evidence');let r=run(['-NoProfile','-Command',`Compress-Archive -LiteralPath ${quotePs(path.join(safeSrc,'evidence.txt'))} -DestinationPath ${quotePs(safeZip)} -Force`]);if(r.status!==0)throw new Error(r.stderr||r.stdout);r=safeExpand(safeZip,safeDest);if(r.status!==0||!fs.existsSync(path.join(safeDest,'evidence.txt')))throw new Error(`SAFE_ARCHIVE_REJECTED:${r.stderr||r.stdout}`);
++  const sentinelDest=path.join(tmp,'sentinel-dest');fs.mkdirSync(sentinelDest);fs.writeFileSync(path.join(sentinelDest,'keep.txt'),'keep');const traversal=path.join(tmp,'traversal.zip');makeZip([['../escape.txt','escape']],traversal);r=safeExpand(traversal,sentinelDest);if(r.status===0)throw new Error('TRAVERSAL_ARCHIVE_WAS_ACCEPTED');if(fs.existsSync(path.join(tmp,'escape.txt')))throw new Error('ZIP_SLIP_CREATED_OUTSIDE_FILE');if(fs.readFileSync(path.join(sentinelDest,'keep.txt'),'utf8')!=='keep')throw new Error('INVALID_ARCHIVE_DESTROYED_EXISTING_DESTINATION');
++  const ads=path.join(tmp,'ads.zip');makeZip([['evidence.txt:evil','ads']],ads);r=safeExpand(ads,path.join(tmp,'ads-out'));if(r.status===0)throw new Error('ADS_ARCHIVE_WAS_ACCEPTED');
++  const dup=path.join(tmp,'dup.zip');makeZip([['A.txt','a'],['a.txt','b']],dup);r=safeExpand(dup,path.join(tmp,'dup-out'));if(r.status===0)throw new Error('CASE_ALIAS_DUPLICATE_WAS_ACCEPTED');
++  const bounded=path.join(tmp,'bounded.zip');makeZip([['large.txt','0123456789']],bounded);r=safeExpand(bounded,path.join(tmp,'bounded-out'),['-MaxTotalUncompressedBytes','4']);if(r.status===0)throw new Error('ARCHIVE_SIZE_BOUND_WAS_NOT_ENFORCED');
++  finish('PASS',{code:'SAFE_HANDOFF_ARCHIVE_BOUNDARY_VERIFIED',checks:{safeExtract:true,traversalBlocked:true,destinationPreservedOnReject:true,adsBlocked:true,caseAliasBlocked:true,sizeBound:true}});
++}catch(e){finish('FAIL',{code:'SAFE_HANDOFF_TRANSPORT_UAT_FAILED',message:String(e.message||e).slice(0,1200)},1)}finally{try{fs.rmSync(tmp,{recursive:true,force:true})}catch{}}

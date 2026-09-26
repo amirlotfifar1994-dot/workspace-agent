@@ -1,0 +1,65 @@
+const { execFile } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const util = require('util');
+const execFileAsync = util.promisify(execFile);
+
+function psEscape(v='') { return `'${String(v).replace(/'/g, "''")}'`; }
+async function powershell(script, timeout = 20000) {
+  const { stdout, stderr } = await execFileAsync('powershell.exe', ['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-Command', script], { windowsHide: true, timeout, maxBuffer: 4*1024*1024 });
+  return { stdout: stdout.trim(), stderr: stderr.trim() };
+}
+async function detectCorel() {
+  if (process.platform !== 'win32') return { ok: false, installed: false, reason: 'Corel bridge only runs on Windows.' };
+  const script = `$t=[type]::GetTypeFromProgID('CorelDRAW.Application'); if($null -eq $t){'NOT_FOUND'}else{'FOUND'}`;
+  try { const r = await powershell(script); return { ok: true, installed: r.stdout.includes('FOUND') }; }
+  catch (error) { return { ok: false, installed: false, reason: error.message }; }
+}
+async function importSvg(svgPath) {
+  if (process.platform !== 'win32') return { ok: false, message: 'فقط در ویندوز قابل اجراست.' };
+  const p = path.resolve(svgPath);
+  const script = [
+    `$app=New-Object -ComObject CorelDRAW.Application`,
+    `$app.Visible=$true`,
+    `if($app.Documents.Count -eq 0){$doc=$app.CreateDocument()}else{$doc=$app.ActiveDocument}`,
+    `$doc.ActiveLayer.Import(${psEscape(p)})`,
+    `$app.Refresh()`,
+    `'OK'`
+  ].join(';');
+  try { const r = await powershell(script, 45000); return { ok: true, output: r.stdout }; }
+  catch (error) { return { ok: false, message: error.message }; }
+}
+async function drawPolylines(polylines = [], { scale = 1, offsetX = 0, offsetY = 0 } = {}) {
+  if (process.platform !== 'win32') return { ok: false, message: 'فقط در ویندوز قابل اجراست.' };
+  if (!Array.isArray(polylines) || !polylines.length) return { ok: false, message: 'هیچ مسیر برداری دریافت نشد.' };
+  const lines = [
+    `$app=New-Object -ComObject CorelDRAW.Application`, `$app.Visible=$true`,
+    `if($app.Documents.Count -eq 0){$doc=$app.CreateDocument()}else{$doc=$app.ActiveDocument}`
+  ];
+  for (const points of polylines.slice(0, 3000)) {
+    if (!Array.isArray(points) || points.length < 2) continue;
+    const p0 = points[0];
+    lines.push(`$crv=$app.CreateCurve($doc)`);
+    lines.push(`$sp=$crv.CreateSubPath(${Number(p0.x)*scale+offsetX},${Number(p0.y)*scale+offsetY})`);
+    for (const p of points.slice(1, 20000)) lines.push(`$sp.AppendLineSegment(${Number(p.x)*scale+offsetX},${Number(p.y)*scale+offsetY})`);
+    lines.push(`$shape=$doc.ActiveLayer.CreateCurve($crv)`);
+  }
+  lines.push(`$app.Refresh()`, `'OK'`);
+  try { const r = await powershell(lines.join(';'), 60000); return { ok: true, output: r.stdout }; }
+  catch (error) { return { ok: false, message: error.message }; }
+}
+async function traceBitmapToSvg(bitmapPath, { threshold = 180, turdSize = 2, optTolerance = 0.2 } = {}) {
+  const potrace = require('potrace');
+  const out = path.join(os.tmpdir(), `workspace-agent-trace-${Date.now()}.svg`);
+  await new Promise((resolve, reject) => potrace.trace(path.resolve(bitmapPath), { threshold, turdSize, optTolerance }, (err, svg) => {
+    if (err) return reject(err); fs.writeFile(out, svg, 'utf8', e => e ? reject(e) : resolve());
+  }));
+  return { ok: true, svgPath: out };
+}
+async function traceAndImport(bitmapPath, options = {}) {
+  const traced = await traceBitmapToSvg(bitmapPath, options);
+  const imported = await importSvg(traced.svgPath);
+  return { ...imported, svgPath: traced.svgPath };
+}
+module.exports = { detectCorel, importSvg, drawPolylines, traceBitmapToSvg, traceAndImport };

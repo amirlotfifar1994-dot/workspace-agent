@@ -1,0 +1,796 @@
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/README_FA.md /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/README_FA.md
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/README_FA.md	2026-08-13 09:21:45.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/README_FA.md	2026-08-13 10:06:34.718254377 +0000
+@@ -1,104 +1,71 @@
+-# Workspace Agent v0.8.3 — System-Level Windows Resilience
++# Workspace Agent v0.8.4 — Windows Certification Foundation
+ 
+-تمرکز فعال پروژه **Windows Agent** است. CorelDRAW همچنان از Runtime، IPC و UI فعال خارج است و فقط در `docs/deferred/` نگه‌داری می‌شود.
++تمرکز فعال پروژه **Windows Agent امن برای مدیریت Workspace/هارد** است. CorelDRAW همچنان Deferred است.
+ 
+ ## چرخه اصلی
+ Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End
+ 
+-برای Writeهای فایل lifecycle امن زیر فعال است:
+-**Transaction Intent → Checkpoint → Crash Inspection → Resume / Rollback / Manual Review**
++Writeهای فایل همچنان از Transaction Intent / Checkpoint / Recovery / Undo عبور می‌کنند و Permanent Delete و arbitrary shell غیرفعال‌اند.
+ 
+-## جدید در v0.8.3
+-- **Volume Identity Resilience** برای تشخیص اینکه یک Drive Letter واقعاً همان Volume قبلی است یا نه.
+-- روی Windows، probe فقط‌خواندنی با `Get-Volume` انجام می‌شود و `UniqueId / Path / FileSystem / DriveType / HealthStatus` ثبت می‌گردد.
+-- ورودی PowerShell با environment variable منتقل می‌شود؛ path/UniqueId داخل command shell interpolate نمی‌شود.
+-- Root stateها: `available`, `unavailable`, `reconnected`, `identity-changed`, `relocated-candidate`.
+-- اگر همان Drive Letter با Volume دیگری برگردد، Root **Block** می‌شود و Watcher اجازه شروع ندارد.
+-- اگر همان Volume با Drive Letter دیگری برگردد، فقط **Rebind Candidate** ساخته می‌شود؛ Auto-Rebind نداریم.
+-- Block مربوط به Volume identity از Sleep/Resume عبور نمی‌کند.
+-- اعتماد به Volume جدید فقط بعد از **Fresh Reindex کامل** acknowledge می‌شود؛ Resume قدیمی کافی نیست.
+-- Electron `powerMonitor` به Suspend/Resume متصل شده است: Watcherها در Suspend متوقف و Rootها Dirty می‌شوند، بعد از Resume ابتدا storage probe و سپس resume کنترل‌شده انجام می‌شود.
+-- Persistent Index schema از v1 به **v2** با migration افزایشی ارتقا یافته و `root_runtime` برای availability/identity state دارد.
+-- اسکن در قطع Root fail-safe شده است: Queue مصرف نمی‌شود، stale-generation rows حذف نمی‌شوند و Commit تا برگشت Root به تعویق می‌افتد.
+-- یک باگ واقعی mid-directory outage نیز اصلاح شد؛ خطاهای فایل هنگام قطع Root دیگر باعث از دست رفتن همان directory از resume queue نمی‌شوند.
+-- UI بخش File Watcher وضعیت Power/Volume، blocked roots و Rebind Candidate را نشان می‌دهد.
+-- Windows UATهای جدید برای system resilience، removable-drive phases و scale 10k تا 1M فایل اضافه شده‌اند.
+-
+-## پایه‌های قبلی که حفظ شده‌اند
+-- Persistent SQLite Index با WAL، generation commit و crash-resumable `scan_queue`.
+-- `opendir()` streaming + batch کوچک برای low-RAM scan.
+-- Indexed Search + pagination و Indexed Duplicate با SHA-256 cache.
+-- Watcher bounded/coalesced با Dirty-root detection.
+-- Hash Worker Pool با fallback امن.
+-- SQLite health/maintenance و crash-kill resume test.
+-- Long-path/UNC/Unicode و symlink/junction safety.
+-- Windows UI Automation Action Foundation با Preview/Confirm/Verify و target pinning.
+-- Release gate با exact dependency pins، lockfile-required `npm ci` و source hygiene.
+-- Permanent Delete و arbitrary shell همچنان غیرفعال‌اند.
++## جدید در v0.8.4
++- **Lifecycle / Unclean Shutdown Marker** با atomic write و heartbeat. اگر Process/برق بدون clean exit قطع شود، Startup بعدی آن را تشخیص می‌دهد.
++- Startup پس از unclean session، SQLite `integrity_check` را اجرا و Rootهای Watch‌شده را برای gap علامت‌گذاری می‌کند؛ هیچ Recovery نوشتنی خودکار انجام نمی‌شود.
++- **Resource Pressure Guard** برای RAM، Event-loop و CPU سهم خود Agent. در فشار بالا chunk اسکن و concurrency هش کاهش می‌یابد؛ correctness فدای سرعت نمی‌شود.
++- **Multi-root isolation**: تغییر identity یا unavailable شدن یک Root نباید Root دیگر را block کند.
++- **Packaged App Smoke Mode**: `win-unpacked` با userData ایزوله بالا می‌آید، سرویس‌ها bootstrap می‌شوند و گزارش JSON از Lifecycle/SQLite/Journal/Watcher/Root/Pressure می‌نویسد.
++- **Windows Certification Harness** با خروجی JSON + Markdown و وضعیت صریح PASS/FAIL/SKIP/PENDING.
++- Harness می‌تواند Runtime pins، Regression، UATهای UIA/Index/Volume/Removable/Multi-root، scale، packaged worker/app، artifact SHA-256 و Authenticode را بررسی کند.
++- Actual hard power-loss عمداً خودکار trigger نمی‌شود و به‌عنوان شواهد دستی جدا باقی می‌ماند.
++- UI یک تب `Certification` برای Runtime health دارد؛ این UI جایگزین Certification رسمی Windows نیست.
+ 
+-## Validation عمومی
++## تست عمومی
+ ```bash
+ npm run check
+-npm run test:system-resilience
+-npm run test:index-crash
+-npm run test:index-scale
+-npm run test:windows-paths
++npm run test:cert-core
+ ```
+ 
+-## Windows UAT
+-```bash
+-npm run test:windows-uia-uat
+-npm run test:windows-index-uat
+-npm run test:windows-production-uat
+-npm run test:windows-verification-uat
+-npm run test:windows-system-resilience-uat
+-```
+-
+-### Scale UAT
+-روی Windows واقعی:
++## Windows Certification
++ابتدا lockfile واقعی را روی Node/npm pin‌شده تولید و commit کنید:
+ ```powershell
+-$env:WA_SCALE_FILES='100000'
+-npm run test:windows-scale-resilience-uat
++npm run release:lock
++npm run check:release-inputs
+ ```
+-مقدار تا `1000000` قابل افزایش است.
+ 
+-### Removable Drive UAT
+-این UAT عمداً سه‌مرحله‌ای و با disconnect/reconnect فیزیکی است:
++Certification پایه:
+ ```powershell
+-$env:WA_REMOVABLE_ROOT='E:\Workspace'
+-$env:WA_REMOVABLE_PHASE='baseline'
+-npm run test:windows-removable-uat
+-
+-# هارد را جدا کنید
+-$env:WA_REMOVABLE_PHASE='disconnected'
+-npm run test:windows-removable-uat
+-
+-# دوباره وصل کنید؛ Drive Letter می‌تواند عوض شود
+-$env:WA_REMOVABLE_PHASE='reconnected'
+-npm run test:windows-removable-uat
++npm run certify:windows
+ ```
+ 
+-## Dependency lock برای Release
+-Top-level dependencyها exact هستند، اما Release رسمی باید lockfile واقعی registry داشته باشد:
++با build واقعی `win-unpacked` و smoke:
+ ```powershell
+-npm run release:lock
+-npm run check:release-inputs
++powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1 -BuildPackaged
+ ```
+-`package-lock.json` ساختگی در پروژه قرار داده نشده است.
+ 
+-## Windows Release
++برای دو مسیر تست روی دو Volume واقعی:
+ ```powershell
+-npm run release:win
++$env:WA_CERT_ROOT_A='D:\WA-Test'
++$env:WA_CERT_ROOT_B='E:\WA-Test'
++npm run test:windows-multiroot-uat
+ ```
+-برای اجرای Scale UAT داخل Release gate:
++
++برای scale:
+ ```powershell
+-powershell -ExecutionPolicy Bypass -File scripts/windows-release.ps1 -RunScaleUat
++powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1 -RunScale
+ ```
+-برای Release امضاشده:
++
++برای artifact/signature verification:
+ ```powershell
+-powershell -ExecutionPolicy Bypass -File scripts/windows-release.ps1 -RequireSigning
++powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1 -VerifyArtifacts -RequireSigning
+ ```
+ 
+-> وضعیت فعلی: Regression، schema migration، root disconnect/reconnect simulation، identity-change latch، blocked-root persistence، mid-scan outage safety، source hygiene، syntax و JSX در محیط توسعه PASS هستند. Windows-only UAT، package-lock واقعی، NSIS/Portable و signing هنوز باید روی Windows 10/11 اجرا شوند.
++## وضعیت فعلی
++- Regression/Source Hygiene/Syntax/JSX: PASS
++- forced-process-death lifecycle detection: PASS
++- resource-aware cycle budgets: PASS
++- multi-root RootResilience isolation: PASS
++- multi-root SQLite isolation: PASS
++- Windows-only Certification/UAT: PENDING روی Windows واقعی
++- package-lock رسمی: PENDING
++- NSIS/Portable/Authenticode: PENDING
+ 
+-جزئیات: `docs/SYSTEM_RESILIENCE_MODEL_v0.8.3_FA.md`، `docs/CHANGELOG_v0.8.3_FA.md`، `docs/VALIDATION_v0.8.3_FA.md`، `docs/WINDOWS_SYSTEM_UAT_v0.8.3_FA.md` و `docs/WINDOWS_RELEASE_CHECKLIST_FA.md`.
++جزئیات: `docs/CERTIFICATION_MODEL_v0.8.4_FA.md`, `docs/VALIDATION_v0.8.4_FA.md`, `docs/CHANGELOG_v0.8.4_FA.md`.
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/CERTIFICATION_MODEL_v0.8.4_FA.md /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/CERTIFICATION_MODEL_v0.8.4_FA.md
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/CERTIFICATION_MODEL_v0.8.4_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/CERTIFICATION_MODEL_v0.8.4_FA.md	2026-08-13 10:06:34.730254377 +0000
+@@ -0,0 +1,45 @@
++# مدل Certification در v0.8.4
++
++## هدف
++Certification در این پروژه به معنی «گزارش قابل ممیزی از چیزی که واقعاً روی Windows اجرا شده» است، نه نام‌گذاری یک build به‌عنوان production-ready.
++
++## لایه‌ها
++1. **Source gate**: exact dependency pins، source hygiene، syntax، JSX، regression.
++2. **Runtime gate**: Node/npm pin، Electron version، lifecycle marker، journal chain، SQLite health، resource pressure.
++3. **Windows UAT**: UI Automation، NTFS index، long-path/Unicode/reparse، suspend/resume، removable volume، drive identity.
++4. **Multi-root evidence**: دو location مجزا با `WA_CERT_ROOT_A/B`. بدون env، تست SKIP می‌شود و PASS جعلی تولید نمی‌کند.
++5. **Packaged gate**: `win-unpacked`، worker از `app.asar.unpacked`، bootstrap واقعی executable در userData موقت.
++6. **Artifact gate**: SHA-256 و Authenticode برای NSIS/Portable.
++
++## Lifecycle
++`runtime/lifecycle.json` در شروع session با `cleanExit=false` به‌صورت atomic نوشته می‌شود و heartbeat دارد. فقط در `will-quit` به `cleanExit=true` تبدیل می‌شود. Force-kill/power-loss بنابراین session قبلی را unclean باقی می‌گذارد.
++
++در Startup پس از unclean session:
++- Interrupted Cycleها reconcile می‌شوند.
++- SQLite integrity check عمیق اجرا می‌شود.
++- watcher roots با `UNCLEAN_SHUTDOWN_GAP` dirty می‌شوند.
++- هیچ Write recovery خودکار اجرا نمی‌شود.
++
++## Resource Pressure
++Resource Pressure Guard از این سیگنال‌ها استفاده می‌کند:
++- free memory ratio
++- event-loop p95 delay
++- process CPU share نسبت به تعداد logical core
++
++حالت‌ها: `normal`, `warn`, `critical`.
++
++اثر فقط روی budget است:
++- `warn`: chunk تقریباً 50% و hash concurrency حداکثر 2.
++- `critical`: chunk تقریباً 25% و hash concurrency 1.
++
++Agent در فشار سیستم correctness را پایین نمی‌آورد و فایل را skip/delete نمی‌کند.
++
++## Packaged smoke
++Executable ساخته‌شده با پارامترهای زیر اجرا می‌شود:
++- `--cert-smoke-output=<json>`
++- `--cert-user-data=<isolated-dir>`
++
++گزارش شامل app/Electron/Node، lifecycle، SQLite health، root resilience، watcher، journal و pressure است. سپس app تمیز خارج می‌شود.
++
++## مرز شواهد
++Harness هرگز power-off یا hard reset سیستم کاربر را خودکار انجام نمی‌دهد. «Actual hard power-loss» باید جداگانه و کنترل‌شده ثبت شود و در گزارش پیش‌فرض `PENDING_MANUAL` است.
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/CHANGELOG_v0.8.4_FA.md /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/CHANGELOG_v0.8.4_FA.md
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/CHANGELOG_v0.8.4_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/CHANGELOG_v0.8.4_FA.md	2026-08-13 10:06:34.738254377 +0000
+@@ -0,0 +1,12 @@
++# Changelog v0.8.4
++
++- اضافه شدن `LifecycleState` با atomic marker، heartbeat و clean/unclean exit detection.
++- startup integrity check و dirty-gap بعد از session غیرتمیز.
++- اضافه شدن `ResourcePressureGuard` و adaptive scan/hash budgets.
++- اضافه شدن Runtime Certification IPC/UI.
++- packaged executable smoke mode با userData ایزوله.
++- اضافه شدن `windows-certification.ps1` با گزارش JSON/Markdown.
++- اضافه شدن multi-root Windows UAT با دو test location اختیاری.
++- Release script حالا packaged application startup smoke و multi-root UAT را هم دارد.
++- Capability Registry به schema v8.4 ارتقا یافت.
++- تست force-kill lifecycle، multi-root resilience، multi-root SQLite و resource-aware cycles اضافه شد.
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/RELEASE_READINESS_v0.8.4.json /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/RELEASE_READINESS_v0.8.4.json
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/RELEASE_READINESS_v0.8.4.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/RELEASE_READINESS_v0.8.4.json	2026-08-13 10:06:34.754254377 +0000
+@@ -0,0 +1,22 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-v0.8.4",
++  "version": "0.8.4",
++  "sourceRegression": "PASS",
++  "sourceHygiene": "PASS",
++  "lifecycleCrashDetection": "PASS",
++  "resourcePressurePolicy": "PASS",
++  "multiRootIsolation": "PASS",
++  "certificationHarnessSource": "READY",
++  "packageLock": "PENDING",
++  "windows10Uat": "PENDING",
++  "windows11Uat": "PENDING",
++  "physicalSuspendResume": "PENDING",
++  "physicalRemovableDrive": "PENDING",
++  "twoPhysicalVolumes": "PENDING",
++  "packagedWorkerSmoke": "PENDING_WINDOWS_BUILD",
++  "packagedAppSmoke": "PENDING_WINDOWS_BUILD",
++  "nsis": "PENDING",
++  "portable": "PENDING",
++  "authenticode": "PENDING",
++  "actualHardPowerLoss": "PENDING_MANUAL"
++}
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/ROADMAP_FA.md /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/ROADMAP_FA.md
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/ROADMAP_FA.md	2026-08-13 09:22:13.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/ROADMAP_FA.md	2026-08-13 10:06:36.418642082 +0000
+@@ -1,4 +1,4 @@
+-# Roadmap پس از v0.8.3
++# Roadmap پس از v0.8.4
+ 
+ ## v0.8.0 — انجام‌شده: Persistent File Index Foundation
+ - SQLite WAL persistent local index.
+@@ -39,18 +39,16 @@
+ - Fresh Reindex-only identity acknowledgement.
+ - Windows system/removable/scale UAT scripts.
+ 
+-## v0.8.4 — Windows Certification / Release Candidate Hardening
+-- اجرای UAT واقعی روی Windows 10 x64 و Windows 11 x64.
+-- package-lock واقعی روی Node/npm pin‌شده.
+-- 100k / 500k / 1M فایل واقعی NTFS.
+-- physical sleep/resume.
+-- USB/HDD/SSD disconnect/reconnect.
+-- Drive Letter reassignment واقعی.
+-- UNC/network share policy matrix.
+-- win-unpacked, NSIS, Portable واقعی.
+-- packaged Worker smoke روی artifact.
+-- signed build، Defender/SmartScreen بررسی.
+-- UIA Action UAT روی برنامه‌های واقعی Windows.
++## v0.8.4 — انجام‌شده در سورس: Certification Foundation
++- atomic lifecycle marker + unclean shutdown detection.
++- startup integrity/recovery evidence بعد از forced termination.
++- adaptive resource-pressure budget برای scan/hash.
++- multi-root isolation در resilience و SQLite.
++- packaged executable bootstrap smoke با userData ایزوله.
++- Windows certification harness با JSON/Markdown evidence.
++- multi-root Windows UAT با `WA_CERT_ROOT_A/B`.
++- Release gate شامل packaged worker + packaged app smoke.
++- Actual hard power-loss همچنان manual evidence و خودکار اجرا نمی‌شود.
+ 
+ ## v0.9 — Local AI Layer (اختیاری)
+ - provider abstraction برای local/remote opt-in.
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/VALIDATION_v0.8.4_FA.md /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/VALIDATION_v0.8.4_FA.md
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/VALIDATION_v0.8.4_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/VALIDATION_v0.8.4_FA.md	2026-08-13 10:08:13.966254377 +0000
+@@ -0,0 +1,37 @@
++# Validation v0.8.4
++
++## PASS در محیط توسعه فعلی
++- exact dependency pins
++- source hygiene
++- Node syntax
++- JSX parse/type pass
++- تمام regressionهای v0.3 تا v0.8.3
++- forced child-process kill → next session detects unclean shutdown
++- clean exit → next session does not report unclean
++- Resource Pressure normal/warn/critical policy
++- pressure-aware Persistent Index chunk sizing
++- pressure-aware duplicate hash concurrency
++- RootResilience multi-root isolation
++- Persistent SQLite multi-root isolation
++- SQLite deep health after isolation test
++
++## Fail-closed مورد انتظار
++`npm run check:release-inputs` بدون lockfile واقعی: `LOCKFILE_REQUIRED`.
++
++## غیرقابل اجرا در این محیط
++- Windows UIA real UAT
++- physical suspend/resume evidence
++- removable drive physical disconnect/reconnect
++- two physical volume UAT مگر روی Windows با `WA_CERT_ROOT_A/B`
++- win-unpacked/NSIS/Portable
++- packaged executable smoke
++- Authenticode verification
++- actual hard power-loss evidence
++
++## Build
++`npm run build` در این محیط به‌علت نصب نبودن `node_modules/vite` اجرا نشد (`vite: not found`). این مورد به‌عنوان PASS ثبت نشده است.
++
++## Benchmark synthetic در محیط فعلی
++- 100,000 metadata rows: build 5,376 ms، search 188 ms، duplicate candidate 89 ms، RSS 67 MB، heap 7 MB، DB 98 MB.
++- 500,000 metadata rows: build 26,522 ms، search 541 ms، duplicate candidate 150 ms، RSS 100 MB، heap 8 MB، DB 493 MB.
++- اجرای ترکیبی 1,000,000 در سقف زمانی ابزار متوقف شد؛ عدد 1M برای این نسخه گزارش نشده و در Windows scale UAT باقی مانده است.
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/WINDOWS_RELEASE_CHECKLIST_FA.md /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/WINDOWS_RELEASE_CHECKLIST_FA.md
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/docs/WINDOWS_RELEASE_CHECKLIST_FA.md	2026-08-13 09:28:24.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/docs/WINDOWS_RELEASE_CHECKLIST_FA.md	2026-08-13 10:06:36.686254377 +0000
+@@ -109,3 +109,10 @@
+ - [ ] NSIS + Portable در manifest
+ - [ ] system-resilience UAT در manifest
+ - [ ] hashها کنار artifact نهایی نگه‌داری شوند
++
++## افزوده‌های v0.8.4
++- [ ] `npm run certify:windows` گزارش JSON/Markdown بدهد.
++- [ ] `WA_CERT_ROOT_A/B` در صورت ادعای multi-volume واقعی روی دو Volume مجزا تنظیم شود.
++- [ ] `win-unpacked` packaged-worker smoke PASS.
++- [ ] `win-unpacked` packaged-app bootstrap smoke PASS.
++- [ ] actual hard power-loss فقط به‌عنوان شواهد دستی ثبت شود؛ Harness آن را خودکار trigger نکند.
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/ipc.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/ipc.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/ipc.cjs	2026-08-13 09:27:38.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/ipc.cjs	2026-08-13 10:00:23.935156150 +0000
+@@ -5,7 +5,7 @@
+ const { planGoal } = require('./services/goal-planner.cjs');
+ function trusted(event) { const url = String(event.senderFrame?.url || event.sender?.getURL?.() || ''); return url.startsWith('file://') || /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(url); }
+ function deny(){ return {ok:false,code:'UNTRUSTED_IPC'}; }
+-function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService }) {
++function registerIpc({ ipcMain, engine, store, snapshotStore, automationStore, automationService, reviewQueueStore, managedZoneStore, storageTrendStore, journal, recoveryService, watcherService, configurationService, windowsActionSessionStore, persistentFileIndex, rootResilienceService, lifecycleState=null, resourcePressureGuard=null }) {
+   const importTokens=new Map();
+   ipcMain.handle('wa:select-folder', async e => trusted(e) ? (await dialog.showOpenDialog({properties:['openDirectory']})).filePaths[0] || '' : '');
+   ipcMain.handle('wa:cycles', e => trusted(e) ? store.list(100) : deny());
+@@ -43,6 +43,8 @@
+   ipcMain.handle('wa:recovery-act', async (e,id,action) => trusted(e) ? recoveryService.act(id,action) : deny());
+   ipcMain.handle('wa:resilience-status', e => trusted(e) ? (rootResilienceService?rootResilienceService.status():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
+   ipcMain.handle('wa:resilience-probe', async e => trusted(e) ? (rootResilienceService?rootResilienceService.probeNow():{schemaVersion:'root-resilience-v2',running:false,roots:[]}) : deny());
++  ipcMain.handle('wa:cert-status', e => trusted(e) ? ({schemaVersion:'workspace-agent-cert-runtime-v1',at:new Date().toISOString(),platform:process.platform,arch:process.arch,node:process.versions.node,electron:process.versions.electron||null,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal.verify()}) : deny());
++  ipcMain.handle('wa:resource-pressure', e => trusted(e) ? (resourcePressureGuard?.snapshot?.()||{schemaVersion:'resource-pressure-v1',state:'unavailable'}) : deny());
+   ipcMain.handle('wa:watch-list', e => trusted(e) ? watcherService.configs() : deny());
+   ipcMain.handle('wa:watch-events', (e,limit=300) => trusted(e) ? watcherService.events(limit) : deny());
+   ipcMain.handle('wa:watch-status', e => trusted(e) ? watcherService.status() : deny());
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/main.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/main.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/main.cjs	2026-08-13 09:24:41.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/main.cjs	2026-08-13 10:02:23.514254377 +0000
+@@ -1,5 +1,6 @@
+ const { app, BrowserWindow, ipcMain, Notification, powerMonitor } = require('electron');
+ const path = require('path');
++const fs = require('fs');
+ const { CycleStore } = require('./services/cycle-store.cjs');
+ const { SnapshotStore } = require('./services/snapshot-store.cjs');
+ const { AutomationStore } = require('./services/automation-store.cjs');
+@@ -17,6 +18,8 @@
+ const { PersistentFileIndex } = require('./services/persistent-file-index.cjs');
+ const { RootResilienceService } = require('./services/root-resilience-service.cjs');
+ const { SystemResilienceController } = require('./services/system-resilience-controller.cjs');
++const { LifecycleState } = require('./services/lifecycle-state.cjs');
++const { ResourcePressureGuard } = require('./services/resource-pressure-guard.cjs');
+ const { CycleEngine } = require('./services/cycle-engine.cjs');
+ const { skillByCycleType } = require('./services/skill-registry.cjs');
+ const { scanCycle, healthCycle, duplicateCycle, duplicateReviewCycle, organizeCycle } = require('./services/file-cycles.cjs');
+@@ -24,20 +27,27 @@
+ const { persistentIndexScanCycle, persistentIndexMaintenanceCycle, indexedFileSearchCycle, indexedDuplicatesCycle } = require('./services/persistent-index-cycles.cjs');
+ const { registerIpc } = require('./ipc.cjs');
+ 
+-let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;
++let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;
++
++function certificationSmokeOutput(){const eq=process.argv.find(x=>String(x).startsWith('--cert-smoke-output='));if(eq)return String(eq).slice('--cert-smoke-output='.length);const i=process.argv.indexOf('--cert-smoke-output');return i>=0?String(process.argv[i+1]||''):'';}
++function certificationUserData(){const eq=process.argv.find(x=>String(x).startsWith('--cert-user-data='));if(eq)return String(eq).slice('--cert-user-data='.length);const i=process.argv.indexOf('--cert-user-data');return i>=0?String(process.argv[i+1]||''):'';}
++const certUserData=certificationUserData();if(certUserData){try{app.setPath('userData',path.resolve(certUserData));}catch{}}
++function writeCertificationSmoke(file,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard}={}){if(!file)return null;const out=path.resolve(file);fs.mkdirSync(path.dirname(out),{recursive:true});const report={schemaVersion:'workspace-agent-packaged-smoke-v1',ok:true,at:new Date().toISOString(),appVersion:app.getVersion(),platform:process.platform,arch:process.arch,electron:process.versions.electron,node:process.versions.node,lifecycle:lifecycleState?.status?.()||null,resourcePressure:resourcePressureGuard?.snapshot?.()||null,indexHealth:persistentFileIndex?.health?.({deep:false})||{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'},rootResilience:rootResilienceService?.status?.()||null,watcher:watcherService?.status?.()||null,journal:journal?.verify?.()||null};fs.writeFileSync(out,JSON.stringify(report,null,2),'utf8');journal?.append('PACKAGED_CERT_SMOKE_WRITTEN',{payload:{file:out,ok:report.ok}});return report;}
++
+ function createWindow(){
+   mainWindow = new BrowserWindow({width:1540,height:980,minWidth:1120,minHeight:740,backgroundColor:'#0b1020',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+   const dev=process.env.VITE_DEV_SERVER_URL; if(dev) mainWindow.loadURL(dev); else mainWindow.loadFile(path.join(__dirname,'..','dist','index.html'));
+ }
+ app.whenReady().then(async()=>{
+-  const userData=app.getPath('userData');const journal=new EventJournal(userData);const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+-  engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine}));
++  const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
++  engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+   }});automationService.start();
+-  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService});createWindow();
++  registerIpc({ipcMain,engine,store,snapshotStore,automationStore,automationService,reviewQueueStore,managedZoneStore,storageTrendStore,journal,recoveryService,watcherService,configurationService,windowsActionSessionStore,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard});const certOut=certificationSmokeOutput();if(certOut){writeCertificationSmoke(certOut,{journal,watcherService,persistentFileIndex,rootResilienceService,lifecycleState,resourcePressureGuard});app.quit();return;}createWindow();
+   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0) createWindow();});
+ });
+-app.on('before-quit',()=>{automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();persistentFileIndex?.close();});
++app.on('before-quit',()=>{automationService?.stop();systemResilienceController?.stop();rootResilienceService?.stop();watcherService?.stopAll();resourcePressureGuard?.stop();persistentFileIndex?.close();});
++app.on('will-quit',()=>{try{lifecycleState?.markCleanExit('will-quit');}catch{}});
+ app.on('window-all-closed',()=>{if(process.platform!=='darwin') app.quit();});
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/preload.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/preload.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/preload.cjs	2026-08-13 09:11:21.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/preload.cjs	2026-08-13 10:00:26.077200419 +0000
+@@ -4,6 +4,6 @@
+   startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
+   reviewList:root=>ipcRenderer.invoke('wa:review-list',root),reviewUpdate:(id,patch)=>ipcRenderer.invoke('wa:review-update',id,patch),reviewClear:root=>ipcRenderer.invoke('wa:review-clear',root),
+   zonesList:()=>ipcRenderer.invoke('wa:zones-list'),zonesAdd:input=>ipcRenderer.invoke('wa:zones-add',input),zonesRemove:id=>ipcRenderer.invoke('wa:zones-remove',id),storageTrend:root=>ipcRenderer.invoke('wa:storage-trend',root),
+-  journalList:filters=>ipcRenderer.invoke('wa:journal-list',filters),journalVerify:()=>ipcRenderer.invoke('wa:journal-verify'),recoveryList:()=>ipcRenderer.invoke('wa:recovery-list'),recoveryAct:(id,action)=>ipcRenderer.invoke('wa:recovery-act',id,action),watchList:()=>ipcRenderer.invoke('wa:watch-list'),watchEvents:limit=>ipcRenderer.invoke('wa:watch-events',limit),watchStatus:()=>ipcRenderer.invoke('wa:watch-status'),resilienceStatus:()=>ipcRenderer.invoke('wa:resilience-status'),resilienceProbe:()=>ipcRenderer.invoke('wa:resilience-probe'),watchAdd:(root,title)=>ipcRenderer.invoke('wa:watch-add',root,title),watchRemove:id=>ipcRenderer.invoke('wa:watch-remove',id),configExport:()=>ipcRenderer.invoke('wa:config-export'),configImportPreview:()=>ipcRenderer.invoke('wa:config-import-preview'),configImportApply:token=>ipcRenderer.invoke('wa:config-import-apply',token),
++  journalList:filters=>ipcRenderer.invoke('wa:journal-list',filters),journalVerify:()=>ipcRenderer.invoke('wa:journal-verify'),recoveryList:()=>ipcRenderer.invoke('wa:recovery-list'),recoveryAct:(id,action)=>ipcRenderer.invoke('wa:recovery-act',id,action),watchList:()=>ipcRenderer.invoke('wa:watch-list'),watchEvents:limit=>ipcRenderer.invoke('wa:watch-events',limit),watchStatus:()=>ipcRenderer.invoke('wa:watch-status'),resilienceStatus:()=>ipcRenderer.invoke('wa:resilience-status'),resilienceProbe:()=>ipcRenderer.invoke('wa:resilience-probe'),certStatus:()=>ipcRenderer.invoke('wa:cert-status'),resourcePressure:()=>ipcRenderer.invoke('wa:resource-pressure'),watchAdd:(root,title)=>ipcRenderer.invoke('wa:watch-add',root,title),watchRemove:id=>ipcRenderer.invoke('wa:watch-remove',id),configExport:()=>ipcRenderer.invoke('wa:config-export'),configImportPreview:()=>ipcRenderer.invoke('wa:config-import-preview'),configImportApply:token=>ipcRenderer.invoke('wa:config-import-apply',token),
+   automationList:()=>ipcRenderer.invoke('wa:automation-list'),automationCreate:input=>ipcRenderer.invoke('wa:automation-create',input),automationUpdate:(id,patch)=>ipcRenderer.invoke('wa:automation-update',id,patch),automationRemove:id=>ipcRenderer.invoke('wa:automation-remove',id),automationRun:id=>ipcRenderer.invoke('wa:automation-run',id),
+ });
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/capability-registry.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/capability-registry.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/capability-registry.cjs	2026-08-13 09:15:36.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/capability-registry.cjs	2026-08-13 10:05:31.585246657 +0000
+@@ -10,6 +10,9 @@
+   { id:'watcher-backpressure', group:'automation', title:'Watcher Backpressure', mode:'bounded-coalesced-serial', status:'beta', detail:'Coalesce بر اساس Path، Pending/Delivery سقف‌دار، reconcile سریال و metric برای burst/event-storm' },
+   { id:'volume-identity-resilience', group:'safety', title:'Volume Identity Resilience', mode:'read-only-identity-gate', status:'beta', detail:'ثبت UniqueId/Volume Path، تشخیص قطع/وصل و تغییر Volume پشت یک Drive Letter، Rebind Candidate بدون Auto-Rebind و اعتماد مجدد فقط پس از Fresh Reindex' },
+   { id:'suspend-resume-watch-safety', group:'safety', title:'Suspend / Resume Watch Safety', mode:'power-gap-guard', status:'beta', detail:'در Suspend همه Watcherها متوقف و Rootها Dirty می‌شوند؛ پس از Resume ابتدا Probe و سپس Resume کنترل‌شده انجام می‌شود' },
++  { id:'unclean-shutdown-detection', group:'safety', title:'Unclean Shutdown Detection', mode:'lifecycle-marker', status:'beta', detail:'Session marker اتمیک + heartbeat؛ Startup بعد از crash/power-loss، integrity/recovery را بدون فرض clean exit بررسی می‌کند' },
++  { id:'resource-pressure-guard', group:'safety', title:'Resource Pressure Guard', mode:'adaptive-budget', status:'beta', detail:'RAM/Event-loop/process CPU pressure باعث کاهش chunk و hashing concurrency می‌شود؛ عملیات به‌جای fail-open آهسته‌تر اجرا می‌شوند' },
++  { id:'windows-certification-harness', group:'windows', title:'Windows Certification Harness', mode:'uat-release-evidence', status:'beta', detail:'گزارش JSON/Markdown برای runtime pins، UAT، multi-root، packaged app/worker، artifact hash/signature و مرز شواهد دستی power-loss' },
+   { id:'hash-worker-pool', group:'storage', title:'Duplicate Hash Worker Pool', mode:'worker-threads', status:'beta', detail:'SHA-256 پایدار خارج از Main Thread با worker_threads و fallback امن به مسیر قبلی' },
+   { id:'incremental-index-reconcile', group:'automation', title:'Incremental Index Reconcile', mode:'watch-to-index', status:'beta', detail:'File Watcher فقط Agent Index را reconcile می‌کند؛ هیچ Move/Rename/Delete خودکاری از Event اجرا نمی‌شود' },
+   { id:'indexed-search', group:'storage', title:'Indexed File Search', mode:'read-only', status:'beta', detail:'Query و pagination مستقیم روی SQLite بدون نگهداری Tree کامل در RAM' },
+@@ -49,5 +52,5 @@
+   { id:'startup-review-advisor', group:'windows', title:'Startup Review Advisor', mode:'analysis-suggestion-only', status:'beta', detail:'اولویت‌بندی ورودی‌های Startup برای Review؛ بدون Disable/Registry Write/Process Kill' },
+   { id:'semantic-vision-labeling', group:'intelligence', title:'Semantic Vision Labeling', mode:'analysis', status:'planned', detail:'تشخیص اشیاء/موضوع تصویر با مدل محلی یا provider اختیاری؛ در این نسخه فعال نیست' },
+ ]);
+-function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v8.3', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
++function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v8.4', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
+ module.exports = { CAPABILITIES, capabilitySummary };
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/lifecycle-state.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/lifecycle-state.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/lifecycle-state.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/lifecycle-state.cjs	2026-08-13 09:59:17.458254377 +0000
+@@ -0,0 +1,22 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++function now(){return new Date().toISOString();}
++function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=`${file}.tmp-${process.pid}-${Date.now()}`;fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,file);}
++function readJson(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}}
++class LifecycleState{
++ constructor(baseDir,{journal=null,heartbeatMs=15000,setTimer=setInterval,clearTimer=clearInterval,pid=process.pid}={}){
++  this.dir=path.join(baseDir,'runtime');this.file=path.join(this.dir,'lifecycle.json');this.journal=journal;this.heartbeatMs=Math.max(5000,Number(heartbeatMs)||15000);this.setTimer=setTimer;this.clearTimer=clearTimer;this.pid=pid;this.timer=null;this.current=null;fs.mkdirSync(this.dir,{recursive:true});
++ }
++ beginSession({version='',platform=process.platform,node=process.versions.node}={}){
++  const previous=readJson(this.file);const previousUnclean=Boolean(previous?.sessionId&&previous.cleanExit!==true);const at=now();
++  this.current={schemaVersion:'workspace-agent-lifecycle-v1',sessionId:`session-${Date.now()}-${crypto.randomBytes(5).toString('hex')}`,pid:this.pid,version:String(version||''),platform:String(platform||''),node:String(node||''),startedAt:at,lastHeartbeatAt:at,cleanExit:false,cleanExitAt:null,exitReason:null,previousSession:previous?{sessionId:previous.sessionId||null,startedAt:previous.startedAt||null,lastHeartbeatAt:previous.lastHeartbeatAt||null,cleanExit:Boolean(previous.cleanExit),cleanExitAt:previous.cleanExitAt||null,exitReason:previous.exitReason||null,pid:previous.pid||null,version:previous.version||null}:null};
++  atomic(this.file,this.current);this.journal?.append('APP_SESSION_STARTED',{payload:{sessionId:this.current.sessionId,previousUnclean,previousSessionId:previous?.sessionId||null,version:this.current.version}});this.startHeartbeat();return{session:{...this.current},previous,previousUnclean};
++ }
++ startHeartbeat(){if(this.timer||!this.current)return;this.timer=this.setTimer(()=>{try{this.heartbeat()}catch{}},this.heartbeatMs);this.timer?.unref?.();}
++ heartbeat(){if(!this.current||this.current.cleanExit)return this.status();this.current.lastHeartbeatAt=now();atomic(this.file,this.current);return this.status();}
++ markCleanExit(reason='will-quit'){if(this.timer){this.clearTimer(this.timer);this.timer=null;}if(!this.current){this.current=readJson(this.file)||{schemaVersion:'workspace-agent-lifecycle-v1',sessionId:null};}this.current.cleanExit=true;this.current.cleanExitAt=now();this.current.exitReason=String(reason||'will-quit');this.current.lastHeartbeatAt=this.current.cleanExitAt;atomic(this.file,this.current);this.journal?.append('APP_SESSION_CLEAN_EXIT',{payload:{sessionId:this.current.sessionId,reason:this.current.exitReason}});return this.status();}
++ status(){const row=this.current||readJson(this.file);return row?{...row}:{schemaVersion:'workspace-agent-lifecycle-v1',sessionId:null,cleanExit:null};}
++ stopHeartbeat(){if(this.timer){this.clearTimer(this.timer);this.timer=null;}}
++}
++module.exports={LifecycleState,readJson};
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/persistent-index-cycles.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/persistent-index-cycles.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/persistent-index-cycles.cjs	2026-08-13 07:39:02.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/persistent-index-cycles.cjs	2026-08-13 09:59:34.696723341 +0000
+@@ -3,13 +3,14 @@
+ function step(id,kind,status,label,detail=''){return{id,kind,status,label,detail,at:at()};}
+ function evidence(code,data={}){return{at:at(),code,...data};}
+ function requireIndex(index){if(!index)throw Object.assign(new Error('Persistent Index در Runtime فعلی در دسترس نیست.'),{code:'INDEX_SQLITE_UNAVAILABLE'});return index;}
+-function persistentIndexScanCycle({index}){
++function persistentIndexScanCycle({index,resourceGuard=null}){
+   return{async next(cycle){requireIndex(index);
+     const first=cycle.iteration===1;const resume=first?cycle.input.resume!==false:true;
+-    let result;try{result=await index.scan(cycle.input.root,{resume,includeHidden:Boolean(cycle.input.includeHidden),skipDirNames:cycle.input.skipDirNames||[],skipPathPrefixes:cycle.input.skipPathPrefixes||[],maxWallTimeMs:Number(cycle.input.chunkWallTimeMs||30000),maxFilesSession:Number(cycle.input.chunkFiles||50000),maxDirsSession:Number(cycle.input.chunkDirs||2000),dbBatchSize:Number(cycle.input.dbBatchSize||1000)});}catch(error){index.markFailed?.(cycle.input.root,error);throw error;}
++    const requested={wallTimeMs:Number(cycle.input.chunkWallTimeMs||30000),files:Number(cycle.input.chunkFiles||50000),dirs:Number(cycle.input.chunkDirs||2000)};const tuned=resourceGuard?.tuneChunk?.(requested)||{state:'unknown',factor:1,...requested};
++    let result;try{result=await index.scan(cycle.input.root,{resume,includeHidden:Boolean(cycle.input.includeHidden),skipDirNames:cycle.input.skipDirNames||[],skipPathPrefixes:cycle.input.skipPathPrefixes||[],maxWallTimeMs:tuned.wallTimeMs,maxFilesSession:tuned.files,maxDirsSession:tuned.dirs,dbBatchSize:Number(cycle.input.dbBatchSize||1000)});}catch(error){index.markFailed?.(cycle.input.root,error);throw error;}
+     const completed=result.status==='completed';const detail=`${result.files} فایل · ${result.dirsSeen} پوشه · Queue ${result.queue}`;
+     const steps=[step('persistent-index','agent-local',completed?'completed':'running','Persistent SQLite Index',detail),step('checkpoint','verify',completed?'completed':'running','Crash-resumable Checkpoint',completed?'Queue خالی؛ نسل اسکن Commit شد':`Pause: ${result.pauseReason||result.status} · ${result.queue} پوشه باقی مانده`)];
+-    return{status:completed?'completed':'running',result,steps,evidence:[...cycle.evidence,evidence(completed?'PERSISTENT_INDEX_COMPLETE':'PERSISTENT_INDEX_CHUNK',{root:result.root,generation:result.generation,files:result.files,bytes:result.bytes,queue:result.queue,pauseReason:result.pauseReason||null,iteration:cycle.iteration})]};
++    return{status:completed?'completed':'running',result,steps,evidence:[...cycle.evidence,evidence(completed?'PERSISTENT_INDEX_COMPLETE':'PERSISTENT_INDEX_CHUNK',{root:result.root,generation:result.generation,files:result.files,bytes:result.bytes,queue:result.queue,pauseReason:result.pauseReason||null,iteration:cycle.iteration,resourcePressure:tuned.state,chunkFactor:tuned.factor})]};
+   },async onEnd(cycle){const complete=cycle.result?.status==='completed';return{summary:complete?`Persistent Index کامل شد: ${cycle.result?.files||0} فایل در SQLite ثبت شد.`:`Index checkpoint حفظ شد؛ ${cycle.result?.queue||0} پوشه برای Resume باقی مانده است.`,quality:complete?'verified':'partial',nextCycleSuggestions:complete?['indexed-file-search','indexed-duplicates']:['persistent-index-scan']};}};
+ }
+ 
+@@ -19,7 +20,7 @@
+ function indexedFileSearchCycle({index}){
+   return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};const result=index.search({root:cycle.input.root,...(cycle.input.filters||{}),limit:cycle.input.limit||500,offset:cycle.input.offset||0});return{status:'completed',result,steps:[step('query','read','completed','SQLite Indexed Search',`${result.total} نتیجه`),step('verify','verify','completed','Low-RAM Query','نتایج مستقیماً از Index صفحه‌بندی شدند؛ Tree scan اجرا نشد.')],evidence:[...cycle.evidence,evidence('INDEXED_SEARCH_COMPLETE',{root:result.root,query:result.query,total:result.total,returned:result.rows.length,offset:result.offset})]};},async onEnd(cycle){return{summary:`${cycle.result?.total||0} نتیجه از Persistent Index پیدا شد؛ بدون اسکن مجدد Tree.`,quality:'verified',nextCycleSuggestions:[]};}};
+ }
+-function indexedDuplicatesCycle({index}){
+-  return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};const status=await index.status(cycle.input.root);if(status.status==='not-indexed')throw Object.assign(new Error('ابتدا Persistent Index را برای این Workspace بسازید.'),{code:'INDEX_REQUIRED'});const result=await findExactDuplicatesFromIndex(index,cycle.input.root,{concurrency:Number(cycle.input.concurrency||3),maxGroups:Number(cycle.input.maxGroups||5000),maxCandidateSizeGroups:Number(cycle.input.maxCandidateSizeGroups||10000),maxCandidateFiles:Number(cycle.input.maxCandidateFiles||100000),minBytes:Number(cycle.input.minBytes||1)});return{status:'completed',result,steps:[step('candidates','read','completed','Duplicate Candidate Query',`${result.candidateSizeGroups} Size group · ${result.candidateFiles} candidate`),step('hash','analysis','completed','Stable SHA-256 + Hash Cache',`${result.hashedFiles} Hash جدید · ${result.cacheHits} Cache hit`),step('verify','verify','completed','Exact Duplicate Verification',`${result.groupsTotal} گروه قطعی · ${result.errorsTotal} خطا`)],evidence:[...cycle.evidence,evidence('INDEXED_DUPLICATES_COMPLETE',{groups:result.groupsTotal,duplicateFiles:result.duplicateFiles,reclaimableBytes:result.reclaimableBytes,candidateFiles:result.candidateFiles,hashedFiles:result.hashedFiles,cacheHits:result.cacheHits,truncated:result.candidateTraversalTruncated})]};},async onEnd(cycle){return{summary:`${cycle.result?.groupsTotal||0} گروه Duplicate قطعی با candidateهای SQLite و SHA-256 تأیید شد.`,quality:'verified',nextCycleSuggestions:cycle.result?.groupsTotal?['duplicate-review']:[]};}};
++function indexedDuplicatesCycle({index,resourceGuard=null}){
++  return{async next(cycle){requireIndex(index);if(cycle.steps.length)return{status:'completed'};const status=await index.status(cycle.input.root);if(status.status==='not-indexed')throw Object.assign(new Error('ابتدا Persistent Index را برای این Workspace بسازید.'),{code:'INDEX_REQUIRED'});const requestedConcurrency=Number(cycle.input.concurrency||3),effectiveConcurrency=resourceGuard?.recommendConcurrency?.(requestedConcurrency)||requestedConcurrency;const result=await findExactDuplicatesFromIndex(index,cycle.input.root,{concurrency:effectiveConcurrency,maxGroups:Number(cycle.input.maxGroups||5000),maxCandidateSizeGroups:Number(cycle.input.maxCandidateSizeGroups||10000),maxCandidateFiles:Number(cycle.input.maxCandidateFiles||100000),minBytes:Number(cycle.input.minBytes||1)});result.resourcePressure=resourceGuard?.snapshot?.()||null;result.requestedConcurrency=requestedConcurrency;result.effectiveConcurrency=effectiveConcurrency;return{status:'completed',result,steps:[step('candidates','read','completed','Duplicate Candidate Query',`${result.candidateSizeGroups} Size group · ${result.candidateFiles} candidate`),step('hash','analysis','completed','Stable SHA-256 + Hash Cache',`${result.hashedFiles} Hash جدید · ${result.cacheHits} Cache hit`),step('verify','verify','completed','Exact Duplicate Verification',`${result.groupsTotal} گروه قطعی · ${result.errorsTotal} خطا`)],evidence:[...cycle.evidence,evidence('INDEXED_DUPLICATES_COMPLETE',{groups:result.groupsTotal,duplicateFiles:result.duplicateFiles,reclaimableBytes:result.reclaimableBytes,candidateFiles:result.candidateFiles,hashedFiles:result.hashedFiles,cacheHits:result.cacheHits,truncated:result.candidateTraversalTruncated})]};},async onEnd(cycle){return{summary:`${cycle.result?.groupsTotal||0} گروه Duplicate قطعی با candidateهای SQLite و SHA-256 تأیید شد.`,quality:'verified',nextCycleSuggestions:cycle.result?.groupsTotal?['duplicate-review']:[]};}};
+ }
+ module.exports={persistentIndexScanCycle,persistentIndexMaintenanceCycle,indexedFileSearchCycle,indexedDuplicatesCycle};
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/resource-pressure-guard.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/resource-pressure-guard.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/electron/services/resource-pressure-guard.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/electron/services/resource-pressure-guard.cjs	2026-08-13 09:59:17.466254377 +0000
+@@ -0,0 +1,18 @@
++const os=require('os');
++const {monitorEventLoopDelay}=require('perf_hooks');
++function clamp(n,min,max,fallback){const v=Number(n);return Number.isFinite(v)?Math.max(min,Math.min(max,v)):fallback;}
++function finite(n,fallback=0){return Number.isFinite(Number(n))?Number(n):fallback;}
++class ResourcePressureGuard{
++ constructor({journal=null,sampleIntervalMs=5000,memoryWarnRatio=0.10,memoryCriticalRatio=0.05,eventLoopWarnMs=150,eventLoopCriticalMs=500,cpuWarnPercent=60,cpuCriticalPercent=90,sampleProvider=null,setTimer=setInterval,clearTimer=clearInterval}={}){
++  this.journal=journal;this.sampleIntervalMs=Math.max(1000,Number(sampleIntervalMs)||5000);this.thresholds={memoryWarnRatio:Number(memoryWarnRatio),memoryCriticalRatio:Number(memoryCriticalRatio),eventLoopWarnMs:Number(eventLoopWarnMs),eventLoopCriticalMs:Number(eventLoopCriticalMs),cpuWarnPercent:Number(cpuWarnPercent),cpuCriticalPercent:Number(cpuCriticalPercent)};this.sampleProvider=sampleProvider;this.setTimer=setTimer;this.clearTimer=clearTimer;this.timer=null;this.hist=null;this.lastCpu=process.cpuUsage();this.lastAt=process.hrtime.bigint();this.last=null;this.lastState='unknown';
++ }
++ start(){if(this.timer)return this.snapshot();if(!this.sampleProvider){this.hist=monitorEventLoopDelay({resolution:20});this.hist.enable();}this.sample();this.timer=this.setTimer(()=>{try{this.sample()}catch{}},this.sampleIntervalMs);this.timer?.unref?.();return this.snapshot();}
++ stop(){if(this.timer){this.clearTimer(this.timer);this.timer=null;}try{this.hist?.disable?.();}catch{}this.hist=null;}
++ _defaultSample(){const total=finite(os.totalmem()),free=finite(os.freemem()),cores=Math.max(1,os.cpus()?.length||1);const at=process.hrtime.bigint(),cpu=process.cpuUsage(),elapsedUs=Math.max(1,Number(at-this.lastAt)/1000),cpuDelta=Math.max(0,(cpu.user-this.lastCpu.user)+(cpu.system-this.lastCpu.system));this.lastAt=at;this.lastCpu=cpu;const p95=this.hist?finite(this.hist.percentile(95)/1e6):0;if(this.hist)this.hist.reset();const mem=process.memoryUsage();return{totalMemoryBytes:total,freeMemoryBytes:free,freeMemoryRatio:total?free/total:1,rssBytes:finite(mem.rss),heapUsedBytes:finite(mem.heapUsed),eventLoopP95Ms:p95,processCpuSharePercent:(cpuDelta/(elapsedUs*cores))*100,cpuCores:cores};}
++ _classify(s){const t=this.thresholds;if(s.freeMemoryRatio<=t.memoryCriticalRatio||s.eventLoopP95Ms>=t.eventLoopCriticalMs||s.processCpuSharePercent>=t.cpuCriticalPercent)return'critical';if(s.freeMemoryRatio<=t.memoryWarnRatio||s.eventLoopP95Ms>=t.eventLoopWarnMs||s.processCpuSharePercent>=t.cpuWarnPercent)return'warn';return'normal';}
++ sample(){const raw=this.sampleProvider?this.sampleProvider():this._defaultSample();const sample={schemaVersion:'resource-pressure-v1',at:new Date().toISOString(),freeMemoryRatio:clamp(raw.freeMemoryRatio,0,1,1),freeMemoryBytes:finite(raw.freeMemoryBytes),totalMemoryBytes:finite(raw.totalMemoryBytes),rssBytes:finite(raw.rssBytes),heapUsedBytes:finite(raw.heapUsedBytes),eventLoopP95Ms:Math.max(0,finite(raw.eventLoopP95Ms)),processCpuSharePercent:Math.max(0,finite(raw.processCpuSharePercent)),cpuCores:Math.max(1,finite(raw.cpuCores,1))};sample.state=this._classify(sample);sample.chunkFactor=sample.state==='critical'?0.25:sample.state==='warn'?0.5:1;sample.maxRecommendedConcurrency=sample.state==='critical'?1:sample.state==='warn'?2:8;this.last=sample;if(sample.state!==this.lastState){this.journal?.append('RESOURCE_PRESSURE_CHANGED',{payload:{from:this.lastState,to:sample.state,freeMemoryRatio:sample.freeMemoryRatio,eventLoopP95Ms:sample.eventLoopP95Ms,processCpuSharePercent:sample.processCpuSharePercent}});this.lastState=sample.state;}return{...sample};}
++ snapshot(){return this.last?{...this.last}:this.sample();}
++ recommendConcurrency(requested=3){const s=this.snapshot(),base=clamp(requested,1,8,3);return Math.max(1,Math.min(base,s.maxRecommendedConcurrency));}
++ tuneChunk({files=50000,dirs=2000,wallTimeMs=30000}={}){const s=this.snapshot(),f=s.chunkFactor;return{state:s.state,factor:f,files:Math.max(1000,Math.round(Number(files||50000)*f)),dirs:Math.max(100,Math.round(Number(dirs||2000)*f)),wallTimeMs:Math.max(5000,Math.round(Number(wallTimeMs||30000)*f))};}
++}
++module.exports={ResourcePressureGuard};
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/package.json /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/package.json
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/package.json	2026-08-13 09:24:03.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/package.json	2026-08-13 10:04:43.244335318 +0000
+@@ -1,16 +1,16 @@
+ {
+   "name": "windows-workspace-agent",
+-  "version": "0.8.3",
++  "version": "0.8.4",
+   "private": true,
+-  "description": "Cycle-driven Windows workspace agent with crash-resilient SQLite indexing, bounded watcher backpressure, worker-thread hashing, volume identity tracking, suspend/resume safety, removable-drive resilience, long-path guards and reproducible release gates.",
++  "description": "Cycle-driven Windows workspace agent with crash-resilient SQLite indexing, bounded watcher backpressure, worker-thread hashing, volume identity tracking, shutdown-state detection, multi-root isolation, resource-pressure guards and Windows certification/release verification.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -37,7 +37,11 @@
+     "test:system-resilience": "node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs",
+     "test:windows-system-resilience-uat": "node tests/windows-system-resilience-v083.uat.cjs",
+     "test:windows-scale-resilience-uat": "node tests/windows-scale-resilience-v083.uat.cjs",
+-    "test:windows-removable-uat": "node tests/windows-removable-drive-v083.uat.cjs"
++    "test:windows-removable-uat": "node tests/windows-removable-drive-v083.uat.cjs",
++    "test:cert-core": "node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs",
++    "test:packaged-app": "node tests/packaged-app-smoke-v084.cjs",
++    "test:windows-multiroot-uat": "node tests/windows-multiroot-v084.uat.cjs",
++    "certify:windows": "powershell -ExecutionPolicy Bypass -File scripts/windows-certification.ps1"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/scripts/windows-certification.ps1 /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/scripts/windows-certification.ps1
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/scripts/windows-certification.ps1	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/scripts/windows-certification.ps1	2026-08-13 10:03:16.182254377 +0000
+@@ -0,0 +1,48 @@
++param(
++  [switch]$RunScale,
++  [switch]$BuildPackaged,
++  [switch]$VerifyArtifacts,
++  [switch]$RequireSigning,
++  [string]$OutputDir = 'certification'
++)
++$ErrorActionPreference='Continue'
++if($env:OS -ne 'Windows_NT'){throw 'Windows certification harness فقط روی Windows اجرا می‌شود.'}
++Set-Location (Split-Path -Parent $PSScriptRoot)
++$pkg=Get-Content package.json -Raw | ConvertFrom-Json
++$stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
++$out=Join-Path (Get-Location) (Join-Path $OutputDir $stamp)
++New-Item -ItemType Directory -Path $out -Force | Out-Null
++$gates=New-Object System.Collections.Generic.List[object]
++function Add-Gate([string]$name,[string]$status,[int]$exitCode,[string]$log,[bool]$required=$true,[object]$detail=$null){$gates.Add([pscustomobject]@{name=$name;status=$status;exitCode=$exitCode;required=$required;log=$log;detail=$detail})}
++function Run-Npm([string]$script,[bool]$required=$true){$log=Join-Path $out ("gate-"+$script.Replace(':','-')+'.log'); & npm run $script *>&1 | Tee-Object -FilePath $log; $code=$LASTEXITCODE; Add-Gate $script ($(if($code -eq 0){'PASS'}else{'FAIL'})) $code $log $required $null; return $code}
++function Run-Node([string]$name,[string[]]$args,[bool]$required=$true){$log=Join-Path $out ("gate-"+$name+'.log'); & node @args *>&1 | Tee-Object -FilePath $log; $code=$LASTEXITCODE; Add-Gate $name ($(if($code -eq 0){'PASS'}else{'FAIL'})) $code $log $required $null; return $code}
++$expectedNode=(Get-Content .nvmrc -Raw).Trim();$actualNode=(node -p "process.versions.node").Trim();$expectedNpm=([string]$pkg.packageManager).Replace('npm@','');$actualNpm=(npm -v).Trim();
++$runtimeOk=($actualNode -eq $expectedNode -and $actualNpm -eq $expectedNpm);Add-Gate 'runtime-version' ($(if($runtimeOk){'PASS'}else{'FAIL'})) ($(if($runtimeOk){0}else{1})) '' $true ([pscustomobject]@{expectedNode=$expectedNode;actualNode=$actualNode;expectedNpm=$expectedNpm;actualNpm=$actualNpm})
++Run-Npm 'check:release-inputs' $true | Out-Null
++Run-Npm 'check' $true | Out-Null
++$uat=@('test:windows-uia-uat','test:windows-index-uat','test:windows-production-uat','test:windows-verification-uat','test:windows-system-resilience-uat','test:windows-removable-uat','test:windows-multiroot-uat')
++foreach($u in $uat){Run-Npm $u $true | Out-Null}
++if($RunScale){Run-Npm 'test:windows-scale-resilience-uat' $true | Out-Null}else{Add-Gate 'test:windows-scale-resilience-uat' 'SKIP' 0 '' $false 'Run with -RunScale'}
++$packagedExe=$null
++if($BuildPackaged){
++ Run-Npm 'build' $true | Out-Null;Run-Npm 'pack:win:dir' $true | Out-Null
++ $worker=Join-Path (Get-Location) 'release\win-unpacked\resources\app.asar.unpacked\electron\services\hash-worker.cjs'
++ if(Test-Path $worker){Run-Node 'packaged-worker-smoke' @('tests/packaged-worker-smoke-v082.cjs',$worker) $true | Out-Null}else{Add-Gate 'packaged-worker-smoke' 'FAIL' 2 '' $true "missing $worker"}
++ $packagedExe=(Get-ChildItem 'release\win-unpacked' -Filter '*.exe' -File | Select-Object -First 1).FullName
++ if($packagedExe){Run-Node 'packaged-app-smoke' @('tests/packaged-app-smoke-v084.cjs',$packagedExe) $true | Out-Null}else{Add-Gate 'packaged-app-smoke' 'FAIL' 2 '' $true 'win-unpacked exe not found'}
++}else{Add-Gate 'packaged-build' 'SKIP' 0 '' $false 'Run with -BuildPackaged'}
++$artifacts=@();$signatures=@()
++if($VerifyArtifacts){
++ if(-not (Test-Path release)){Add-Gate 'artifact-verification' 'FAIL' 2 '' $true 'release directory missing'}else{
++  $files=Get-ChildItem release -File | Where-Object{$_.Extension -in '.exe','.msi','.zip'} | Sort-Object Name
++  foreach($f in $files){$h=Get-FileHash $f.FullName -Algorithm SHA256;$sig=Get-AuthenticodeSignature $f.FullName;$artifacts += [pscustomobject]@{file=$f.Name;bytes=$f.Length;sha256=$h.Hash.ToLowerInvariant()};$signatures += [pscustomobject]@{file=$f.Name;status=[string]$sig.Status;subject=if($sig.SignerCertificate){$sig.SignerCertificate.Subject}else{$null};thumbprint=if($sig.SignerCertificate){$sig.SignerCertificate.Thumbprint}else{$null}}}
++  $sigOk=(!$RequireSigning -or (($signatures|Where-Object{$_.status -ne 'Valid'}).Count -eq 0 -and $signatures.Count -gt 0));Add-Gate 'artifact-verification' ($(if($sigOk){'PASS'}else{'FAIL'})) ($(if($sigOk){0}else{1})) '' $true ([pscustomobject]@{artifacts=$artifacts.Count;requireSigning=[bool]$RequireSigning})
++ }
++}else{Add-Gate 'artifact-verification' 'SKIP' 0 '' $false 'Run with -VerifyArtifacts'}
++$osInfo=$null;$computer=$null;$volumes=@();try{$o=Get-CimInstance Win32_OperatingSystem;$osInfo=[pscustomobject]@{caption=$o.Caption;version=$o.Version;build=$o.BuildNumber;lastBoot=$o.LastBootUpTime}}catch{};try{$c=Get-CimInstance Win32_ComputerSystem;$computer=[pscustomobject]@{manufacturer=$c.Manufacturer;model=$c.Model;ramBytes=[int64]$c.TotalPhysicalMemory;processors=$c.NumberOfLogicalProcessors}}catch{};try{$volumes=Get-Volume | Select-Object DriveLetter,FileSystemLabel,FileSystem,DriveType,HealthStatus,OperationalStatus,UniqueId,Size,SizeRemaining}catch{}
++$requiredFailures=@($gates|Where-Object{$_.required -and $_.status -eq 'FAIL'});$overall=if($requiredFailures.Count){'FAIL'}else{'PASS'}
++$report=[ordered]@{schemaVersion='workspace-agent-windows-certification-v1';workspaceAgentVersion=$pkg.version;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;runtime=[ordered]@{node=$actualNode;npm=$actualNpm;electron=$pkg.devDependencies.electron;arch=$env:PROCESSOR_ARCHITECTURE};os=$osInfo;computer=$computer;volumes=$volumes;options=[ordered]@{runScale=[bool]$RunScale;buildPackaged=[bool]$BuildPackaged;verifyArtifacts=[bool]$VerifyArtifacts;requireSigning=[bool]$RequireSigning};gates=$gates;artifacts=$artifacts;signatures=$signatures;manualEvidence=[ordered]@{actualPowerLoss='PENDING_MANUAL';sleepResume='covered-by-UAT';twoPhysicalVolumes=if($env:WA_CERT_ROOT_A -and $env:WA_CERT_ROOT_B){'REQUESTED'}else{'PENDING_ENV_ROOTS'}}}
++$json=Join-Path $out 'certification-report.json';$report|ConvertTo-Json -Depth 10|Set-Content $json -Encoding utf8
++$md=Join-Path $out 'certification-report.md';$lines=@("# Workspace Agent Windows Certification","","- Version: $($pkg.version)","- Overall: **$overall**","- Created: $($report.createdAt)","- Node/npm: $actualNode / $actualNpm","","## Gates","");foreach($g in $gates){$lines += "- $($g.status) — $($g.name)"};$lines += @("","## Boundary","","Actual hard power-loss remains manual evidence and is never triggered automatically by this harness.");$lines|Set-Content $md -Encoding utf8
++Write-Host "Certification report: $json" -ForegroundColor Cyan
++if($overall -ne 'PASS'){exit 1}
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/scripts/windows-release.ps1 /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/scripts/windows-release.ps1
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/scripts/windows-release.ps1	2026-08-13 09:15:56.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/scripts/windows-release.ps1	2026-08-13 10:03:32.919942021 +0000
+@@ -29,12 +29,16 @@
+ npm run test:windows-production-uat; if ($LASTEXITCODE -ne 0) { throw 'Windows Production UAT failed.' }
+ npm run test:windows-verification-uat; if ($LASTEXITCODE -ne 0) { throw 'Windows long-path/reparse/package verification UAT failed.' }
+ npm run test:windows-system-resilience-uat; if ($LASTEXITCODE -ne 0) { throw 'Windows system/volume resilience UAT failed.' }
++npm run test:windows-multiroot-uat; if ($LASTEXITCODE -ne 0) { throw 'Windows multi-root UAT failed.' }
+ if ($RunScaleUat) { npm run test:windows-scale-resilience-uat; if ($LASTEXITCODE -ne 0) { throw 'Windows scale resilience UAT failed.' } }
+ npm run build; if ($LASTEXITCODE -ne 0) { throw 'Vite build failed.' }
+ npm run pack:win:dir; if ($LASTEXITCODE -ne 0) { throw 'win-unpacked build failed.' }
+ $workerPath = Join-Path (Get-Location) 'release\win-unpacked\resources\app.asar.unpacked\electron\services\hash-worker.cjs'
+ if (-not (Test-Path $workerPath)) { throw "Packaged worker missing: $workerPath" }
+ node tests/packaged-worker-smoke-v082.cjs $workerPath; if ($LASTEXITCODE -ne 0) { throw 'Packaged Worker smoke test failed.' }
++$packagedExe=(Get-ChildItem 'release\win-unpacked' -Filter '*.exe' -File | Select-Object -First 1).FullName
++if (-not $packagedExe) { throw 'Packaged app executable not found.' }
++node tests/packaged-app-smoke-v084.cjs $packagedExe; if ($LASTEXITCODE -ne 0) { throw 'Packaged application startup smoke failed.' }
+ npm run pack:win; if ($LASTEXITCODE -ne 0) { throw 'Windows NSIS/Portable build failed.' }
+ $artifacts = Get-ChildItem release -File | Where-Object { $_.Extension -in '.exe','.msi','.zip' } | Sort-Object Name
+ if (-not $artifacts) { throw 'Release artifact پیدا نشد.' }
+@@ -48,7 +52,7 @@
+ $rows | ForEach-Object { "$($_.sha256)  $($_.file)" } | Set-Content release\SHA256SUMS.txt -Encoding ascii
+ $lockHash=(Get-FileHash package-lock.json -Algorithm SHA256).Hash.ToLowerInvariant()
+ $manifest=[ordered]@{
+-  schemaVersion='workspace-agent-release-v3';version=$pkg.version;createdAt=(Get-Date).ToUniversalTime().ToString('o');
++  schemaVersion='workspace-agent-release-v4';version=$pkg.version;createdAt=(Get-Date).ToUniversalTime().ToString('o');
+   node=(node -v);npm=(npm -v);packageManager=$pkg.packageManager;packageLockSha256=$lockHash;electron=$pkg.devDependencies.electron;
+   signingRequired=[bool]$RequireSigning;signingConfigured=[bool]($env:CSC_LINK -or $env:WIN_CSC_LINK);systemResilienceUat=$true;scaleUat=[bool]$RunScaleUat;signatures=$signatures;artifacts=$rows
+ }
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/src/App.jsx /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/src/App.jsx
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/src/App.jsx	2026-08-13 09:11:54.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/src/App.jsx	2026-08-13 10:00:44.801084041 +0000
+@@ -3,9 +3,9 @@
+ const api=window.workspaceAgent;
+ const fmt=n=>new Intl.NumberFormat('fa-IR').format(n||0);
+ const bytes=n=>{if(!n)return'۰ B';const u=['B','KB','MB','GB','TB'];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${new Intl.NumberFormat('fa-IR',{maximumFractionDigits:1}).format(v)} ${u[i]}`};
+-const tabs={home:'مرکز فرمان',system:'Windows System',uia:'Windows UI Map',mission:'Agent فارسی',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
++const tabs={home:'مرکز فرمان',system:'Windows System',uia:'Windows UI Map',mission:'Agent فارسی',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+- const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null);
++ const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null);
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -13,9 +13,10 @@
+  const refreshRecovery=async()=>setRecoveries(await api.recoveryList());
+  const refreshJournal=async()=>{setJournalRows(await api.journalList({limit:250}));setJournalStatus(await api.journalVerify())};
+  const refreshWatches=async()=>{setWatches(await api.watchList());setWatchEvents(await api.watchEvents(250));setWatchStatus(await api.watchStatus());setResilience(await api.resilienceStatus())};
++ const refreshCert=async()=>setCertStatus(await api.certStatus());
+  const refreshReviews=async r=>{const target=r||root;if(!target){setReviewItems([]);return}setReviewItems(await api.reviewList(target));};
+  const refreshIndex=async r=>{const target=r||root;if(!target){setIndexStatus(null);setIndexErrors([]);setIndexHealth(null);return}setIndexStatus(await api.indexStatus(target));setIndexErrors(await api.indexErrors(target,100));setIndexHealth(await api.indexHealth(false));};
+- useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
++ useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
+  async function pick(){const p=await api.selectFolder();if(p){setRoot(p);setCycle(null);setHealth(null);setDup(null);setSearchResult(null);setIntel(null);setSimilarImages(null);setSimilarTexts(null);setSelectedReview([]);await refreshSnaps(p);await refreshReviews(p);await refreshIndex(p)}}
+  async function run(type,input={}){const actualRoot=input.root||root;if(!actualRoot&&!['windows-system','windows-ui-map'].includes(type))return;setBusy(true);try{const c=await api.startCycle(type,{root:actualRoot,...input});setCycle(c);if(type==='workspace-health'&&c.result)setHealth(c.result);if((type==='duplicates'||type==='indexed-duplicates')&&c.result)setDup(c.result);if((type==='file-search'||type==='indexed-file-search')&&c.result)setSearchResult(c.result);if(type==='persistent-index-scan'||type==='persistent-index-maintenance')await refreshIndex(actualRoot);if(type==='windows-system'&&c.result)setSystem(c.result);if(type==='windows-ui-map'&&c.result)setUiaMap(c.result);if(type==='workspace-intelligence'&&c.result)setIntel(c.result);if(type==='similar-images'&&c.result)setSimilarImages(c.result);if(type==='similar-texts'&&c.result)setSimilarTexts(c.result);if(type==='managed-zone-audit'&&c.result)setZoneReport(c.result);if(type==='drive-audit'&&c.result)setDriveReport(c.result);if(type==='pdf-intelligence'&&c.result)setPdfReport(c.result);if(type==='review-queue-build'||type==='recommendation-apply')await refreshReviews(actualRoot);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
+  async function startUiaAction(target,action,value=''){setUiaError('');setBusy(true);try{const selector={processId:target.processId,windowName:uiaMap?.focusedWindow?.name||'',windowClassName:uiaMap?.focusedWindow?.className||'',automationId:target.automationId||'',name:target.name||'',className:target.className||'',controlType:target.controlType||'',frameworkId:target.frameworkId||''};const c=await api.startWindowsUiAction({action,selector,value,sensitive:false});if(c?.id){setCycle(c);await refresh();await refreshJournal();return c}setUiaError(c?.message||c?.code||'ساخت Action Preview ناموفق بود.');return c}catch(error){setUiaError(error?.message||'خطای UIA Action')}finally{setBusy(false)}}
+@@ -26,7 +27,7 @@
+  async function auditZone(z){setActiveZone(z);setZoneReport(null);await run('managed-zone-audit',{root:z.root,zoneId:z.id})}
+  const pending=useMemo(()=>reviewItems.filter(x=>x.status==='pending'),[reviewItems]);
+  const rootTabs=['home','mission','health','intelligence','review','zones','drive','index','search','cleanup','files','duplicates','snapshots','automation','watch','pdf'];
+- return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.8.3</span></header>
++ return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.8.4</span></header>
+  {rootTabs.includes(tab)&&<section className="picker"><div><b>Workspace</b><span>{root||'پوشه‌ای انتخاب نشده'}</span></div><button onClick={pick}>انتخاب پوشه</button></section>}
+  {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
+  {tab==='system'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('windows-system')} disabled={busy}>اجرای Windows System Doctor</button><span>Read-only؛ Startup Advisor فقط اولویت Review می‌دهد و Registry/Process را تغییر نمی‌دهد.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{system&&<SystemReport data={system}/>}</>}
+@@ -47,6 +48,7 @@
+  {tab==='recovery'&&<><div className="panel"><div className="panel-title"><div><h3>Crash Recovery Center</h3><p>Transactionهای Write نیمه‌تمام بعد از Restart از روی Source / Staging / Destination طبقه‌بندی می‌شوند. هیچ Recovery خودکار Write نمی‌کند.</p></div><div className="mini-stats"><b>{fmt(recoveries.length)}</b><span>Recoverable</span><b>{journalStatus?.ok?'OK':'Check'}</b><span>Journal Chain</span></div></div><div className="toolbar"><button onClick={async()=>{await refreshRecovery();await refreshJournal()}}>Refresh</button></div>{recoveries.map(tx=><div className="rule" key={tx.id}><div><b>{tx.kind} · {tx.id}</b><small>{tx.status} · {tx.operations.length} عملیات · committed {fmt(tx.recovery.committed)} · staged {fmt(tx.recovery.staged)} · pending {fmt(tx.recovery.pending)}</small><small>{tx.recovery.manualReview?'نیازمند بررسی دستی':`پیشنهاد: ${tx.recovery.recommendation}`}</small></div><div className="actions"><button disabled={!tx.recovery.resumeAllowed} onClick={async()=>{await api.recoveryAct(tx.id,'resume');await refreshRecovery();await refreshJournal()}}>Resume</button><button className="danger" disabled={!tx.recovery.rollbackAllowed} onClick={async()=>{await api.recoveryAct(tx.id,'rollback');await refreshRecovery();await refreshJournal()}}>Rollback</button><button onClick={async()=>{await api.recoveryAct(tx.id,'abandon');await refreshRecovery();await refreshJournal()}}>فقط Archive</button></div></div>)}{!recoveries.length&&<p>Transaction نیمه‌تمامی برای Recovery وجود ندارد.</p>}</div><div className="panel"><h3>Event Journal</h3><p>Hash chain: {journalStatus?.ok?'سالم':'نیازمند بررسی'} · {fmt(journalStatus?.count)} رویداد در فایل فعال</p>{journalRows.slice(0,120).map(e=><div className="file-row" key={`${e.seq}-${e.hash}`}><b>#{fmt(e.seq)} {e.type}</b><span>{e.at} {e.cycleId?`· ${e.cycleId}`:''}</span></div>)}</div></>}
+  {tab==='watch'&&<><div className="panel"><h3>File Watcher — Bounded / Coalesced / Volume-aware</h3><p>Eventهای یک Path با هم coalesce می‌شوند، reconcile سریال است و Backpressure سقف‌دار دارد. هنگام Suspend یا قطع Volume، Watcher fail-safe متوقف می‌شود و Root برای Full Reindex علامت می‌خورد.</p><div className="toolbar"><button className="primary" disabled={!root} onClick={async()=>{await api.watchAdd(root);await refreshWatches()}}>Watch همین Workspace</button><button onClick={refreshWatches}>Refresh Events</button><button onClick={async()=>{setResilience(await api.resilienceProbe());await refreshWatches()}}>Probe Storage</button></div>{watchStatus&&<div className="mini-stats"><b>{fmt(watchStatus.pending)}</b><span>Pending</span><b>{fmt(watchStatus.coalesced)}</b><span>Coalesced</span><b>{fmt(watchStatus.droppedDelivery+watchStatus.droppedPending)}</b><span>Backpressure drops</span><b>{watchStatus.suspended?'Paused':'Active'}</b><span>Power state</span></div>}{resilience&&<div className="panel note"><b>Root / Volume Resilience</b>{(resilience.roots||[]).map((r,i)=><div className="file-row" key={`${r.root}-${i}`}><b>{r.status}</b><span>{r.root}{r.driveLetter?` · ${r.driveLetter}:`:''}{r.driveType?` · ${r.driveType}`:''}{r.identityChanged?' · VOLUME ID CHANGED':''}{r.rebindCandidate?.root?` · candidate: ${r.rebindCandidate.root}`:''}</span></div>)}{!(resilience.roots||[]).length&&<p>هنوز Root مانیتورشده‌ای وجود ندارد.</p>}</div>}{watchStatus?.needsFullRescan&&<div className="panel note"><b>Index freshness warning</b><p>برای {fmt(watchStatus.dirtyRoots?.length)} Root بخشی از Watch events از دست رفته/ناموفق بوده است. یک Full Persistent Reindex اجرا کن تا Dirty flag بعد از Commit پاک شود.</p></div>}{watches.map(w=><div className="rule" key={w.id}><div><b>{w.title}</b><small>{w.root}</small></div><div className="actions"><button className="danger" onClick={async()=>{await api.watchRemove(w.id);await refreshWatches()}}>Stop Watch</button></div></div>)}</div><div className="panel"><h3>آخرین File Events</h3>{watchEvents.map(e=><div className="file-row" key={e.id}><b>{e.eventType}</b><span>{e.path}</span></div>)}{!watchEvents.length&&<p>هنوز Event ثبت نشده است.</p>}</div></>}
+  {tab==='pdf'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('pdf-intelligence')} disabled={!root||busy}>تحلیل PDFهای Workspace</button><span>Read-only · بدون OCR · Encodingهای پیچیده ممکن است متن کامل ندهند.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{pdfReport&&<div className="panel"><h3>PDF Intelligence</h3><div className="stats"><div><b>{fmt(pdfReport.pdfsFound)}</b><span>PDF found</span></div><div><b>{fmt(pdfReport.processed)}</b><span>Processed</span></div><div><b>{fmt(pdfReport.errorsTotal)}</b><span>Errors</span></div></div>{pdfReport.rows.map(x=><div className="recommend" key={x.path}><div><button className="linkish" onClick={()=>api.showItem(x.path)}>{x.metadata?.title||x.path}</button><small>{fmt(x.pages)} صفحه · {bytes(x.size)} · {x.encrypted?'Encrypted':'Readable base'}</small></div><p>{x.textPreview||'متن پایه استخراج نشد.'}</p><small>{(x.limitations||[]).join(' · ')}</small></div>)}</div>}</>}
++ {tab==='cert'&&<div className="health-grid"><div className="panel wide"><div className="panel-title"><div><h3>Runtime Certification Status</h3><p>این صفحه وضعیت Runtime را نشان می‌دهد؛ Windows Certification رسمی فقط از Harness و UAT واقعی صادر می‌شود.</p></div><button onClick={refreshCert}>Refresh</button></div>{certStatus&&<><div className="mini-stats"><b>{certStatus.lifecycle?.cleanExit===false?'ACTIVE':'-'}</b><span>Session</span><b>{certStatus.resourcePressure?.state||'-'}</b><span>Pressure</span><b>{certStatus.indexHealth?.ok?'OK':'CHECK'}</b><span>SQLite</span><b>{certStatus.journal?.ok?'OK':'CHECK'}</b><span>Journal</span></div><div className="meter"><span>Platform</span><b>{certStatus.platform} / {certStatus.arch}</b></div><div className="meter"><span>Node / Electron</span><b>{certStatus.node} / {certStatus.electron||'-'}</b></div><div className="meter"><span>Session ID</span><b>{certStatus.lifecycle?.sessionId||'-'}</b></div><div className="meter"><span>Last heartbeat</span><b>{certStatus.lifecycle?.lastHeartbeatAt||'-'}</b></div><div className="meter"><span>Free memory</span><b>{certStatus.resourcePressure?`${Math.round((certStatus.resourcePressure.freeMemoryRatio||0)*100)}%`:'-'}</b></div><div className="meter"><span>Event-loop p95</span><b>{certStatus.resourcePressure?`${Math.round(certStatus.resourcePressure.eventLoopP95Ms||0)} ms`:'-'}</b></div><div className="meter"><span>Root states</span><b>{fmt(certStatus.rootResilience?.roots?.length||0)}</b></div></>}</div><div className="panel"><h3>Certification Boundary</h3><p>PASS این صفحه فقط Runtime health است؛ Installer/Portable، Authenticode، NTFS/removable drive، shutdown/power-loss و packaged-worker باید با <code>npm run certify:windows</code> روی Windows واقعی تأیید شوند.</p></div></div>}
+  {tab==='settings'&&<div className="panel"><h3>Backup / Settings Portability</h3><p>Export شامل Automation Ruleها، Managed Zoneها و Watch Rootهاست؛ فایل‌های Workspace و Secretها داخل Bundle قرار نمی‌گیرند.</p><div className="actions"><button className="primary" onClick={async()=>{const r=await api.configExport();if(r?.ok)setConfigPreview({mode:'export',...r})}}>Export Settings</button><button onClick={async()=>{const r=await api.configImportPreview();if(r?.ok)setConfigPreview({mode:'import',...r})}}>Import Preview</button>{configPreview?.mode==='import'&&<button className="primary" onClick={async()=>{const r=await api.configImportApply(configPreview.token);setConfigPreview({mode:'applied',...r});await refreshRules();await refreshZones();await refreshWatches()}}>Apply Import</button>}</div>{configPreview&&<pre className="preview-box">{JSON.stringify(configPreview,null,2)}</pre>}</div>}
+  {tab==='cycles'&&<div className="panel"><h3>آخرین چرخه‌ها</h3>{cycles.map(c=><button className="history" key={c.id} onClick={()=>setCycle(c)}><span><b>{c.type}</b><small>{c.id}</small></span><em>{c.status}</em></button>)}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></div>}
+  </main></div>;
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/fixtures/lifecycle-crash-child-v084.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/fixtures/lifecycle-crash-child-v084.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/fixtures/lifecycle-crash-child-v084.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/fixtures/lifecycle-crash-child-v084.cjs	2026-08-13 10:01:23.426254377 +0000
+@@ -0,0 +1,8 @@
++const fs=require('fs');
++const {LifecycleState}=require('../../electron/services/lifecycle-state.cjs');
++const dir=process.argv[2],ready=process.argv[3];
++if(!dir||!ready)process.exit(2);
++const state=new LifecycleState(dir,{heartbeatMs:5000});
++state.beginSession({version:'test-child'});
++fs.writeFileSync(ready,'ready','utf8');
++setInterval(()=>{},1000);
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/lifecycle-resource-v084.test.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/lifecycle-resource-v084.test.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/lifecycle-resource-v084.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/lifecycle-resource-v084.test.cjs	2026-08-13 10:01:23.434254377 +0000
+@@ -0,0 +1,32 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {spawn}=require('child_process');
++const {LifecycleState}=require('../electron/services/lifecycle-state.cjs');
++const {ResourcePressureGuard}=require('../electron/services/resource-pressure-guard.cjs');
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-v084-life-'));
++function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
++async function waitFile(file,timeout=5000){const start=Date.now();while(Date.now()-start<timeout){if(fs.existsSync(file))return;await sleep(20);}throw new Error('ready timeout');}
++(async()=>{
++  const ready=path.join(tmp,'ready');
++  const child=spawn(process.execPath,[path.join(__dirname,'fixtures','lifecycle-crash-child-v084.cjs'),tmp,ready],{stdio:'ignore'});
++  await waitFile(ready);child.kill('SIGKILL');await new Promise(r=>child.once('exit',r));
++  const afterCrash=new LifecycleState(tmp,{heartbeatMs:5000});
++  const start=afterCrash.beginSession({version:'test-parent'});
++  assert.equal(start.previousUnclean,true,'forced process death must be detected as unclean');
++  afterCrash.markCleanExit('test-clean');
++  const next=new LifecycleState(tmp,{heartbeatMs:5000});
++  const cleanStart=next.beginSession({version:'test-next'});
++  assert.equal(cleanStart.previousUnclean,false,'clean exit must not be reported as unclean');
++  next.markCleanExit('done');
++
++  let sample={freeMemoryRatio:.5,freeMemoryBytes:500,totalMemoryBytes:1000,rssBytes:100,heapUsedBytes:50,eventLoopP95Ms:10,processCpuSharePercent:5,cpuCores:8};
++  const guard=new ResourcePressureGuard({sampleProvider:()=>({...sample})});
++  assert.equal(guard.sample().state,'normal');assert.equal(guard.recommendConcurrency(6),6);assert.equal(guard.tuneChunk({files:40000,dirs:2000,wallTimeMs:20000}).files,40000);
++  sample={...sample,freeMemoryRatio:.08,eventLoopP95Ms:200,processCpuSharePercent:65};
++  assert.equal(guard.sample().state,'warn');assert.equal(guard.recommendConcurrency(6),2);assert.equal(guard.tuneChunk({files:40000,dirs:2000,wallTimeMs:20000}).files,20000);
++  sample={...sample,freeMemoryRatio:.03,eventLoopP95Ms:600,processCpuSharePercent:95};
++  assert.equal(guard.sample().state,'critical');assert.equal(guard.recommendConcurrency(6),1);const tuned=guard.tuneChunk({files:40000,dirs:2000,wallTimeMs:20000});assert.equal(tuned.files,10000);assert.equal(tuned.dirs,500);assert.equal(tuned.wallTimeMs,5000);
++  console.log('PASS lifecycle + resource pressure v0.8.4');
++})().catch(e=>{console.error(e);process.exit(1)}).finally(()=>{try{fs.rmSync(tmp,{recursive:true,force:true})}catch{}});
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/multi-index-isolation-v084.test.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/multi-index-isolation-v084.test.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/multi-index-isolation-v084.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/multi-index-isolation-v084.test.cjs	2026-08-13 10:04:24.302254377 +0000
+@@ -0,0 +1,7 @@
++const assert=require('assert');
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {PersistentFileIndex}=require('../electron/services/persistent-file-index.cjs');
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-v084-multi-index-')),a=path.join(tmp,'A'),b=path.join(tmp,'B'),data=path.join(tmp,'data');
++(async()=>{try{fs.mkdirSync(a);fs.mkdirSync(b);for(let i=0;i<120;i++){fs.writeFileSync(path.join(a,`a-${i}.txt`),`A-${i}`);fs.writeFileSync(path.join(b,`b-${i}.txt`),`B-${i}`)}const index=new PersistentFileIndex(data);const [sa,sb]=await Promise.all([index.scan(a,{maxWallTimeMs:30000}),index.scan(b,{maxWallTimeMs:30000})]);assert.equal(sa.status,'completed');assert.equal(sb.status,'completed');assert.equal(sa.files,120);assert.equal(sb.files,120);index.setRootRuntime(a,{available:false,status:'unavailable',identityKey:'path:A'});const pa=await index.scan(a,{resume:false,maxWallTimeMs:2000});assert.equal(pa.status,'paused');assert.match(String(pa.pauseReason),/ROOT_UNAVAILABLE/);const stableB=await index.status(b);assert.equal(stableB.status,'completed');assert.equal(stableB.files,120);const q=index.search({root:b,query:'b-11',limit:50});assert.ok(q.total>0);assert.equal(index.health({deep:true}).ok,true);index.close();console.log('PASS multi-index isolation v0.8.4');}finally{fs.rmSync(tmp,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/multi-root-isolation-v084.test.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/multi-root-isolation-v084.test.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/multi-root-isolation-v084.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/multi-root-isolation-v084.test.cjs	2026-08-13 10:02:05.017161454 +0000
+@@ -0,0 +1,18 @@
++const assert=require('assert');
++const path=require('path');
++const {RootResilienceService}=require('../electron/services/root-resilience-service.cjs');
++class FakeWatcher{
++ constructor(roots){this.rows=roots.map((root,i)=>({id:`w${i}`,root,enabled:true}));this.blocked=new Map();this.started=[];this.dirty=[];}
++ configs(){return this.rows} blockRoot(root,reason){this.blocked.set(root,reason)} unblockRoot(root){return this.blocked.delete(root)} startRoot(root){this.started.push(root);return 1} stopRoot(){return 1} _markDirty(root,reason){this.dirty.push({root,reason})} clearDirty(){} isRootBlocked(root){return this.blocked.has(root)}
++}
++(async()=>{
++ const A=path.resolve('/tmp/wa-drive-A'),B=path.resolve('/tmp/wa-drive-B');const watcher=new FakeWatcher([A,B]);const runtime=[];const index={listRoots:()=>[],setRootRuntime:(root,state)=>runtime.push({root,state}),rootRuntime:()=>null};
++ const identities={A:{available:true,identityKey:'volume:A',volume:{uniqueId:'A'},driveLetter:'E'},B:{available:true,identityKey:'volume:B',volume:{uniqueId:'B'},driveLetter:'F'}};const which=root=>String(root).toLowerCase().includes('drive-a')?'A':'B';
++ const svc=new RootResilienceService({watcherService:watcher,index,platform:'win32',probe:async root=>({...identities[which(root)]}),locate:async()=>({found:false}),intervalMs:1000,deepIdentityIntervalMs:1000});
++ await svc.probeNow({forceIdentity:true});assert.equal(svc.status().roots.length,2);assert.equal(watcher.blocked.size,0);
++ identities.A={available:true,identityKey:'volume:C',volume:{uniqueId:'C'},driveLetter:'E'};await svc.probeRoot(A,{forceIdentity:true});
++ assert.ok([...watcher.blocked.keys()].some(x=>String(x).toLowerCase().includes('drive-a')),'changed root A must be blocked');assert.ok(![...watcher.blocked.keys()].some(x=>String(x).toLowerCase().includes('drive-b')),'root B must stay unblocked');
++ const b=await svc.probeRoot(B,{forceIdentity:true});assert.equal(b.identityChanged,false);assert.equal(b.available,true);
++ identities.A={available:false,identityKey:'',volume:null,driveLetter:'E'};await svc.probeRoot(A,{forceIdentity:true});const status=svc.status();const br=status.roots.find(x=>String(x.root).toLowerCase().includes('drive-b'));assert.equal(br.available,true);assert.notEqual(br.status,'identity-changed');
++ console.log('PASS multi-root isolation v0.8.4');
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/packaged-app-smoke-v084.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/packaged-app-smoke-v084.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/packaged-app-smoke-v084.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/packaged-app-smoke-v084.cjs	2026-08-13 10:02:23.942254377 +0000
+@@ -0,0 +1,10 @@
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const {spawn}=require('child_process');
++if(process.platform!=='win32'){console.log('SKIP packaged app smoke v0.8.4 (Windows only)');process.exit(0)}
++const exe=process.argv[2];if(!exe||!fs.existsSync(exe)){console.error('PACKAGED_EXE_REQUIRED');process.exit(2)}
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'wa-cert-smoke-')),out=path.join(tmp,'smoke.json'),userData=path.join(tmp,'userdata');
++const child=spawn(exe,[`--cert-smoke-output=${out}`,`--cert-user-data=${userData}`],{stdio:'ignore',windowsHide:true});
++const timer=setTimeout(()=>{try{child.kill()}catch{};console.error('PACKAGED_APP_SMOKE_TIMEOUT');process.exit(3)},45000);
++child.on('exit',(code)=>{clearTimeout(timer);try{if(code!==0)throw new Error(`PACKAGED_APP_EXIT_${code}`);const r=JSON.parse(fs.readFileSync(out,'utf8'));if(!r.ok)throw new Error('PACKAGED_APP_REPORT_NOT_OK');if(r.platform!=='win32')throw new Error('PACKAGED_APP_WRONG_PLATFORM');if(!r.journal?.ok)throw new Error('PACKAGED_APP_JOURNAL_FAILED');if(r.indexHealth&&!r.indexHealth.ok)throw new Error('PACKAGED_APP_SQLITE_HEALTH_FAILED');console.log(`PASS packaged app smoke v0.8.4 ${r.appVersion} Electron ${r.electron}`);fs.rmSync(tmp,{recursive:true,force:true});process.exit(0);}catch(error){console.error(error.message);try{console.error(fs.readFileSync(out,'utf8'))}catch{}process.exit(4)}});
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/resource-cycle-integration-v084.test.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/resource-cycle-integration-v084.test.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/resource-cycle-integration-v084.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/resource-cycle-integration-v084.test.cjs	2026-08-13 10:04:41.418254377 +0000
+@@ -0,0 +1,3 @@
++const assert=require('assert');
++const {persistentIndexScanCycle,indexedDuplicatesCycle}=require('../electron/services/persistent-index-cycles.cjs');
++(async()=>{let scanOptions=null;const index={scan:async(root,opts)=>{scanOptions=opts;return{root,status:'completed',files:10,dirsSeen:2,queue:0,generation:1,bytes:100}},markFailed(){},status:async()=>({status:'completed'}),duplicateCandidates:()=>[],filesBySize:()=>[],getCachedHash:()=>null,setCachedHash(){}};const guard={tuneChunk:()=>({state:'critical',factor:.25,files:2500,dirs:250,wallTimeMs:6000}),recommendConcurrency:()=>1,snapshot:()=>({state:'critical'})};const scan=persistentIndexScanCycle({index,resourceGuard:guard});const sr=await scan.next({iteration:1,input:{root:'/x',chunkFiles:10000,chunkDirs:1000,chunkWallTimeMs:24000},evidence:[],steps:[]});assert.equal(scanOptions.maxFilesSession,2500);assert.equal(scanOptions.maxDirsSession,250);assert.equal(scanOptions.maxWallTimeMs,6000);assert.equal(sr.evidence.at(-1).resourcePressure,'critical');const dup=indexedDuplicatesCycle({index,resourceGuard:guard});const dr=await dup.next({iteration:1,input:{root:'/x',concurrency:7},evidence:[],steps:[]});assert.equal(dr.result.requestedConcurrency,7);assert.equal(dr.result.effectiveConcurrency,1);assert.equal(dr.result.resourcePressure.state,'critical');console.log('PASS resource-aware cycles v0.8.4')})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v0.8.4.txt' '--exclude=FILE_INVENTORY_v0.8.4.txt' /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/windows-multiroot-v084.uat.cjs /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/windows-multiroot-v084.uat.cjs
+--- /mnt/data/wwa083/windows-workspace-agent-v0.8.3-system-resilience/tests/windows-multiroot-v084.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.8.4-certification-foundation/tests/windows-multiroot-v084.uat.cjs	2026-08-13 10:03:16.174254377 +0000
+@@ -0,0 +1,10 @@
++const fs=require('fs');
++const os=require('os');
++const path=require('path');
++const assert=require('assert');
++const {PersistentFileIndex}=require('../electron/services/persistent-file-index.cjs');
++if(process.platform!=='win32'){console.log('SKIP windows multi-root UAT v0.8.4 (Windows only)');process.exit(0)}
++const baseA=process.env.WA_CERT_ROOT_A||'',baseB=process.env.WA_CERT_ROOT_B||'';
++if(!baseA||!baseB){console.log('SKIP windows multi-root UAT v0.8.4 (set WA_CERT_ROOT_A and WA_CERT_ROOT_B to two writable test locations, ideally separate volumes)');process.exit(0)}
++const id=`wa-cert-${Date.now()}`,a=path.join(baseA,id+'-A'),b=path.join(baseB,id+'-B'),db=fs.mkdtempSync(path.join(os.tmpdir(),'wa-multi-index-'));
++(async()=>{try{fs.mkdirSync(a,{recursive:true});fs.mkdirSync(b,{recursive:true});for(let i=0;i<300;i++){fs.writeFileSync(path.join(a,`a-${i}.txt`),`A-${i}`);fs.writeFileSync(path.join(b,`b-${i}.txt`),`B-${i}`)}const index=new PersistentFileIndex(db);await Promise.all([index.scan(a,{maxWallTimeMs:60000}),index.scan(b,{maxWallTimeMs:60000})]);const sa=await index.status(a),sb=await index.status(b);assert.equal(sa.status,'completed');assert.equal(sb.status,'completed');assert.equal(sa.files,300);assert.equal(sb.files,300);index.setRootRuntime(a,{available:false,status:'unavailable',identityKey:'volume:test-A'});const paused=await index.scan(a,{resume:false,maxWallTimeMs:3000});assert.equal(paused.status,'paused');const stillB=await index.status(b);assert.equal(stillB.status,'completed');assert.equal(stillB.files,300);const health=index.health({deep:true});assert.equal(health.ok,true);index.close();console.log('PASS windows multi-root UAT v0.8.4');}finally{try{fs.rmSync(a,{recursive:true,force:true})}catch{}try{fs.rmSync(b,{recursive:true,force:true})}catch{}try{fs.rmSync(db,{recursive:true,force:true})}catch{}}})().catch(e=>{console.error(e);process.exit(1)});

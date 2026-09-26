@@ -1,0 +1,17 @@
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const {detectWindowsFamily,validatePeerPair,MANUAL_KEYS}=require('../scripts/rc1-certification-envelope.cjs');
+assert.equal(detectWindowsFamily({windowsFamily:'Windows10'}),'Windows10');
+assert.equal(detectWindowsFamily({os:{caption:'Microsoft Windows 11 Pro',build:'26100'}}),'Windows11');
+const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit21',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
+const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit21',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock',releaseIdentitySha256:'rid'};
+let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit21'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit21'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
+pair=validatePeerPair(current,{...peer,releaseIdentitySha256:'other'},{fingerprint:'abc',lockSha:'lock',releaseIdentitySha256:'rid',version:'1.0.0-rc1',toolingRevision:'cert-kit21'});assert(!pair.ok&&pair.reasons.includes('PEER_RELEASE_IDENTITY_MISMATCH'));
+assert(MANUAL_KEYS.includes('realUpgradeFrom0_9_8'),'real packaged upgrade evidence must be required');
+const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');
+for(const token of ['PeerWindowsReport','--require-dual-windows','$RequiredScaleMatrix','STABLE_POLICY_SKIP_SCALE_FORBIDDEN','yyyyMMdd-HHmmss-fff','windows-runs'])assert(orchestrator.includes(token),`missing RC1 matrix invariant: ${token}`);
+const cert=fs.readFileSync(path.join(root,'scripts','windows-certification-v097.ps1'),'utf8');
+assert(cert.includes('$RequiredScaleMatrix'),'RC1 must run the immutable stable-policy scale matrix');assert(/Remove-Item release -Recurse -Force/.test(cert),'release directory must be reset before packaging');assert(cert.includes('packageLockSha256'),'certification report must bind the lockfile hash');assert(cert.includes('releaseIdentitySha256'),'certification report must bind release identity');assert(cert.includes("schemaVersion='workspace-agent-windows-certification-v5'"),'certification report schema v5 required');assert(cert.includes('evidenceBundle=$evidenceBundle'),'certification report must bind evidence bundle');assert(cert.includes("WA_CERT_RESULT=(Join-Path $out 'windows-native-edge-rc1-uat.json')"),'native UAT must emit structured evidence');
+console.log('rc1-release-matrix-contract.test.cjs PASS',{dualWindows:true,scaleMatrix:['100k','1m'],upgradeEvidence:true,evidenceBundle:true});

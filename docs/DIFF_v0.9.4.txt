@@ -1,0 +1,1133 @@
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/README_FA.md /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/README_FA.md
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/README_FA.md	2026-08-13 17:50:42.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/README_FA.md	2026-08-13 19:27:10.801790091 +0000
+@@ -1,26 +1,53 @@
+-# Workspace Agent v0.9.3 — Production Grounding Hardening
++# Workspace Agent v0.9.4 — File Explorer Skill Pack
+ 
+-نسخه v0.9.3 لایه Intelligent Grounding نسخه 0.9.2 را برای شرایط واقعی‌تر Windows سخت‌گیرانه‌تر می‌کند: چند Surface هم‌زمان، Dialog/Menu/Popup، کنترل‌های هم‌نام، ScrollItem، چند مانیتور و Screenshot mapping مطمئن، و Recovery قبل از Preview.
++نسخه v0.9.4 اولین Skill Pack کاربردی برای **Windows File Explorer** را روی Safety Core و Grounding نسخه‌های قبلی اضافه می‌کند. هدف این نسخه این نیست که AI آزادانه روی Explorer کلیک کند؛ عملیات File Explorer به مسیرهای deterministic و قابل‌بررسی تقسیم شده‌اند.
+ 
+-## جدید در v0.9.3
++## قابلیت‌های File Explorer
+ 
+-- UIA inspection چند-surface برای پنجره اصلی، dialog و popupهای همان Process.
+-- Ancestor trail و Surface context برای تفکیک کنترل‌های هم‌نام.
+-- Context-aware semantic ranking با AutomationId uniqueness و modal/menu hints.
+-- `scrollIntoView` فقط برای کنترل‌هایی که `ScrollItemPattern` دارند؛ بدون coordinate click.
+-- Fresh re-grounding درست قبل از Preview Action.
+-- Recovery یکتا برای Target جابه‌جا‌شده؛ ambiguity به‌صورت fail-closed Block می‌شود.
+-- Adaptive Vision Crop برای exact-window، monitor و virtual-desktop.
+-- Screenshot mapping نامطمئن با `VISION_CROP_MAPPING_UNTRUSTED` رد می‌شود.
+-- پشتیبانی از مختصات منفی مانیتور دوم/چپ در crop mapping.
+-- Vision همچنان فقط Candidateهای UIA را corroborate می‌کند و Target جدید نمی‌سازد.
++### Read / UI-local
++- `Properties`: خواندن metadata با `lstat` بدون دنبال‌کردن symlink/junction.
++- `Search`: استفاده از Persistent SQLite Index در صورت آماده‌بودن؛ fallback به bounded scan.
++- `Navigate`: بازکردن پوشه با Electron Shell فقط از مسیر تعاملی.
++- `Reveal / Select`: نمایش آیتم در File Explorer با `showItemInFolder` فقط از مسیر تعاملی.
++
++### Controlled Write
++- `New Folder`
++- `Copy File`
++- `Move File/Folder`
++- `Rename File/Folder`
++
++Writeها مسیر زیر را دارند:
++
++`Resolve relative path → Reparse guard → Preview → Confirmation → Fresh preflight → Execute → Verify → Undo`
+ 
+ ## Safety Boundary
+ 
+-AI یا Renderer همچنان coordinate، selector آزاد، shell یا global keyboard دریافت نمی‌کند. مسیر Action همچنان Preview → Confirmation → Target Pin → Execute → Verify است. v0.9.3 قبل از ساخت Preview یک UIA refresh مستقل هم انجام می‌دهد.
++- File Explorer Writeها `interactiveOnly` هستند و Local AI / Mission نمی‌تواند مستقیماً آن‌ها را اجرا کند.
++- Generic `wa:start-cycle` برای چهار Write جدید با `RESTRICTED_EXPLORER_WRITE_ENTRYPOINT` بسته است.
++- فقط IPC اختصاصی `wa:start-explorer-write` می‌تواند Preview بسازد.
++- تمام مسیرهای Write باید نسبت به Workspace باشند؛ absolute path و `..` escape مسدود است.
++- Write از داخل symlink/junction عبور نمی‌کند.
++- مقصد موجود به‌صورت fail-closed Block می‌شود؛ overwrite خاموش است.
++- Copy recursive پوشه در v0.9.4 عمداً غیرفعال است.
++- پس از Write تأییدشده، Persistent Index به‌صورت مستقیم برای Source/Destination reconcile می‌شود؛ fs.watch تنها منبع همگام‌سازی نیست.
++- Copy فایل با staging + source recheck + SHA-256 verify انجام می‌شود.
++- Undo Copy فقط اگر Hash مقصد هنوز با فایل ایجادشده برابر باشد انجام می‌شود؛ اگر کاربر مقصد را ویرایش کرده باشد Undo متوقف می‌شود.
++- Undo New Folder فقط برای پوشه خالی انجام می‌شود.
++
++## Recovery
++
++Recovery Center اکنون transaction نوع `explorer-copy-file` را می‌شناسد. در Copy، منبع هرگز به‌عنوان Move تفسیر نمی‌شود:
++- source only → Resume می‌تواند stage و commit کند.
++- source + stage → Resume فقط stage را commit می‌کند.
++- source + destination → Copy committed محسوب می‌شود.
++- Rollback مقصد/Stage کپی را حذف می‌کند، نه Source را.
++
++Move/Rename از transaction/recovery rename-based موجود استفاده می‌کنند و directory transaction نیز با metadata نوع پوشه تشخیص داده می‌شود.
+ 
+ ## Validation
+ 
+-`npm run check` شامل تمام Regressionهای قبلی و تست‌های جدید Grounding است. Windows UAT واقعی در `tests/windows-production-grounding-v093.uat.cjs` قرار دارد و روی Runtime غیر-Windows به‌درستی SKIP می‌شود.
++- تمام Regressionهای v0.1 تا v0.9.3 PASS هستند.
++- `tests/file-explorer-skill-pack-v094.test.cjs` مسیر، symlink، Copy SHA-256، Move/Undo، Rename، New Folder، Confirmation و Copy Recovery را تست می‌کند.
++- `tests/windows-file-explorer-v094.uat.cjs` برای Windows واقعی، Unicode/Emoji، long path، junction و Write/Undo آماده است.
+ 
+-جزئیات: `docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md`.
++جزئیات معماری: `docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md`.
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/CHANGELOG_v0.9.4_FA.md /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/CHANGELOG_v0.9.4_FA.md
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/CHANGELOG_v0.9.4_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/CHANGELOG_v0.9.4_FA.md	2026-08-13 19:25:12.774169982 +0000
+@@ -0,0 +1,23 @@
++# Changelog v0.9.4
++
++## Added
++- File Explorer Skill Pack با 8 Skill جدید.
++- `file-explorer-service.cjs` برای path policy، properties، search و write plan/execution/verify/undo.
++- `file-explorer-cycles.cjs` برای Read/UI-local/Write cycleها.
++- File Explorer tab در UI.
++- IPC اختصاصی `wa:start-explorer-write`.
++- Copy Recovery semantics مستقل از Move.
++- Windows File Explorer UAT.
++
++## Safety
++- چهار Write جدید `interactiveOnly` و Confirmation-required هستند.
++- Generic cycle entrypoint برای Explorer Write بسته شد.
++- Workspace-relative only + absolute/escape block.
++- symlink/junction traversal guard برای Write.
++- overwrite خاموش.
++- Copy directory recursive deferred.
++- Copy SHA-256 verification و hash-protected undo.
++- Undo folder only if empty.
++
++## Compatibility
++تمام Regressionهای قبلی بدون تغییر رفتار pass می‌شوند.
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/DIFF_v0.9.4.txt /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/DIFF_v0.9.4.txt
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/DIFF_v0.9.4.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/DIFF_v0.9.4.txt	2026-08-13 19:28:40.110683530 +0000
+@@ -0,0 +1,100 @@
++diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/README_FA.md /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/README_FA.md
++--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/README_FA.md	2026-08-13 17:50:42.000000000 +0000
+++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/README_FA.md	2026-08-13 19:27:10.801790091 +0000
++@@ -1,26 +1,53 @@
++-# Workspace Agent v0.9.3 — Production Grounding Hardening
+++# Workspace Agent v0.9.4 — File Explorer Skill Pack
++ 
++-نسخه v0.9.3 لایه Intelligent Grounding نسخه 0.9.2 را برای شرایط واقعی‌تر Windows سخت‌گیرانه‌تر می‌کند: چند Surface هم‌زمان، Dialog/Menu/Popup، کنترل‌های هم‌نام، ScrollItem، چند مانیتور و Screenshot mapping مطمئن، و Recovery قبل از Preview.
+++نسخه v0.9.4 اولین Skill Pack کاربردی برای **Windows File Explorer** را روی Safety Core و Grounding نسخه‌های قبلی اضافه می‌کند. هدف این نسخه این نیست که AI آزادانه روی Explorer کلیک کند؛ عملیات File Explorer به مسیرهای deterministic و قابل‌بررسی تقسیم شده‌اند.
++ 
++-## جدید در v0.9.3
+++## قابلیت‌های File Explorer
++ 
++-- UIA inspection چند-surface برای پنجره اصلی، dialog و popupهای همان Process.
++-- Ancestor trail و Surface context برای تفکیک کنترل‌های هم‌نام.
++-- Context-aware semantic ranking با AutomationId uniqueness و modal/menu hints.
++-- `scrollIntoView` فقط برای کنترل‌هایی که `ScrollItemPattern` دارند؛ بدون coordinate click.
++-- Fresh re-grounding درست قبل از Preview Action.
++-- Recovery یکتا برای Target جابه‌جا‌شده؛ ambiguity به‌صورت fail-closed Block می‌شود.
++-- Adaptive Vision Crop برای exact-window، monitor و virtual-desktop.
++-- Screenshot mapping نامطمئن با `VISION_CROP_MAPPING_UNTRUSTED` رد می‌شود.
++-- پشتیبانی از مختصات منفی مانیتور دوم/چپ در crop mapping.
++-- Vision همچنان فقط Candidateهای UIA را corroborate می‌کند و Target جدید نمی‌سازد.
+++### Read / UI-local
+++- `Properties`: خواندن metadata با `lstat` بدون دنبال‌کردن symlink/junction.
+++- `Search`: استفاده از Persistent SQLite Index در صورت آماده‌بودن؛ fallback به bounded scan.
+++- `Navigate`: بازکردن پوشه با Electron Shell فقط از مسیر تعاملی.
+++- `Reveal / Select`: نمایش آیتم در File Explorer با `showItemInFolder` فقط از مسیر تعاملی.
+++
+++### Controlled Write
+++- `New Folder`
+++- `Copy File`
+++- `Move File/Folder`
+++- `Rename File/Folder`
+++
+++Writeها مسیر زیر را دارند:
+++
+++`Resolve relative path → Reparse guard → Preview → Confirmation → Fresh preflight → Execute → Verify → Undo`
++ 
++ ## Safety Boundary
++ 
++-AI یا Renderer همچنان coordinate، selector آزاد، shell یا global keyboard دریافت نمی‌کند. مسیر Action همچنان Preview → Confirmation → Target Pin → Execute → Verify است. v0.9.3 قبل از ساخت Preview یک UIA refresh مستقل هم انجام می‌دهد.
+++- File Explorer Writeها `interactiveOnly` هستند و Local AI / Mission نمی‌تواند مستقیماً آن‌ها را اجرا کند.
+++- Generic `wa:start-cycle` برای چهار Write جدید با `RESTRICTED_EXPLORER_WRITE_ENTRYPOINT` بسته است.
+++- فقط IPC اختصاصی `wa:start-explorer-write` می‌تواند Preview بسازد.
+++- تمام مسیرهای Write باید نسبت به Workspace باشند؛ absolute path و `..` escape مسدود است.
+++- Write از داخل symlink/junction عبور نمی‌کند.
+++- مقصد موجود به‌صورت fail-closed Block می‌شود؛ overwrite خاموش است.
+++- Copy recursive پوشه در v0.9.4 عمداً غیرفعال است.
+++- پس از Write تأییدشده، Persistent Index به‌صورت مستقیم برای Source/Destination reconcile می‌شود؛ fs.watch تنها منبع همگام‌سازی نیست.
+++- Copy فایل با staging + source recheck + SHA-256 verify انجام می‌شود.
+++- Undo Copy فقط اگر Hash مقصد هنوز با فایل ایجادشده برابر باشد انجام می‌شود؛ اگر کاربر مقصد را ویرایش کرده باشد Undo متوقف می‌شود.
+++- Undo New Folder فقط برای پوشه خالی انجام می‌شود.
+++
+++## Recovery
+++
+++Recovery Center اکنون transaction نوع `explorer-copy-file` را می‌شناسد. در Copy، منبع هرگز به‌عنوان Move تفسیر نمی‌شود:
+++- source only → Resume می‌تواند stage و commit کند.
+++- source + stage → Resume فقط stage را commit می‌کند.
+++- source + destination → Copy committed محسوب می‌شود.
+++- Rollback مقصد/Stage کپی را حذف می‌کند، نه Source را.
+++
+++Move/Rename از transaction/recovery rename-based موجود استفاده می‌کنند و directory transaction نیز با metadata نوع پوشه تشخیص داده می‌شود.
++ 
++ ## Validation
++ 
++-`npm run check` شامل تمام Regressionهای قبلی و تست‌های جدید Grounding است. Windows UAT واقعی در `tests/windows-production-grounding-v093.uat.cjs` قرار دارد و روی Runtime غیر-Windows به‌درستی SKIP می‌شود.
+++- تمام Regressionهای v0.1 تا v0.9.3 PASS هستند.
+++- `tests/file-explorer-skill-pack-v094.test.cjs` مسیر، symlink، Copy SHA-256، Move/Undo، Rename، New Folder، Confirmation و Copy Recovery را تست می‌کند.
+++- `tests/windows-file-explorer-v094.uat.cjs` برای Windows واقعی، Unicode/Emoji، long path، junction و Write/Undo آماده است.
++ 
++-جزئیات: `docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md`.
+++جزئیات معماری: `docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md`.
++diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/CHANGELOG_v0.9.4_FA.md /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/CHANGELOG_v0.9.4_FA.md
++--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/CHANGELOG_v0.9.4_FA.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/CHANGELOG_v0.9.4_FA.md	2026-08-13 19:25:12.774169982 +0000
++@@ -0,0 +1,23 @@
+++# Changelog v0.9.4
+++
+++## Added
+++- File Explorer Skill Pack با 8 Skill جدید.
+++- `file-explorer-service.cjs` برای path policy، properties، search و write plan/execution/verify/undo.
+++- `file-explorer-cycles.cjs` برای Read/UI-local/Write cycleها.
+++- File Explorer tab در UI.
+++- IPC اختصاصی `wa:start-explorer-write`.
+++- Copy Recovery semantics مستقل از Move.
+++- Windows File Explorer UAT.
+++
+++## Safety
+++- چهار Write جدید `interactiveOnly` و Confirmation-required هستند.
+++- Generic cycle entrypoint برای Explorer Write بسته شد.
+++- Workspace-relative only + absolute/escape block.
+++- symlink/junction traversal guard برای Write.
+++- overwrite خاموش.
+++- Copy directory recursive deferred.
+++- Copy SHA-256 verification و hash-protected undo.
+++- Undo folder only if empty.
+++
+++## Compatibility
+++تمام Regressionهای قبلی بدون تغییر رفتار pass می‌شوند.
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md	2026-08-13 19:27:10.801881456 +0000
+@@ -0,0 +1,95 @@
++# File Explorer Skill Pack v0.9.4
++
++## هدف
++
++ساخت اولین Skill Pack برنامه‌محور روی Workspace Agent با تکیه بر File API و Electron Shell، بدون بازکردن مسیر shell command، coordinate click یا AI tool execution آزاد.
++
++## Skill Registry
++
++| Skill | Cycle | Risk | Mission/AI |
++|---|---|---:|---|
++| File Explorer Properties | `explorer-properties` | read | مجاز |
++| File Explorer Search | `explorer-search` | read | مجاز |
++| Open Folder in File Explorer | `explorer-navigate` | agent-local | interactive-only |
++| Reveal Item in File Explorer | `explorer-select` | agent-local | interactive-only |
++| File Explorer New Folder | `explorer-new-folder` | write | interactive-only + confirmation |
++| File Explorer Copy File | `explorer-copy` | write | interactive-only + confirmation |
++| File Explorer Move | `explorer-move` | write | interactive-only + confirmation |
++| File Explorer Rename | `explorer-rename` | write | interactive-only + confirmation |
++
++## Path model
++
++تمام ورودی‌ها Workspace-relative هستند. `cleanRelative()` این موارد را رد می‌کند:
++- absolute path
++- drive-qualified path
++- UNC/extended namespace path
++- `..` escape
++- NUL
++
++پس از resolve، `assertInsideRoot()` دوباره مرز Workspace را enforce می‌کند.
++
++### Reparse guard
++
++برای Write، زنجیره مسیر با `lstat()` بررسی می‌شود. هر segment موجود که Symbolic Link/Junction باشد با `EXPLORER_REPARSE_PATH_BLOCKED` متوقف می‌شود. این لایه جلوی escape فیزیکی از Workspace را می‌گیرد؛ چیزی که صرفاً lexical path check نمی‌تواند تضمین کند.
++
++## Write plan
++
++`workspace-file-explorer-write-plan-v1` شامل:
++- action
++- root
++- source / destination
++- source snapshot
++- planHash
++- createdAt
++
++قبل از Execute:
++1. plan hash دوباره محاسبه می‌شود.
++2. Root و Path Policy دوباره اجرا می‌شوند.
++3. Source snapshot دوباره بررسی می‌شود.
++4. Destination باید همچنان خالی باشد.
++5. Reparse chain دوباره بررسی می‌شود.
++
++## Copy
++
++در v0.9.4 فقط regular file:
++1. Source snapshot
++2. Copy به `.workspace-agent-staging/<cycle>/...part`
++3. Source recheck
++4. `fsync` stage
++5. atomic rename stage → destination
++6. SHA-256 source و destination
++7. Transaction complete
++
++Recursive directory copy عمداً `EXPLORER_COPY_DIRECTORY_DEFERRED` است تا Recovery ناقص tree-level وارد Core نشود.
++
++## Move / Rename
++
++از filesystem rename استفاده می‌شود. مقصد موجود overwrite نمی‌شود. Move برای فایل و پوشه پشتیبانی می‌شود؛ junction/symlink source Block است. Rename فقط داخل parent فعلی و با Windows filename validation انجام می‌شود.
++
++## New Folder
++
++`mkdir(..., recursive:false)`؛ Parent باید از قبل موجود و داخل Workspace باشد. Undo فقط در صورت خالی‌بودن پوشه انجام می‌شود.
++
++## Recovery Copy
++
++`RecoveryService.classifyOp()` برای `explorer-copy-file` stateهای زیر دارد:
++- `copy-source`
++- `copy-staged`
++- `copy-destination`
++- `copy-source-missing`
++
++در هیچ stateای source به destination rename نمی‌شود.
++
++## Undo integrity
++
++- Copy: size + SHA-256 مقصد باید همان artifact ایجادشده باشد.
++- Move/Rename: snapshot مقصد باید بدون تغییر باشد و source path آزاد باشد.
++- New Folder: فقط empty directory.
++
++## Index consistency
++
++پس از Verify موفق، Cycle یک callback مستقیم به Persistent Index می‌دهد و Source/Destination را reconcile می‌کند. شکست reconcile باعث جعل شکست Write نمی‌شود؛ نتیجه در Evidence ثبت می‌شود و Index/Watcher می‌تواند repair جداگانه انجام دهد.
++
++## UI
++
++تب `File Explorer Skills` مسیرهای نسبی دریافت می‌کند. Write buttonها مستقیماً Execute نمی‌کنند؛ Preview Cycle را از IPC اختصاصی شروع می‌کنند و `CycleTimeline` Confirmation را نمایش می‌دهد.
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/FILE_INVENTORY_v0.9.4.txt /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/FILE_INVENTORY_v0.9.4.txt
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/FILE_INVENTORY_v0.9.4.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/FILE_INVENTORY_v0.9.4.txt	2026-08-13 19:27:24.778719491 +0000
+@@ -0,0 +1,235 @@
++./.node-version
++./.npmrc
++./.nvmrc
++./README_FA.md
++./docs/ARCHITECTURE_FA.md
++./docs/CERTIFICATION_MODEL_v0.8.4_FA.md
++./docs/CHANGELOG_v0.4_FA.md
++./docs/CHANGELOG_v0.5_FA.md
++./docs/CHANGELOG_v0.6_FA.md
++./docs/CHANGELOG_v0.7.1_FA.md
++./docs/CHANGELOG_v0.7.2_FA.md
++./docs/CHANGELOG_v0.7_FA.md
++./docs/CHANGELOG_v0.8.0_FA.md
++./docs/CHANGELOG_v0.8.1_FA.md
++./docs/CHANGELOG_v0.8.2_FA.md
++./docs/CHANGELOG_v0.8.3_FA.md
++./docs/CHANGELOG_v0.8.4_FA.md
++./docs/CHANGELOG_v0.9.0_FA.md
++./docs/CHANGELOG_v0.9.1_FA.md
++./docs/CHANGELOG_v0.9.2_FA.md
++./docs/CHANGELOG_v0.9.3_FA.md
++./docs/CHANGELOG_v0.9.4_FA.md
++./docs/DIFF_v0.7.1.txt
++./docs/DIFF_v0.7.2.txt
++./docs/DIFF_v0.8.0.txt
++./docs/DIFF_v0.8.1.txt
++./docs/DIFF_v0.8.2.txt
++./docs/DIFF_v0.8.3.txt
++./docs/DIFF_v0.8.4.txt
++./docs/DIFF_v0.9.0.txt
++./docs/DIFF_v0.9.1.txt
++./docs/DIFF_v0.9.2.txt
++./docs/DIFF_v0.9.3.txt
++./docs/DIFF_v0.9.4.txt
++./docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md
++./docs/FILE_INVENTORY_v0.8.2.txt
++./docs/FILE_INVENTORY_v0.8.3.txt
++./docs/FILE_INVENTORY_v0.8.4.txt
++./docs/FILE_INVENTORY_v0.9.0.txt
++./docs/FILE_INVENTORY_v0.9.1.txt
++./docs/FILE_INVENTORY_v0.9.2.txt
++./docs/FILE_INVENTORY_v0.9.3.txt
++./docs/FILE_INVENTORY_v0.9.4.txt
++./docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md
++./docs/LOCAL_AI_MODEL_v0.9_FA.md
++./docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md
++./docs/PERSISTENT_INDEX_MODEL_FA.md
++./docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md
++./docs/PRODUCTION_HARDENING_v0.8.1_FA.md
++./docs/RECOVERY_MODEL_FA.md
++./docs/RELEASE_READINESS_v0.8.2.json
++./docs/RELEASE_READINESS_v0.8.3.json
++./docs/RELEASE_READINESS_v0.8.4.json
++./docs/RELEASE_READINESS_v0.9.0.json
++./docs/RELEASE_READINESS_v0.9.1.json
++./docs/RELEASE_READINESS_v0.9.2.json
++./docs/RELEASE_READINESS_v0.9.3.json
++./docs/RELEASE_READINESS_v0.9.4.json
++./docs/ROADMAP_FA.md
++./docs/SOURCE_REUSE_AUDIT_FA.md
++./docs/SYSTEM_RESILIENCE_MODEL_v0.8.3_FA.md
++./docs/UPSTREAM_INTEGRATION_FA.md
++./docs/UPSTREAM_PROVENANCE.md
++./docs/VALIDATION_v0.4_FA.md
++./docs/VALIDATION_v0.5_FA.md
++./docs/VALIDATION_v0.6_FA.md
++./docs/VALIDATION_v0.7.1_FA.md
++./docs/VALIDATION_v0.7.2_FA.md
++./docs/VALIDATION_v0.7_FA.md
++./docs/VALIDATION_v0.8.0_FA.md
++./docs/VALIDATION_v0.8.1_FA.md
++./docs/VALIDATION_v0.8.2_FA.md
++./docs/VALIDATION_v0.8.3_FA.md
++./docs/VALIDATION_v0.8.4_FA.md
++./docs/VALIDATION_v0.9.0_FA.md
++./docs/VALIDATION_v0.9.1_FA.md
++./docs/VALIDATION_v0.9.2_FA.md
++./docs/VALIDATION_v0.9.3_FA.md
++./docs/VALIDATION_v0.9.4_FA.md
++./docs/WINDOWS_PATH_RELEASE_MODEL_v0.8.2_FA.md
++./docs/WINDOWS_RELEASE_CHECKLIST_FA.md
++./docs/WINDOWS_SYSTEM_UAT_v0.8.3_FA.md
++./docs/WINDOWS_UIA_ACTION_MODEL_FA.md
++./docs/deferred/corel-bridge.cjs.txt
++./electron/ipc.cjs
++./electron/main.cjs
++./electron/preload.cjs
++./electron/services/ai-call-guard.cjs
++./electron/services/ai-planner.cjs
++./electron/services/ai-redaction.cjs
++./electron/services/automation-conditions.cjs
++./electron/services/automation-service.cjs
++./electron/services/automation-store.cjs
++./electron/services/capability-registry.cjs
++./electron/services/configuration-service.cjs
++./electron/services/cycle-engine.cjs
++./electron/services/cycle-store.cjs
++./electron/services/drive-audit.cjs
++./electron/services/duplicate-finder.cjs
++./electron/services/event-journal.cjs
++./electron/services/file-analyzer.cjs
++./electron/services/file-cycles.cjs
++./electron/services/file-explorer-cycles.cjs
++./electron/services/file-explorer-service.cjs
++./electron/services/file-indexer.cjs
++./electron/services/file-insights.cjs
++./electron/services/file-search.cjs
++./electron/services/file-watcher-service.cjs
++./electron/services/fingerprint-store.cjs
++./electron/services/goal-planner.cjs
++./electron/services/grounding-memory-store.cjs
++./electron/services/hardware-profile-service.cjs
++./electron/services/hash-worker-pool.cjs
++./electron/services/hash-worker.cjs
++./electron/services/image-similarity.cjs
++./electron/services/indexed-duplicate-finder.cjs
++./electron/services/lifecycle-state.cjs
++./electron/services/local-ai-config-store.cjs
++./electron/services/local-ai-runtime-manager.cjs
++./electron/services/local-ai-service.cjs
++./electron/services/local-openai-provider.cjs
++./electron/services/maintenance.cjs
++./electron/services/managed-zone-audit.cjs
++./electron/services/managed-zone-store.cjs
++./electron/services/mission-compiler.cjs
++./electron/services/office-text-extractor.cjs
++./electron/services/organizer.cjs
++./electron/services/path-policy.cjs
++./electron/services/pdf-text-extractor.cjs
++./electron/services/persistent-file-index.cjs
++./electron/services/persistent-index-cycles.cjs
++./electron/services/quarantine.cjs
++./electron/services/recommendation-applier.cjs
++./electron/services/recovery-service.cjs
++./electron/services/renamer.cjs
++./electron/services/resource-pressure-guard.cjs
++./electron/services/review-queue-store.cjs
++./electron/services/root-resilience-service.cjs
++./electron/services/similarity-core.cjs
++./electron/services/skill-memory-store.cjs
++./electron/services/skill-registry.cjs
++./electron/services/skill-retriever.cjs
++./electron/services/snapshot-store.cjs
++./electron/services/startup-advisor.cjs
++./electron/services/storage-trend-store.cjs
++./electron/services/system-resilience-controller.cjs
++./electron/services/text-similarity.cjs
++./electron/services/transaction-store.cjs
++./electron/services/ui-grounding-core.cjs
++./electron/services/ui-grounding-layout.cjs
++./electron/services/ui-grounding-service.cjs
++./electron/services/ui-grounding-session-store.cjs
++./electron/services/ui-outcome-verifier.cjs
++./electron/services/vision-crop-service.cjs
++./electron/services/windows-action-policy.cjs
++./electron/services/windows-action-session-store.cjs
++./electron/services/windows-inspector.cjs
++./electron/services/windows-path-utils.cjs
++./electron/services/windows-uia-actions.cjs
++./electron/services/windows-uia.cjs
++./electron/services/windows-volume-probe.cjs
++./electron/services/workspace-cycles.cjs
++./electron/services/workspace-intelligence.cjs
++./index.html
++./package.json
++./scripts/generate-lockfile.ps1
++./scripts/local-ai-smoke.ps1
++./scripts/verify-release-inputs.cjs
++./scripts/verify-source-hygiene.cjs
++./scripts/windows-certification.ps1
++./scripts/windows-release.ps1
++./src/App.jsx
++./src/components/CycleTimeline.jsx
++./src/main.jsx
++./src/styles/app.css
++./tests/ai-mission-v090.test.cjs
++./tests/automation-v04.test.cjs
++./tests/cycle-engine.test.cjs
++./tests/cycle-root-guard-v083.test.cjs
++./tests/file-cycles.integration.test.cjs
++./tests/file-explorer-skill-pack-v094.test.cjs
++./tests/file-guardian.test.cjs
++./tests/fixtures/lifecycle-crash-child-v084.cjs
++./tests/fixtures/persistent-index-crash-child-v081.cjs
++./tests/lifecycle-resource-v084.test.cjs
++./tests/local-ai-capability-v091.test.cjs
++./tests/local-ai-foundation-v090.test.cjs
++./tests/local-ai-grounding-vision-v092.test.cjs
++./tests/local-ai-guard-v090.test.cjs
++./tests/local-ai-server-v090.uat.cjs
++./tests/mission.integration.test.cjs
++./tests/multi-index-isolation-v084.test.cjs
++./tests/multi-root-isolation-v084.test.cjs
++./tests/office-extractor-v05.test.cjs
++./tests/packaged-app-smoke-v084.cjs
++./tests/packaged-worker-smoke-v082.cjs
++./tests/persistent-index-crash-v081.test.cjs
++./tests/persistent-index-cycles-v080.test.cjs
++./tests/persistent-index-scale-v080.cjs
++./tests/persistent-index-v080.test.cjs
++./tests/persistent-index-windows.uat.cjs
++./tests/production-hardening-v07.test.cjs
++./tests/production-hardening-v081.test.cjs
++./tests/real-local-ai-runtime-v091.test.cjs
++./tests/resource-cycle-integration-v084.test.cjs
++./tests/root-interruption-v083.test.cjs
++./tests/scale-benchmark-v07.cjs
++./tests/semantic-cycles-v05.test.cjs
++./tests/semantic-intelligence-v05.test.cjs
++./tests/system-resilience-v083.test.cjs
++./tests/ui-grounded-action-v092.test.cjs
++./tests/ui-grounding-core-v092.test.cjs
++./tests/ui-grounding-layout-v093.test.cjs
++./tests/ui-grounding-recovery-v093.test.cjs
++./tests/ui-grounding-scale-v092.cjs
++./tests/ui-grounding-service-v092.test.cjs
++./tests/upstream-foundation-v071.test.cjs
++./tests/vision-crop-v093.test.cjs
++./tests/windows-agent-v03.test.cjs
++./tests/windows-agent-v06.test.cjs
++./tests/windows-file-explorer-v094.uat.cjs
++./tests/windows-intelligent-grounding-v092.uat.cjs
++./tests/windows-local-ai-runtime-v091.uat.cjs
++./tests/windows-multiroot-v084.uat.cjs
++./tests/windows-path-hardening-v082.test.cjs
++./tests/windows-production-grounding-v093.uat.cjs
++./tests/windows-production-v081.uat.cjs
++./tests/windows-removable-drive-v083.uat.cjs
++./tests/windows-scale-resilience-v083.uat.cjs
++./tests/windows-system-resilience-v083.uat.cjs
++./tests/windows-uia-action-v072.test.cjs
++./tests/windows-uia-action.uat.cjs
++./tests/windows-verification-v082.uat.cjs
++./tests/windows-volume-probe-v083.test.cjs
++./vite.config.js
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/RELEASE_READINESS_v0.9.4.json /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/RELEASE_READINESS_v0.9.4.json
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/RELEASE_READINESS_v0.9.4.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/RELEASE_READINESS_v0.9.4.json	2026-08-13 19:25:12.775442726 +0000
+@@ -0,0 +1,21 @@
++{
++  "schemaVersion": "workspace-release-readiness-v1",
++  "version": "0.9.4",
++  "coreSource": "READY",
++  "legacyRegression": "PASS",
++  "fileExplorerSkillPack": "PASS_SOURCE_LEVEL",
++  "fileExplorerWriteSafety": "PASS_SOURCE_LEVEL",
++  "copyRecovery": "PASS_SOURCE_LEVEL",
++  "windowsExplorerUat": "PENDING_WINDOWS",
++  "windows10Uat": "PENDING",
++  "windows11Uat": "PENDING",
++  "packageLock": "PENDING",
++  "nsisBuild": "PENDING",
++  "portableBuild": "PENDING",
++  "authenticode": "PENDING",
++  "notes": [
++    "Explorer Write skills are interactive-only and cannot be emitted by Local AI/Mission.",
++    "Recursive directory copy is intentionally deferred in v0.9.4.",
++    "Windows Shell dispatch requires real Electron/Windows UAT before certification."
++  ]
++}
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/ROADMAP_FA.md /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/ROADMAP_FA.md
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/ROADMAP_FA.md	2026-08-13 10:27:39.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/ROADMAP_FA.md	2026-08-13 19:25:12.776121196 +0000
+@@ -1,6 +1,6 @@
+-# Roadmap پس از v0.9.0
++# Roadmap پس از v0.9.4
+ 
+-## v0.8.0 تا v0.8.4 — انجام‌شده
++## انجام‌شده تا v0.8.4
+ - Persistent SQLite Index، crash resume، low-RAM scan.
+ - bounded watcher/backpressure و hash workers.
+ - Windows long-path/Unicode/reparse safety.
+@@ -8,38 +8,39 @@
+ - lifecycle marker، resource pressure، multi-root isolation.
+ - Windows Certification Harness و packaged app/worker smoke foundation.
+ 
+-## v0.9.0 — انجام‌شده در سورس: Local AI Foundation
+-- loopback-only OpenAI-compatible provider.
+-- llama.cpp transport health + schema JSON planning.
+-- Qwen/model-agnostic configuration.
+-- Skill retrieval از Registry موجود.
+-- Skill outcome memory بدون raw prompt/path/content.
+-- secret redaction + prompt/rate/timeout/single-flight/circuit guards.
+-- model output allowlist validation.
+-- ephemeral Workspace-bound plan token.
+-- Local Vision advisory فقط روی user-selected image.
+-- AI Mission همچنان از deterministic Skill/Cycle/Safety Core عبور می‌کند.
+-
+-## v0.9.1 — Local Runtime UAT / Model Profiles
+-- UAT واقعی llama.cpp روی Windows 10/11.
+-- profiles برای low/medium/high hardware بدون hard-code مدل واحد.
+-- context/token budget بر اساس RAM/VRAM و Resource Pressure.
+-- model capability discovery: text / vision / schema support.
+-- startup detection اختیاری برای llama-server موجود؛ بدون auto-download.
+-- Vision grounding comparison: UIA first, VLM advisory fallback.
+-
+-## v0.9.2 — Skill Learning / Retrieval v2
+-- outcome-aware retrieval با provenance/versioning.
+-- task pattern memory opt-in بدون raw content.
+-- failure/recovery examples با privacy budget.
+-- plan quality scorer و deterministic fallback comparison.
++## v0.9.0 تا v0.9.3 — انجام‌شده
++- Local AI Foundation و managed llama.cpp runtime.
++- model-agnostic Qwen/GGUF path.
++- schema-constrained plan-only AI.
++- Local Vision advisory و UIA-first grounding.
++- semantic candidate ranking، hashed success memory.
++- multi-surface/dialog/menu context.
++- multi-monitor crop mapping و stale-target recovery.
++
++## v0.9.4 — انجام‌شده: File Explorer Skill Pack
++- Properties / Search read skills.
++- Navigate / Reveal interactive Shell skills.
++- New Folder / Copy File / Move / Rename با Preview/Confirm/Verify/Undo.
++- Workspace-relative + reparse guard.
++- Copy staging + SHA-256 + crash recovery state model.
++- Write skills interactive-only؛ AI/Mission direct execution blocked.
++
++## v0.9.5 — File Explorer Production UAT / Batch Operations
++- Windows 10/11 واقعی برای Shell dispatch و Explorer behavior.
++- چند انتخاب/Batch move-copy با transaction grouping.
++- recursive directory copy فقط پس از طراحی manifest/checkpoint/recovery کامل.
++- conflict policy صریح: skip / rename-new / replace فقط با confirmation جدا.
++- Explorer refresh/reveal verification روی Windows واقعی.
++- integration با Persistent Index reconcile پس از verified write.
++
++## v0.10 — Application Skill Packs
++- Skill Pack برای برنامه‌های عمومی Windows پس از File Explorer certification.
++- Office/Browser automation فقط با UIA-first و app-specific allowlist.
++- CorelDRAW Skill Pack در فاز مستقل: document state، object selection، drawing commands و visual verification.
+ 
+ ## v1.0 candidate
+-- versioned state migration policy.
++- versioned state migrations.
+ - installer/update/rollback strategy.
+ - signed release + recovery runbook.
+ - Windows certification matrix release gate.
+-- Local AI UAT matrix و documented minimum hardware profiles.
+-
+-## Deferred
+-Corel/Design automation تا بلوغ Windows Agent و Local AI core خارج از Scope فعال باقی می‌ماند.
++- Local AI UAT matrix و minimum hardware profiles.
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/VALIDATION_v0.9.4_FA.md /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/VALIDATION_v0.9.4_FA.md
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/docs/VALIDATION_v0.9.4_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/docs/VALIDATION_v0.9.4_FA.md	2026-08-13 19:27:10.801650915 +0000
+@@ -0,0 +1,31 @@
++# Validation v0.9.4
++
++## Source-level
++- Node syntax: required new services/tests included in `check:syntax`.
++- JSX: File Explorer tab checked by existing TypeScript JSX gate.
++- Source hygiene: no eval/new Function/unrestricted child_process.exec/private-key artifact.
++
++## Automated File Explorer tests
++- Workspace-relative path validation.
++- absolute path / `..` escape block.
++- Properties via no-follow `lstat`.
++- Search fallback.
++- Copy file staging + SHA-256 verify + source retained.
++- Copy undo only when destination hash is unchanged.
++- New Folder + non-empty undo block.
++- Move directory + verify + undo.
++- Rename + verify + undo.
++- directory copy explicitly deferred.
++- symlink/junction write traversal block where host supports it.
++- Copy transaction recovery with source retained.
++- Cycle confirmation gate.
++- Navigate/Select shell adapter dispatch.
++- Explorer Write skills excluded from AI/Mission retrieval.
++- dedicated IPC / generic write entrypoint boundary present.
++- verified Write → direct Persistent Index reconcile callback.
++- full `npm run check`: 39 chained test files/suites PASS.
++
++## Windows UAT
++`npm run test:windows-explorer-uat`
++
++On non-Windows runtime this must report `SKIP (Windows only)` and is not counted as Windows certification evidence.
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/ipc.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/ipc.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/ipc.cjs	2026-08-13 17:46:59.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/ipc.cjs	2026-08-13 19:22:18.571998416 +0000
+@@ -53,7 +53,11 @@
+   ipcMain.handle('wa:ai-plan', async (e,command='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{return await localAIService.plan(command,{root});}catch(error){return{ok:false,code:error.code||'AI_PLAN_FAILED',message:error.message,retryAfterMs:error.retryAfterMs||null}}});
+   ipcMain.handle('wa:ai-start-mission', async (e,planToken='',root='') => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};try{const rec=localAIService.consumePlan(planToken,{root});const c=engine.create('mission',{root,command:'[LOCAL_AI_PLAN]',goalPlan:rec.goalPlan,planSource:'local-ai-token',aiCommandHash:rec.commandHash},{source:'local-ai-token',budget:{maxIterations:80,maxWallTimeMs:30*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'AI_MISSION_START_FAILED',message:error.message}}});
+   ipcMain.handle('wa:ai-vision-file', async e => {if(!trusted(e))return deny();if(!localAIService)return{ok:false,code:'AI_RUNTIME_UNAVAILABLE'};const r=await dialog.showOpenDialog({title:'انتخاب تصویر برای Local Vision',properties:['openFile'],filters:[{name:'Image',extensions:['png','jpg','jpeg','webp']}]});if(r.canceled||!r.filePaths[0])return{ok:false,cancelled:true};try{return await localAIService.analyzeImageFile(r.filePaths[0]);}catch(error){return{ok:false,code:error.code||'AI_VISION_FAILED',message:error.message}}});
+-  ipcMain.handle('wa:start-cycle', async (e,type,input={}) => { if(!trusted(e)) return deny(); if(String(type)==='windows-ui-action')return{ok:false,code:'RESTRICTED_CYCLE_ENTRYPOINT',message:'Windows UI Action فقط از entrypoint تعاملی امن با ephemeral session قابل شروع است.'}; if(String(type)==='mission'&&(input?.goalPlan||input?.planToken||input?.planSource))return{ok:false,code:'AI_PLAN_DIRECT_INJECTION_BLOCKED',message:'AI Plan فقط با token موقت صادرشده از Local AI Service قابل اجراست.'}; const c=engine.create(type,input); const result=await engine.run(c.id);if(String(type)==='persistent-index-scan'&&result?.status==='completed'&&input?.root){watcherService.clearDirty(input.root);if(input?.resume===false)await rootResilienceService?.acknowledgeRoot?.(input.root);}return result; });
++  ipcMain.handle('wa:start-cycle', async (e,type,input={}) => { if(!trusted(e)) return deny(); const explorerWrites=new Set(['explorer-new-folder','explorer-copy','explorer-move','explorer-rename']); if(String(type)==='windows-ui-action')return{ok:false,code:'RESTRICTED_CYCLE_ENTRYPOINT',message:'Windows UI Action فقط از entrypoint تعاملی امن با ephemeral session قابل شروع است.'}; if(explorerWrites.has(String(type)))return{ok:false,code:'RESTRICTED_EXPLORER_WRITE_ENTRYPOINT',message:'File Explorer Write فقط از entrypoint تعاملی اختصاصی قابل شروع است.'}; if(String(type)==='mission'&&(input?.goalPlan||input?.planToken||input?.planSource))return{ok:false,code:'AI_PLAN_DIRECT_INJECTION_BLOCKED',message:'AI Plan فقط با token موقت صادرشده از Local AI Service قابل اجراست.'}; const c=engine.create(type,input); const result=await engine.run(c.id);if(String(type)==='persistent-index-scan'&&result?.status==='completed'&&input?.root){watcherService.clearDirty(input.root);if(input?.resume===false)await rootResilienceService?.acknowledgeRoot?.(input.root);}return result; });
++  ipcMain.handle('wa:start-explorer-write', async (e,type,input={}) => {
++    if(!trusted(e))return deny();const allowed=new Set(['explorer-new-folder','explorer-copy','explorer-move','explorer-rename']);if(!allowed.has(String(type)))return{ok:false,code:'EXPLORER_WRITE_TYPE_BLOCKED'};
++    try{const c=engine.create(String(type),input,{source:'interactive-file-explorer',budget:{maxIterations:6,maxWallTimeMs:30*60*1000}});return await engine.run(c.id);}catch(error){return{ok:false,code:error.code||'EXPLORER_WRITE_START_FAILED',message:error.message,details:error.details||null};}
++  });
+   ipcMain.handle('wa:start-uia-action', async (e,request={}) => {
+     if(!trusted(e))return deny();
+     const session=windowsActionSessionStore.create(request);if(!session.ok)return session;
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/main.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/main.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/main.cjs	2026-08-13 12:11:11.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/main.cjs	2026-08-13 19:25:50.783734018 +0000
+@@ -1,4 +1,4 @@
+-const { app, BrowserWindow, ipcMain, Notification, powerMonitor } = require('electron');
++const { app, BrowserWindow, ipcMain, Notification, powerMonitor, shell } = require('electron');
+ const path = require('path');
+ const fs = require('fs');
+ const { CycleStore } = require('./services/cycle-store.cjs');
+@@ -27,6 +27,7 @@
+ const { scanCycle, healthCycle, duplicateCycle, duplicateReviewCycle, organizeCycle } = require('./services/file-cycles.cjs');
+ const { fileSearchCycle, snapshotCycle, snapshotDiffCycle, maintenanceCleanupCycle, windowsSystemCycle, windowsUiMapCycle, windowsUiActionCycle, renameCycle, similarImagesCycle, similarTextsCycle, workspaceIntelligenceCycle, reviewQueueBuildCycle, recommendationApplyCycle, managedZoneAuditCycle, driveAuditCycle, pdfIntelligenceCycle, missionCycle } = require('./services/workspace-cycles.cjs');
+ const { persistentIndexScanCycle, persistentIndexMaintenanceCycle, indexedFileSearchCycle, indexedDuplicatesCycle } = require('./services/persistent-index-cycles.cjs');
++const { explorerPropertiesCycle, explorerSearchCycle, explorerNavigateCycle, explorerSelectCycle, explorerWriteCycle } = require('./services/file-explorer-cycles.cjs');
+ const { registerIpc } = require('./ipc.cjs');
+ 
+ let mainWindow;let automationService;let watcherService;let persistentFileIndex;let rootResilienceService;let systemResilienceController;let lifecycleState;let resourcePressureGuard;let localAIService;let uiGroundingService;
+@@ -42,7 +43,7 @@
+ }
+ app.whenReady().then(async()=>{
+   const userData=app.getPath('userData');const journal=new EventJournal(userData);lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind!=='recommendation-apply')return;for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal}); const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+-  engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
++  const reconcileExplorerWrite=async completed=>{if(!persistentFileIndex)return{ok:false,code:'INDEX_SQLITE_UNAVAILABLE'};const paths=[completed?.source,completed?.destination].filter(Boolean);const results=[];for(const p of [...new Set(paths)]){try{results.push(await persistentFileIndex.reconcilePath(completed.root,p));}catch(error){results.push({ok:false,path:p,code:error.code||'INDEX_RECONCILE_FAILED'});}}return{ok:results.every(x=>x?.ok!==false),results};};engine.register('explorer-properties',explorerPropertiesCycle());engine.register('explorer-search',explorerSearchCycle({index:persistentFileIndex}));engine.register('explorer-navigate',explorerNavigateCycle({shellAdapter:shell}));engine.register('explorer-select',explorerSelectCycle({shellAdapter:shell}));engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-move',explorerWriteCycle({action:'move',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('explorer-rename',explorerWriteCycle({action:'rename',transactionStore,onVerified:reconcileExplorerWrite}));engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+     if(cycle.status==='failed')new Notification({title:'Workspace Agent',body:`Automation «${rule.title}» با خطا متوقف شد.`}).show();
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/preload.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/preload.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/preload.cjs	2026-08-13 12:03:37.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/preload.cjs	2026-08-13 19:22:18.572104293 +0000
+@@ -2,7 +2,7 @@
+ contextBridge.exposeInMainWorld('workspaceAgent', {
+   selectFolder: () => ipcRenderer.invoke('wa:select-folder'), cycles: () => ipcRenderer.invoke('wa:cycles'), capabilities: () => ipcRenderer.invoke('wa:capabilities'), skills: () => ipcRenderer.invoke('wa:skills'), indexStatus: root => ipcRenderer.invoke('wa:index-status',root), indexRoots: () => ipcRenderer.invoke('wa:index-roots'), indexHealth: deep => ipcRenderer.invoke('wa:index-health',deep), indexSearch: input => ipcRenderer.invoke('wa:index-search',input), indexErrors: (root,limit=200) => ipcRenderer.invoke('wa:index-errors',root,limit), snapshots: root => ipcRenderer.invoke('wa:snapshots',root), planGoal: command => ipcRenderer.invoke('wa:plan-goal',command),
+   aiStatus:()=>ipcRenderer.invoke('wa:ai-status'), aiSettings:()=>ipcRenderer.invoke('wa:ai-settings'), aiSettingsUpdate:patch=>ipcRenderer.invoke('wa:ai-settings-update',patch), aiHealth:()=>ipcRenderer.invoke('wa:ai-health'), aiHardwareProfile:vision=>ipcRenderer.invoke('wa:ai-hardware-profile',vision), aiApplyHardwareAdvice:advice=>ipcRenderer.invoke('wa:ai-apply-hardware-advice',advice), aiRuntimeStatus:()=>ipcRenderer.invoke('wa:ai-runtime-status'), aiRuntimeSelection:()=>ipcRenderer.invoke('wa:ai-runtime-selection'), aiRuntimePickExecutable:()=>ipcRenderer.invoke('wa:ai-runtime-pick-executable'), aiRuntimePickModel:()=>ipcRenderer.invoke('wa:ai-runtime-pick-model'), aiRuntimeStart:()=>ipcRenderer.invoke('wa:ai-runtime-start'), aiRuntimeStop:()=>ipcRenderer.invoke('wa:ai-runtime-stop'), aiRuntimeRestart:()=>ipcRenderer.invoke('wa:ai-runtime-restart'), aiCapabilityProbe:vision=>ipcRenderer.invoke('wa:ai-capability-probe',vision), aiWarmup:()=>ipcRenderer.invoke('wa:ai-warmup'), aiUiAssist:()=>ipcRenderer.invoke('wa:ai-ui-assist'), aiGroundUi:intent=>ipcRenderer.invoke('wa:ai-ground-ui',intent), aiGroundUiVision:token=>ipcRenderer.invoke('wa:ai-ground-ui-vision',token), startGroundedUiaAction:input=>ipcRenderer.invoke('wa:start-uia-grounded-action',input), aiVerifyUiaCycle:id=>ipcRenderer.invoke('wa:ai-verify-uia-cycle',id), aiPlan:(command,root)=>ipcRenderer.invoke('wa:ai-plan',command,root), aiStartMission:(token,root)=>ipcRenderer.invoke('wa:ai-start-mission',token,root), aiVisionFile:()=>ipcRenderer.invoke('wa:ai-vision-file'),
+-  startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
++  startCycle: (type,input) => ipcRenderer.invoke('wa:start-cycle',type,input), startExplorerWrite: (type,input) => ipcRenderer.invoke('wa:start-explorer-write',type,input), startWindowsUiAction: request => ipcRenderer.invoke('wa:start-uia-action',request), confirmCycle: (id,decision) => ipcRenderer.invoke('wa:confirm-cycle',id,decision), undoCycle: id => ipcRenderer.invoke('wa:undo-cycle',id), showItem: p => ipcRenderer.invoke('wa:show-item',p), openPath: p => ipcRenderer.invoke('wa:open-path',p),
+   reviewList:root=>ipcRenderer.invoke('wa:review-list',root),reviewUpdate:(id,patch)=>ipcRenderer.invoke('wa:review-update',id,patch),reviewClear:root=>ipcRenderer.invoke('wa:review-clear',root),
+   zonesList:()=>ipcRenderer.invoke('wa:zones-list'),zonesAdd:input=>ipcRenderer.invoke('wa:zones-add',input),zonesRemove:id=>ipcRenderer.invoke('wa:zones-remove',id),storageTrend:root=>ipcRenderer.invoke('wa:storage-trend',root),
+   journalList:filters=>ipcRenderer.invoke('wa:journal-list',filters),journalVerify:()=>ipcRenderer.invoke('wa:journal-verify'),recoveryList:()=>ipcRenderer.invoke('wa:recovery-list'),recoveryAct:(id,action)=>ipcRenderer.invoke('wa:recovery-act',id,action),watchList:()=>ipcRenderer.invoke('wa:watch-list'),watchEvents:limit=>ipcRenderer.invoke('wa:watch-events',limit),watchStatus:()=>ipcRenderer.invoke('wa:watch-status'),resilienceStatus:()=>ipcRenderer.invoke('wa:resilience-status'),resilienceProbe:()=>ipcRenderer.invoke('wa:resilience-probe'),certStatus:()=>ipcRenderer.invoke('wa:cert-status'),resourcePressure:()=>ipcRenderer.invoke('wa:resource-pressure'),watchAdd:(root,title)=>ipcRenderer.invoke('wa:watch-add',root,title),watchRemove:id=>ipcRenderer.invoke('wa:watch-remove',id),configExport:()=>ipcRenderer.invoke('wa:config-export'),configImportPreview:()=>ipcRenderer.invoke('wa:config-import-preview'),configImportApply:token=>ipcRenderer.invoke('wa:config-import-apply',token),
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/ai-planner.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/ai-planner.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/ai-planner.cjs	2026-08-13 10:29:08.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/ai-planner.cjs	2026-08-13 19:21:58.356352425 +0000
+@@ -27,7 +27,7 @@
+   };
+ }
+ const FORBIDDEN_INPUT_KEYS=/^(root|path|source|destination|target|command|shell|script|powershell|cmd|executable|url|password|secret|token|api.?key|__proto__|prototype|constructor)$/i;
+-const SAFE_INPUT_KEYS=new Set(['query','extension','category','minSize','maxSize','olderThanDays','mode','resume','includeLowRiskJunk','includeEmptyFolders','includeZeroByte','find','replace','prefix','suffix','sequence','threshold','maxGroups','minConfidence','deep']);
++const SAFE_INPUT_KEYS=new Set(['query','extension','category','minSize','maxSize','olderThanDays','mode','resume','includeLowRiskJunk','includeEmptyFolders','includeZeroByte','find','replace','prefix','suffix','sequence','threshold','maxGroups','minConfidence','deep','relativePath','limit']);
+ function safeInput(input={}){if(!input||typeof input!=='object'||Array.isArray(input))return{};const out=Object.create(null);for(const [k,v] of Object.entries(input).slice(0,30)){if(FORBIDDEN_INPUT_KEYS.test(k)||!SAFE_INPUT_KEYS.has(k))continue;if(typeof v==='string')out[k]=redactText(v,500);else if(typeof v==='number'||typeof v==='boolean'||v===null)out[k]=v;else if(Array.isArray(v))out[k]=v.slice(0,20).filter(x=>['string','number','boolean'].includes(typeof x)).map(x=>typeof x==='string'?redactText(x,200):x);}return out;}
+ function validateAiResult(raw,{candidates,maxNodes=12}={}){if(!raw||typeof raw!=='object')throw Object.assign(new Error('AI plan object نامعتبر است.'),{code:'AI_PLAN_INVALID'});const allowed=new Set(candidates.map(x=>x.id));const nodes=Array.isArray(raw.nodes)?raw.nodes:[];if(!nodes.length||nodes.length>maxNodes)throw Object.assign(new Error('تعداد گام‌های AI plan نامعتبر است.'),{code:'AI_PLAN_NODE_LIMIT'});const seen=new Set();const steps=[];for(const n of nodes){const skill=skillById(n?.skillId);if(!skill||!allowed.has(skill.id)||skill.interactiveOnly)throw Object.assign(new Error(`Skill غیرمجاز در AI plan: ${n?.skillId||'-'}`),{code:'AI_PLAN_SKILL_BLOCKED'});const sig=`${skill.id}:${JSON.stringify(safeInput(n.input))}`;if(seen.has(sig))continue;seen.add(sig);steps.push({id:`ai-step-${steps.length+1}`,skillId:skill.id,type:skill.cycleType,label:skill.title,input:safeInput(n.input),reason:redactText(n.reason||'',320),requiresConfirmation:Boolean(skill.confirmation)});}if(!steps.length)throw Object.assign(new Error('AI plan پس از validation خالی شد.'),{code:'AI_PLAN_EMPTY'});steps.sort((a,b)=>Number(a.requiresConfirmation)-Number(b.requiresConfirmation));const goalPlan={schemaVersion:'workspace-ai-goal-plan-v1',commandHash:null,text:'[LOCAL_AI_REDACTED_COMMAND]',confidence:Math.max(0,Math.min(1,Number(raw.confidence)||0)),confidenceBand:Number(raw.confidence)>=.9?'high':Number(raw.confidence)>=.7?'medium':'low',constraints:{noArbitraryShell:true,writeRequiresConfirmation:true,interactiveSkillsBlocked:true},notes:(raw.assumptions||[]).slice(0,8).map(x=>redactText(x,220)),blocked:[],steps,summary:redactText(raw.summary||`${steps.length} گام توسط Local AI پیشنهاد شد.`,500)};const dag=compileMissionPlan(goalPlan,{maxNodes,maxWallTimeMs:30*60*1000});const check=verifyDag(dag);if(!check.ok)throw Object.assign(new Error('AI Mission DAG معتبر نیست.'),{code:check.code});return{goalPlan,dag};}
+ class AIPlanner{
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/capability-registry.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/capability-registry.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/capability-registry.cjs	2026-08-13 12:09:13.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/capability-registry.cjs	2026-08-13 19:21:58.356137427 +0000
+@@ -1,4 +1,5 @@
+ const CAPABILITIES = Object.freeze([
++  { id:'file-explorer-skill-pack', group:'windows', title:'File Explorer Skill Pack', mode:'uia-shell-fs-preview-confirm-verify', status:'beta', detail:'Properties/Search read-only + Navigate/Reveal تعاملی + New Folder/Copy/Move/Rename با relative-path policy، reparse guard، Confirmation، Verify و Undo؛ Copy recursive پوشه عمداً غیرفعال' },
+   { id:'windows-system-doctor', group:'windows', title:'Windows System Doctor', mode:'read-only', status:'active', detail:'OS/Build، RAM/CPU، Logical Disks، Startup inventory و Process memory snapshot با PowerShell/CIM' },
+   { id:'windows-uia-grounding', group:'windows', title:'Windows UIA Grounding', mode:'read-only', status:'beta', detail:'خواندن پنجره فعال و کنترل‌های UI از Microsoft UI Automation با RuntimeId/Password metadata' },
+   { id:'semantic-uia-grounding', group:'agent', title:'Semantic UIA Grounding', mode:'read-only-ranked-candidates', status:'beta', detail:'هدف زبان طبیعی → رتبه‌بندی deterministic کنترل‌های UIA با semantic/structural/uniqueness score؛ مدل اجازه ساخت Target جدید ندارد' },
+@@ -60,5 +61,5 @@
+   { id:'local-ai-vision-advisory', group:'intelligence', title:'Local Vision Advisory', mode:'user-selected-image-read-only', status:'beta', detail:'تحلیل تصویر انتخاب‌شده توسط کاربر با VLM محلی؛ بدون capture پس‌زمینه، coordinate/action generation یا اجرای UI' },
+   { id:'semantic-vision-labeling', group:'intelligence', title:'Semantic Vision Labeling', mode:'analysis', status:'beta', detail:'Foundation محلی Vision در v0.9 فعال شده؛ grounding اجرایی همچنان از UIA/Policy مستقل عبور می‌کند' },
+ ]);
+-function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v9.2', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
++function capabilitySummary(){const active=CAPABILITIES.filter(x=>['active','beta'].includes(x.status));return { schemaVersion:'workspace-capabilities-v9.4', total:CAPABILITIES.length, active:active.length, planned:CAPABILITIES.length-active.length, rows:CAPABILITIES };}
+ module.exports = { CAPABILITIES, capabilitySummary };
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/file-explorer-cycles.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/file-explorer-cycles.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/file-explorer-cycles.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/file-explorer-cycles.cjs	2026-08-13 19:25:50.783548624 +0000
+@@ -0,0 +1,12 @@
++const path=require('path');
++const {describePath,explorerSearch,buildWritePlan,executeWritePlan,verifyCompleted,undoCompleted}=require('./file-explorer-service.cjs');
++function step(id,kind,status,label,detail=''){return{id,kind,status,label,detail,at:new Date().toISOString()};}
++function evidence(code,data={}){return{at:new Date().toISOString(),code,...data};}
++function explorerPropertiesCycle(){return{async next(cycle){if(cycle.steps.length)return{status:'completed'};const result=await describePath(cycle.input.root,cycle.input.relativePath||'');return{status:'completed',result,steps:[step('resolve','read','completed','Resolve Workspace-relative path',result.relativePath||'.'),step('properties','analysis','completed','خواندن Properties',`${result.type} · ${result.size} bytes`),step('verify','verify','completed','Self-Audit','lstat بدون دنبال‌کردن symlink')],evidence:[...cycle.evidence,evidence('EXPLORER_PROPERTIES_COMPLETE',{type:result.type,size:result.size,isSymbolicLink:result.isSymbolicLink})]};},async onEnd(cycle){return{summary:`Properties برای ${cycle.result?.relativePath||'.'} خوانده شد؛ هیچ تغییری انجام نشد.`,quality:'verified',nextCycleSuggestions:[]};}};}
++function explorerSearchCycle({index=null}={}){return{async next(cycle){if(cycle.steps.length)return{status:'completed'};const result=await explorerSearch(cycle.input.root,{query:cycle.input.query,limit:cycle.input.limit||100,index,maxFiles:cycle.input.maxFiles||100000});return{status:'completed',result,steps:[step('resolve','read','completed','Resolve Workspace',path.basename(result.root)||result.root),step('search','analysis','completed','File Explorer Search',`${result.total||0} نتیجه · ${result.source}`),step('verify','verify','completed','Self-Audit',result.source==='persistent-index'?'SQLite index':'Bounded scan fallback')],evidence:[...cycle.evidence,evidence('EXPLORER_SEARCH_COMPLETE',{total:result.total||0,source:result.source,hasMore:Boolean(result.hasMore)})]};},async onEnd(cycle){return{summary:`${cycle.result?.total||0} نتیجه در File Explorer Skill Search پیدا شد؛ Workspace تغییر نکرد.`,quality:'verified',nextCycleSuggestions:[]};}};}
++function explorerNavigateCycle({shellAdapter=null,platform=process.platform}={}){return{async next(cycle){if(cycle.steps.length)return{status:'completed'};const item=await describePath(cycle.input.root,cycle.input.relativePath||'');const folder=item.type==='directory'?item.path:path.dirname(item.path);if(platform!=='win32')return{status:'completed',result:{supported:false,platform,folder},steps:[step('platform','read','completed','Windows Explorer','Runtime غیر-Windows؛ Action UI اجرا نشد')],evidence:[...cycle.evidence,evidence('EXPLORER_NAVIGATE_UNSUPPORTED',{platform})]};const message=await shellAdapter.openPath(folder);if(message)throw Object.assign(new Error(message),{code:'EXPLORER_NAVIGATE_FAILED'});return{status:'completed',result:{supported:true,folder},steps:[step('resolve','read','completed','Resolve folder',folder),step('open','agent-local','completed','بازکردن File Explorer','Shell openPath'),step('verify','verify','completed','Dispatch verification','Shell درخواست را بدون خطا پذیرفت')],evidence:[...cycle.evidence,evidence('EXPLORER_NAVIGATE_DISPATCHED',{folderLabel:path.basename(folder)})]};},async onEnd(cycle){return{summary:cycle.result?.supported?'File Explorer برای مسیر انتخابی باز شد.':'Navigate فقط روی Windows runtime فعال است.',quality:'verified',nextCycleSuggestions:[]};}};}
++function explorerSelectCycle({shellAdapter=null,platform=process.platform}={}){return{async next(cycle){if(cycle.steps.length)return{status:'completed'};const item=await describePath(cycle.input.root,cycle.input.relativePath||'');if(platform!=='win32')return{status:'completed',result:{supported:false,platform,item:item.path},steps:[step('platform','read','completed','Windows Explorer','Runtime غیر-Windows؛ Select اجرا نشد')],evidence:[...cycle.evidence,evidence('EXPLORER_SELECT_UNSUPPORTED',{platform})]};shellAdapter.showItemInFolder(item.path);return{status:'completed',result:{supported:true,item:item.path,type:item.type},steps:[step('resolve','read','completed','Resolve item',item.relativePath),step('select','agent-local','completed','Show item in File Explorer','Shell showItemInFolder'),step('verify','verify','completed','Dispatch verification','Shell dispatch انجام شد')],evidence:[...cycle.evidence,evidence('EXPLORER_SELECT_DISPATCHED',{type:item.type,itemLabel:path.basename(item.path)})]};},async onEnd(cycle){return{summary:cycle.result?.supported?'آیتم در File Explorer نمایش/انتخاب شد.':'Select فقط روی Windows runtime فعال است.',quality:'verified',nextCycleSuggestions:[]};}};}
++function explorerWriteCycle({action,transactionStore=null,onVerified=null}={}){return{async next(cycle){if(!cycle.steps.length){const plan=await buildWritePlan({action,root:cycle.input.root,sourceRelative:cycle.input.sourceRelative||'',destinationRelative:cycle.input.destinationRelative||'',newName:cycle.input.newName||''});const label=action==='new-folder'?'New Folder':action[0].toUpperCase()+action.slice(1);return{explorerPlan:plan,status:'waiting-confirmation',steps:[step('resolve','read','completed','Resolve + path policy',plan.source?`${path.basename(plan.source)} → ${path.basename(plan.destination)}`:path.basename(plan.destination)),step('plan','simulation','completed',`${label} Preview`,`${plan.planHash.slice(0,16)} · no symlink/junction traversal`),step('confirm','approval','waiting-confirmation',`تأیید ${label}`,'قبل از Execute دوباره Source/Target بررسی می‌شود'),step('execute','write','pending',`اجرای ${label}`),step('verify','verify','pending','Verify-after-write')],evidence:[...cycle.evidence,evidence('EXPLORER_WRITE_PREVIEW',{action,planHash:plan.planHash,sourceType:plan.sourceSnapshot?.type||null,sourceLabel:plan.source?path.basename(plan.source):null,destinationLabel:path.basename(plan.destination)})]};}
++  if(cycle.steps.find(s=>s.id==='confirm')?.status==='approved'&&cycle.steps.find(s=>s.id==='execute')?.status==='pending'){const completed=await executeWritePlan(cycle.explorerPlan,{cycleId:cycle.id,transactionStore});const verification=await verifyCompleted(completed);let reconcile=null;if(verification.ok&&onVerified){try{reconcile=await onVerified(completed);}catch(error){reconcile={ok:false,code:error.code||'EXPLORER_INDEX_RECONCILE_FAILED',message:error.message};}}return{status:verification.ok?'completed':'failed',completedOperation:completed,undoStack:completed.undo?[completed.undo]:[],verification,reconcile,result:{action,source:completed.source||null,destination:completed.destination,verification,reconcile},steps:cycle.steps.map(s=>s.id==='execute'?step('execute','write',verification.ok?'completed':'failed',`اجرای ${action}`,verification.ok?'Write commit شد':'Write commit نیازمند بررسی است'):s.id==='verify'?step('verify','verify',verification.ok?'completed':'failed','Verify-after-write',`${verification.mode} · ${verification.mismatches.length} mismatch`):s),evidence:[...cycle.evidence,evidence(verification.ok?'EXPLORER_WRITE_VERIFIED':'EXPLORER_WRITE_VERIFY_FAILED',{action,ok:verification.ok,mode:verification.mode,mismatches:verification.mismatches.length,indexReconcileOk:reconcile?.ok??null})]};}
++  return{status:cycle.status};},async onEnd(cycle){return{summary:cycle.status==='completed'?`File Explorer ${action} اجرا و Verify شد.`:cycle.status==='cancelled'?`File Explorer ${action} لغو شد؛ تغییری انجام نشد.`:`File Explorer ${action} کامل نشد.`,quality:cycle.status==='completed'?'verified':cycle.status==='cancelled'?'cancelled':'failed',nextCycleSuggestions:['explorer-properties']};},async undo(cycle){return undoCompleted(cycle.completedOperation);}};}
++module.exports={explorerPropertiesCycle,explorerSearchCycle,explorerNavigateCycle,explorerSelectCycle,explorerWriteCycle};
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/file-explorer-service.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/file-explorer-service.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/file-explorer-service.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/file-explorer-service.cjs	2026-08-13 19:26:15.158707779 +0000
+@@ -0,0 +1,120 @@
++const fs=require('fs');
++const fsp=fs.promises;
++const path=require('path');
++const crypto=require('crypto');
++const {assertWriteRoot,assertInsideRoot,normalize,comparable}=require('./path-policy.cjs');
++const {validateFilename}=require('./renamer.cjs');
++const {scanTree}=require('./file-indexer.cjs');
++const {searchFiles}=require('./file-search.cjs');
++
++const SCHEMA_VERSION='workspace-file-explorer-service-v1';
++const WRITE_ACTIONS=new Set(['new-folder','copy','move','rename']);
++function now(){return new Date().toISOString();}
++function exists(p){try{return fs.existsSync(p);}catch{return false;}}
++function err(code,message,details=null){return Object.assign(new Error(message),{code,details});}
++function clone(v){return JSON.parse(JSON.stringify(v));}
++function isAbsoluteLike(v=''){const s=String(v||'');return path.isAbsolute(s)||/^[a-zA-Z]:/.test(s)||/^\\\\/.test(s)||/^\\\?\\/.test(s);}
++function cleanRelative(v=''){
++  const raw=String(v||'').trim();
++  if(!raw||raw==='.')return'';
++  if(raw.includes('\0')||isAbsoluteLike(raw))throw err('EXPLORER_RELATIVE_PATH_REQUIRED','مسیر File Explorer باید نسبت به Workspace باشد.');
++  const normalized=path.normalize(raw);
++  if(normalized==='..'||normalized.startsWith(`..${path.sep}`))throw err('EXPLORER_PATH_ESCAPE_BLOCKED','مسیر نسبی از Workspace خارج می‌شود.');
++  return normalized.replace(/^\.[\\/]/,'');
++}
++function rootForRead(root){const rr=normalize(String(root||''));if(!rr)throw err('ROOT_REQUIRED','Workspace مشخص نشده است.');return rr;}
++function resolveRead(root,relativePath=''){const rr=rootForRead(root);const rel=cleanRelative(relativePath);return{root:rr,relativePath:rel,path:assertInsideRoot(path.resolve(rr,rel||'.'),rr)};}
++function resolveWrite(root,relativePath=''){const rr=assertWriteRoot(root);const rel=cleanRelative(relativePath);return{root:rr,relativePath:rel,path:assertInsideRoot(path.resolve(rr,rel||'.'),rr)};}
++async function lstatMaybe(p){try{return await fsp.lstat(p);}catch(e){if(e.code==='ENOENT')return null;throw e;}}
++async function assertNoLinkChain(root,target,{includeTarget=true}={}){
++  const rr=path.resolve(root),tt=path.resolve(target);assertInsideRoot(tt,rr);
++  const rel=path.relative(rr,tt);const parts=rel?rel.split(path.sep).filter(Boolean):[];let current=rr;
++  const upto=includeTarget?parts.length:Math.max(0,parts.length-1);
++  const rootSt=await lstatMaybe(rr);if(rootSt?.isSymbolicLink())throw err('EXPLORER_REPARSE_ROOT_BLOCKED','Workspace روی symlink/junction برای Write پشتیبانی نمی‌شود.',{path:rr});
++  for(let i=0;i<upto;i++){
++    current=path.join(current,parts[i]);const st=await lstatMaybe(current);if(!st)break;if(st.isSymbolicLink())throw err('EXPLORER_REPARSE_PATH_BLOCKED','Write از مسیر symlink/junction عبور نمی‌کند.',{path:current});
++  }
++  return true;
++}
++function statType(st){if(!st)return'missing';if(st.isFile())return'file';if(st.isDirectory())return'directory';if(st.isSymbolicLink())return'link';return'other';}
++function statSnapshot(st){return st?{type:statType(st),size:Number(st.size||0),mtimeMs:Number(st.mtimeMs||0),ctimeMs:Number(st.ctimeMs||0),dev:Number(st.dev||0),ino:Number(st.ino||0)}:null;}
++function sameSnapshot(st,snap,{allowMtimeDriftMs=2}={}){
++  if(!st||!snap)return false;if(statType(st)!==snap.type)return false;
++  if(snap.type==='file'&&Number(st.size)!==Number(snap.size))return false;
++  if(Math.abs(Number(st.mtimeMs||0)-Number(snap.mtimeMs||0))>allowMtimeDriftMs)return false;
++  if(Number(snap.dev||0)&&Number(st.dev||0)&&Number(snap.dev)!==Number(st.dev))return false;
++  if(Number(snap.ino||0)&&Number(st.ino||0)&&Number(snap.ino)!==Number(st.ino))return false;
++  return true;
++}
++async function describePath(root,relativePath=''){
++  const r=resolveRead(root,relativePath);const st=await lstatMaybe(r.path);if(!st)throw err('EXPLORER_ITEM_NOT_FOUND','فایل/پوشه پیدا نشد.',{relativePath:r.relativePath});
++  return{schemaVersion:'workspace-file-explorer-properties-v1',root:r.root,relativePath:r.relativePath,path:r.path,name:path.basename(r.path),type:statType(st),size:Number(st.size||0),mtimeMs:Number(st.mtimeMs||0),ctimeMs:Number(st.ctimeMs||0),birthtimeMs:Number(st.birthtimeMs||0),mode:Number(st.mode||0),isSymbolicLink:st.isSymbolicLink(),readOnly:false};
++}
++async function explorerSearch(root,{query='',limit=100,index=null,maxFiles=100000}={}){
++  const rr=rootForRead(root);const q=String(query||'').trim();if(!q)throw err('EXPLORER_SEARCH_QUERY_REQUIRED','عبارت جست‌وجو لازم است.');
++  if(index){try{const status=index.status(rr);if(status&&status.status==='completed'){const out=index.search({root:rr,query:q,limit:Math.max(1,Math.min(500,Number(limit)||100))});return{...out,source:'persistent-index'};}}catch{}
++  }
++  const scan=await scanTree(rr,{maxFiles:Math.max(1000,Math.min(250000,Number(maxFiles)||100000))});const out=searchFiles(scan.files,{query:q,maxResults:Math.max(1,Math.min(500,Number(limit)||100))});return{schemaVersion:'workspace-file-explorer-search-v1',root:rr,source:'bounded-scan',scan:{files:scan.files.length,dirs:scan.dirs,truncated:scan.truncated,errors:scan.errors.length},...out};
++}
++function canonicalPlan(plan){return JSON.stringify({action:plan.action,root:comparable(plan.root),source:plan.source?comparable(plan.source):'',destination:plan.destination?comparable(plan.destination):'',sourceSnapshot:plan.sourceSnapshot||null});}
++function planHash(plan){return crypto.createHash('sha256').update(canonicalPlan(plan)).digest('hex');}
++async function buildWritePlan({action,root,sourceRelative='',destinationRelative='',newName=''}={}){
++  const a=String(action||'');if(!WRITE_ACTIONS.has(a))throw err('EXPLORER_WRITE_ACTION_BLOCKED','File Explorer Write action ثبت نشده است.');
++  const base=resolveWrite(root,'');await assertNoLinkChain(base.root,base.root);
++  let source=null,destination=null,sourceSnapshot=null;
++  if(a==='new-folder'){
++    const d=resolveWrite(base.root,destinationRelative);if(!d.relativePath)throw err('EXPLORER_FOLDER_NAME_REQUIRED','نام/مسیر پوشه جدید لازم است.');destination=d.path;await assertNoLinkChain(base.root,path.dirname(destination),{includeTarget:true});const parent=await lstatMaybe(path.dirname(destination));if(!parent?.isDirectory())throw err('EXPLORER_DESTINATION_PARENT_MISSING','پوشه والد مقصد وجود ندارد.');if(exists(destination))throw err('EXPLORER_DESTINATION_EXISTS','مقصد از قبل وجود دارد.',{destination});
++  }else{
++    const s=resolveWrite(base.root,sourceRelative);if(!s.relativePath)throw err('EXPLORER_SOURCE_REQUIRED','منبع File Explorer لازم است.');source=s.path;await assertNoLinkChain(base.root,source,{includeTarget:true});const st=await lstatMaybe(source);if(!st)throw err('EXPLORER_SOURCE_MISSING','منبع پیدا نشد.',{source});if(st.isSymbolicLink())throw err('EXPLORER_SOURCE_LINK_BLOCKED','عملیات Write روی symlink/junction مجاز نیست.');if(!st.isFile()&&!st.isDirectory())throw err('EXPLORER_SOURCE_TYPE_BLOCKED','نوع منبع برای این Skill پشتیبانی نمی‌شود.');sourceSnapshot=statSnapshot(st);
++    if(a==='rename'){
++      const valid=validateFilename(newName);if(!valid.ok)throw err('EXPLORER_RENAME_INVALID',`نام جدید معتبر نیست: ${valid.code}`);destination=assertInsideRoot(path.join(path.dirname(source),String(newName)),base.root);
++    }else{
++      const d=resolveWrite(base.root,destinationRelative);if(!d.relativePath)throw err('EXPLORER_DESTINATION_REQUIRED','مقصد File Explorer لازم است.');destination=d.path;
++    }
++    await assertNoLinkChain(base.root,path.dirname(destination),{includeTarget:true});const parent=await lstatMaybe(path.dirname(destination));if(!parent?.isDirectory())throw err('EXPLORER_DESTINATION_PARENT_MISSING','پوشه والد مقصد وجود ندارد.');if(comparable(source)===comparable(destination))throw err('EXPLORER_NOOP','مبدأ و مقصد یکسان هستند.');if(exists(destination))throw err('EXPLORER_DESTINATION_EXISTS','مقصد از قبل وجود دارد.',{destination});
++    if(a==='copy'&&sourceSnapshot.type!=='file')throw err('EXPLORER_COPY_DIRECTORY_DEFERRED','در v0.9.4 کپی recursive پوشه عمداً غیرفعال است؛ Copy فقط برای فایل معمولی فعال است.');
++    if(a==='rename'&&path.dirname(source)!==path.dirname(destination))throw err('EXPLORER_RENAME_SAME_PARENT_REQUIRED','Rename باید داخل همان پوشه انجام شود.');
++  }
++  const plan={schemaVersion:'workspace-file-explorer-write-plan-v1',action:a,root:base.root,source,destination,sourceSnapshot,createdAt:now()};plan.planHash=planHash(plan);return plan;
++}
++async function preflightPlan(plan){
++  if(!plan||plan.schemaVersion!=='workspace-file-explorer-write-plan-v1')throw err('EXPLORER_PLAN_INVALID','Explorer plan نامعتبر است.');if(planHash(plan)!==plan.planHash)throw err('EXPLORER_PLAN_TAMPERED','Explorer plan بعد از Preview تغییر کرده است.');const rr=assertWriteRoot(plan.root);if(comparable(rr)!==comparable(plan.root))throw err('EXPLORER_PLAN_ROOT_CHANGED','Workspace plan تغییر کرده است.');
++  if(plan.source){assertInsideRoot(plan.source,rr);await assertNoLinkChain(rr,plan.source,{includeTarget:true});const st=await lstatMaybe(plan.source);if(!sameSnapshot(st,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_SINCE_PREVIEW','منبع از زمان Preview تغییر کرده است.',{source:plan.source});}
++  assertInsideRoot(plan.destination,rr);await assertNoLinkChain(rr,path.dirname(plan.destination),{includeTarget:true});if(exists(plan.destination))throw err('EXPLORER_DESTINATION_NOW_EXISTS','مقصد بعد از Preview ایجاد شده است.',{destination:plan.destination});return true;
++}
++async function sha256File(file){return await new Promise((resolve,reject)=>{const h=crypto.createHash('sha256');const s=fs.createReadStream(file);s.on('data',d=>h.update(d));s.on('error',reject);s.on('end',()=>resolve(h.digest('hex')));});}
++function safeCycleId(v=''){return String(v||'cycle').replace(/[^a-zA-Z0-9_-]/g,'_');}
++async function executeWritePlan(plan,{cycleId='',transactionStore=null}={}){
++  await preflightPlan(plan);const rr=plan.root;const completed={action:plan.action,root:rr,source:plan.source,destination:plan.destination,sourceSnapshot:clone(plan.sourceSnapshot),planHash:plan.planHash,at:now(),undo:null,verificationHint:null};
++  if(plan.action==='new-folder'){
++    await fsp.mkdir(plan.destination,{recursive:false});const st=await fsp.lstat(plan.destination);if(!st.isDirectory())throw err('EXPLORER_MKDIR_VERIFY_FAILED','پوشه جدید بعد از ساخت تأیید نشد.');completed.after=statSnapshot(st);completed.undo={kind:'remove-empty-directory',path:plan.destination,after:completed.after};return completed;
++  }
++  if(plan.action==='copy'){
++    const stagingRoot=assertInsideRoot(path.join(rr,'.workspace-agent-staging',safeCycleId(cycleId||Date.now())),rr);await fsp.mkdir(stagingRoot,{recursive:true});const stage=assertInsideRoot(path.join(stagingRoot,`copy-${crypto.randomBytes(8).toString('hex')}.part`),rr);const tx=transactionStore?.create({kind:'explorer-copy',cycleId,root:rr,operations:[{kind:'explorer-copy-file',source:plan.source,destination:plan.destination,stage,size:plan.sourceSnapshot.size}]})||null;
++    let destinationCommitted=false;try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.copyFile(plan.source,stage,fs.constants.COPYFILE_EXCL);transactionStore?.markOp(tx.id,0,{state:'staged'});const sourceAfter=await fsp.lstat(plan.source);if(!sameSnapshot(sourceAfter,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد؛ مقصد commit نشد.');const fh=await fsp.open(stage,'r');try{await fh.sync();}finally{await fh.close();}await fsp.rename(stage,plan.destination);destinationCommitted=true;transactionStore?.markOp(tx.id,0,{state:'committed'});const [sourceHash,destinationHash]=await Promise.all([sha256File(plan.source),sha256File(plan.destination)]);if(sourceHash!==destinationHash)throw err('EXPLORER_COPY_HASH_MISMATCH','SHA-256 منبع و مقصد Copy برابر نیست.');const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.sha256=destinationHash;completed.undo={kind:'remove-copied-file',path:plan.destination,sha256:destinationHash,size:Number(st.size||0)};transactionStore?.mark(tx.id,{status:'completed'});try{await fsp.rm(stagingRoot,{recursive:true,force:true});}catch{}return completed;}catch(error){try{if(exists(stage))await fsp.rm(stage,{force:true});}catch{}try{if(destinationCommitted&&exists(plan.destination))await fsp.rm(plan.destination,{force:true});}catch{}transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw error;}
++  }
++  const opKind=plan.sourceSnapshot.type==='directory'?'explorer-move-dir':'explorer-move-file';const tx=transactionStore?.create({kind:plan.action==='rename'?'explorer-rename':'explorer-move',cycleId,root:rr,operations:[{kind:opKind,source:plan.source,destination:plan.destination,size:plan.sourceSnapshot.size}]})||null;
++  try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.rename(plan.source,plan.destination);transactionStore?.markOp(tx.id,0,{state:'committed'});const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.undo={kind:'move-back',source:plan.destination,destination:plan.source,after:completed.after};transactionStore?.mark(tx.id,{status:'completed'});return completed;}catch(error){transactionStore?.mark(tx.id,{status:'rolled-back',error:error.code||error.message});throw error;}
++}
++async function verifyCompleted(completed){
++  const mismatches=[];if(completed.action==='new-folder'){const st=await lstatMaybe(completed.destination);if(!st?.isDirectory())mismatches.push({code:'FOLDER_MISSING',path:completed.destination});return{ok:!mismatches.length,mismatches,mode:'directory-exists'};}
++  if(completed.action==='copy'){const st=await lstatMaybe(completed.destination);if(!st?.isFile())mismatches.push({code:'COPY_DESTINATION_MISSING'});else if(Number(st.size)!==Number(completed.sourceSnapshot?.size))mismatches.push({code:'COPY_SIZE_MISMATCH'});else{const h=await sha256File(completed.destination);if(completed.sha256&&h!==completed.sha256)mismatches.push({code:'COPY_HASH_MISMATCH'});}if(!exists(completed.source))mismatches.push({code:'COPY_SOURCE_MISSING'});return{ok:!mismatches.length,mismatches,mode:'source-retained+sha256'};}
++  const dst=await lstatMaybe(completed.destination);if(!dst)mismatches.push({code:'DESTINATION_MISSING'});if(exists(completed.source))mismatches.push({code:'SOURCE_STILL_EXISTS'});if(dst&&completed.sourceSnapshot?.type!==statType(dst))mismatches.push({code:'TYPE_MISMATCH'});if(dst?.isFile()&&Number(dst.size)!==Number(completed.sourceSnapshot?.size))mismatches.push({code:'SIZE_MISMATCH'});return{ok:!mismatches.length,mismatches,mode:'move-identity'};
++}
++async function undoCompleted(completed){
++  if(!completed?.undo)return[{ok:false,error:'EXPLORER_UNDO_MISSING'}];const u=completed.undo;
++  try{
++    if(u.kind==='remove-empty-directory'){
++      const st=await lstatMaybe(u.path);if(!st)return[{ok:true,kind:u.kind,path:u.path,alreadyGone:true}];if(!st.isDirectory())return[{ok:false,kind:u.kind,path:u.path,error:'UNDO_TARGET_TYPE_CHANGED'}];const entries=await fsp.readdir(u.path);if(entries.length)return[{ok:false,kind:u.kind,path:u.path,error:'UNDO_FOLDER_NOT_EMPTY'}];await fsp.rmdir(u.path);return[{ok:true,kind:u.kind,path:u.path}];
++    }
++    if(u.kind==='remove-copied-file'){
++      const st=await lstatMaybe(u.path);if(!st)return[{ok:true,kind:u.kind,path:u.path,alreadyGone:true}];if(!st.isFile()||Number(st.size)!==Number(u.size))return[{ok:false,kind:u.kind,path:u.path,error:'UNDO_COPY_TARGET_CHANGED'}];const h=await sha256File(u.path);if(h!==u.sha256)return[{ok:false,kind:u.kind,path:u.path,error:'UNDO_COPY_HASH_CHANGED'}];await fsp.rm(u.path,{force:false});return[{ok:true,kind:u.kind,path:u.path}];
++    }
++    if(u.kind==='move-back'){
++      if(!exists(u.source))return[{ok:false,...u,error:'UNDO_SOURCE_MISSING'}];if(exists(u.destination))return[{ok:false,...u,error:'UNDO_DESTINATION_EXISTS'}];const st=await fsp.lstat(u.source);if(!sameSnapshot(st,u.after,{allowMtimeDriftMs:2}))return[{ok:false,...u,error:'UNDO_TARGET_CHANGED'}];await fsp.rename(u.source,u.destination);return[{ok:true,...u}];
++    }
++  }catch(error){return[{ok:false,kind:u.kind,error:error.code||error.message}];}
++  return[{ok:false,error:'EXPLORER_UNDO_KIND_UNKNOWN'}];
++}
++
++module.exports={SCHEMA_VERSION,WRITE_ACTIONS,cleanRelative,resolveRead,resolveWrite,assertNoLinkChain,describePath,explorerSearch,buildWritePlan,preflightPlan,executeWritePlan,verifyCompleted,undoCompleted,sha256File,statSnapshot,sameSnapshot};
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/recovery-service.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/recovery-service.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/recovery-service.cjs	2026-08-13 06:37:23.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/recovery-service.cjs	2026-08-13 19:21:10.106887902 +0000
+@@ -2,14 +2,29 @@
+ const fsp=fs.promises;
+ const path=require('path');
+ function exists(p){try{return Boolean(p)&&fs.existsSync(p);}catch{return false;}}
+-function pathState(p,op){if(!exists(p))return{exists:false,valid:false};try{const st=fs.statSync(p);const dir=op?.meta?.kind==='quarantine-dir';const typeOk=dir?st.isDirectory():st.isFile();const sizeOk=dir||Number(st.size)===Number(op.size);return{exists:true,valid:typeOk&&sizeOk,typeOk,sizeOk,size:st.size};}catch{return{exists:true,valid:false};}}
+-function classifyOp(op){const ss=pathState(op.source,op),gs=op.stage?pathState(op.stage,op):{exists:false,valid:false},ds=pathState(op.destination,op);const s=ss.exists,g=gs.exists,d=ds.exists;if(s&&!g&&!d&&ss.valid)return{state:'source',safeResume:true,safeRollback:true};if(op.stage&&!s&&g&&!d&&gs.valid)return{state:'staged',safeResume:true,safeRollback:true};if(!s&&!g&&d&&ds.valid)return{state:'destination',safeResume:true,safeRollback:true};if(!s&&!g&&!d)return{state:'missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
++function pathState(p,op){if(!exists(p))return{exists:false,valid:false};try{const st=fs.statSync(p);const kind=String(op?.meta?.kind||'');const dir=kind==='quarantine-dir'||kind.endsWith('-dir');const typeOk=dir?st.isDirectory():st.isFile();const sizeOk=dir||Number(st.size)===Number(op.size);return{exists:true,valid:typeOk&&sizeOk,typeOk,sizeOk,size:st.size};}catch{return{exists:true,valid:false};}}
++function isCopyOp(op){return String(op?.meta?.kind||'')==='explorer-copy-file';}
++function classifyOp(op){const ss=pathState(op.source,op),gs=op.stage?pathState(op.stage,op):{exists:false,valid:false},ds=pathState(op.destination,op);const s=ss.exists,g=gs.exists,d=ds.exists;
++  if(isCopyOp(op)){if(s&&!g&&!d&&ss.valid)return{state:'copy-source',safeResume:true,safeRollback:true};if(s&&g&&!d&&ss.valid&&gs.valid)return{state:'copy-staged',safeResume:true,safeRollback:true};if(s&&!g&&d&&ss.valid&&ds.valid)return{state:'copy-destination',safeResume:true,safeRollback:true};if(!s)return{state:'copy-source-missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
++  if(s&&!g&&!d&&ss.valid)return{state:'source',safeResume:true,safeRollback:true};if(op.stage&&!s&&g&&!d&&gs.valid)return{state:'staged',safeResume:true,safeRollback:true};if(!s&&!g&&d&&ds.valid)return{state:'destination',safeResume:true,safeRollback:true};if(!s&&!g&&!d)return{state:'missing',safeResume:false,safeRollback:false};return{state:'ambiguous',safeResume:false,safeRollback:false,source:ss,stage:gs,destination:ds};}
+ class RecoveryService{
+  constructor({transactionStore,cycleStore=null,journal=null,onRecovered=null}={}){this.store=transactionStore;this.cycleStore=cycleStore;this.journal=journal;this.onRecovered=onRecovered;}
+  inspect(){return this.store.list({recoverableOnly:false}).filter(tx=>!['completed','rolled-back','abandoned'].includes(tx.status)||this.cycleStore?.get(tx.cycleId)?.status==='interrupted').map(tx=>{const ops=tx.operations.map(op=>({...op,recovery:classifyOp(op)}));const ambiguous=ops.filter(x=>!x.recovery.safeResume||!x.recovery.safeRollback);const committed=ops.filter(x=>x.recovery.state==='destination').length,staged=ops.filter(x=>x.recovery.state==='staged').length,pending=ops.filter(x=>x.recovery.state==='source').length;return{...tx,operations:ops,recovery:{resumeAllowed:ambiguous.length===0,rollbackAllowed:ambiguous.length===0,manualReview:ambiguous.length>0,committed,staged,pending,ambiguous:ambiguous.length,recommendation:ambiguous.length?'manual-review':tx.status==='completed'?'reconcile-or-rollback':committed>0?'rollback-or-resume':staged>0?'resume-or-rollback':'resume'}};});}
+  async act(id,action){const tx=this.store.get(id);if(!tx)return{ok:false,code:'TRANSACTION_NOT_FOUND'};const inspected=this.inspect().find(x=>x.id===id);if(!inspected)return{ok:false,code:'TRANSACTION_NOT_RECOVERABLE'};if(inspected.recovery.manualReview)return{ok:false,code:'RECOVERY_MANUAL_REVIEW_REQUIRED',transaction:inspected};if(!['resume','rollback','abandon'].includes(action))return{ok:false,code:'INVALID_RECOVERY_ACTION'};if(action==='abandon'){this.store.mark(id,{status:'abandoned'});this.journal?.append('RECOVERY_ABANDONED',{cycleId:tx.cycleId,transactionId:id});return{ok:true,action,transaction:this.store.get(id)};}
+    this.store.mark(id,{status:`recovery-${action}`});const order=action==='rollback'?[...tx.operations].reverse():tx.operations;
+-   try{for(const op of order){const state=classifyOp(op).state;if(action==='resume'){
++   try{for(const op of order){const state=classifyOp(op).state;if(isCopyOp(op)){
++       if(action==='resume'){
++         if(state==='copy-source'){if(!op.stage)throw Object.assign(new Error('Copy recovery stage missing'),{code:'RECOVERY_COPY_STAGE_REQUIRED'});await fsp.mkdir(path.dirname(op.stage),{recursive:true});await fsp.copyFile(op.source,op.stage,fs.constants.COPYFILE_EXCL);this.store.markOp(id,op.index,{state:'staged-recovery'});await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});await fsp.rename(op.stage,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery'});}
++         else if(state==='copy-staged'){await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});await fsp.rename(op.stage,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery'});}
++         else if(state==='copy-destination'){this.store.markOp(id,op.index,{state:'committed-recovery'});}
++       }else{
++         if(state==='copy-destination'){await fsp.rm(op.destination,{force:false});this.store.markOp(id,op.index,{state:'rolled-back-recovery'});}
++         else if(state==='copy-staged'){await fsp.rm(op.stage,{force:true});this.store.markOp(id,op.index,{state:'rolled-back-recovery'});}
++         else if(state==='copy-source'){this.store.markOp(id,op.index,{state:'rolled-back-recovery'});}
++       }
++       continue;
++     }
++     if(action==='resume'){
+        if(state==='source'){await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});if(op.stage){await fsp.mkdir(path.dirname(op.stage),{recursive:true});await fsp.rename(op.source,op.stage);this.store.markOp(id,op.index,{state:'staged-recovery'});await fsp.rename(op.stage,op.destination);}else await fsp.rename(op.source,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery'});}
+        else if(state==='staged'){await fsp.mkdir(path.dirname(op.destination),{recursive:true});if(exists(op.destination))throw Object.assign(new Error('Recovery destination occupied'),{code:'RECOVERY_DESTINATION_OCCUPIED'});await fsp.rename(op.stage,op.destination);this.store.markOp(id,op.index,{state:'committed-recovery'});}else if(state==='destination'){this.store.markOp(id,op.index,{state:'committed-recovery'});}
+      }else{
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/skill-registry.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/skill-registry.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/skill-registry.cjs	2026-08-13 07:39:04.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/skill-registry.cjs	2026-08-13 19:21:58.355767579 +0000
+@@ -23,6 +23,14 @@
+   {id:'skill.zone.audit',cycleType:'managed-zone-audit',title:'Managed Zone Audit',risk:'read',confirmation:false,group:'storage',status:'active'},
+   {id:'skill.drive.audit',cycleType:'drive-audit',title:'Drive Audit',risk:'read',confirmation:false,group:'storage',status:'active'},
+   {id:'skill.pdf.inspect',cycleType:'pdf-intelligence',title:'PDF Base Intelligence',risk:'read',confirmation:false,group:'intelligence',status:'active'},
++  {id:'skill.explorer.properties',cycleType:'explorer-properties',title:'File Explorer Properties',risk:'read',confirmation:false,group:'explorer',status:'active'},
++  {id:'skill.explorer.search',cycleType:'explorer-search',title:'File Explorer Search',risk:'read',confirmation:false,group:'explorer',status:'active'},
++  {id:'skill.explorer.navigate',cycleType:'explorer-navigate',title:'Open Folder in File Explorer',risk:'agent-local',confirmation:false,group:'explorer',status:'beta',interactiveOnly:true},
++  {id:'skill.explorer.select',cycleType:'explorer-select',title:'Reveal Item in File Explorer',risk:'agent-local',confirmation:false,group:'explorer',status:'beta',interactiveOnly:true},
++  {id:'skill.explorer.new-folder',cycleType:'explorer-new-folder',title:'File Explorer New Folder',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
++  {id:'skill.explorer.copy',cycleType:'explorer-copy',title:'File Explorer Copy File',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
++  {id:'skill.explorer.move',cycleType:'explorer-move',title:'File Explorer Move',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
++  {id:'skill.explorer.rename',cycleType:'explorer-rename',title:'File Explorer Rename',risk:'write',confirmation:true,group:'explorer',status:'beta',interactiveOnly:true},
+   {id:'skill.windows.system',cycleType:'windows-system',title:'Windows System Doctor',risk:'read',confirmation:false,group:'windows',status:'active'},
+   {id:'skill.windows.uia-map',cycleType:'windows-ui-map',title:'Windows UIA Grounding Map',risk:'read',confirmation:false,group:'windows',status:'beta'},
+   {id:'skill.windows.uia-action',cycleType:'windows-ui-action',title:'Pinned Windows UIA Action',risk:'write',confirmation:true,group:'windows',status:'beta',interactiveOnly:true},
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/skill-retriever.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/skill-retriever.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/electron/services/skill-retriever.cjs	2026-08-13 10:21:31.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/electron/services/skill-retriever.cjs	2026-08-13 19:21:58.356234931 +0000
+@@ -4,7 +4,7 @@
+ function overlap(a,b){let n=0;for(const x of a)if(b.has(x))n++;return n;}
+ const HINTS=[
+   [/تکراری|duplicate|کپی/,['duplicate','duplicates']], [/جست|search|پیدا/,['search']], [/مرتب|organize|دسته/,['organize']], [/rename|تغییر نام|نام فایل/,['rename']],
+-  [/سلامت|health|فضا|حجم/,['health','audit']], [/pdf/,['pdf']], [/عکس|image|photo/,['image']], [/متن|document|سند/,['text','intelligence']], [/ویندوز|windows/,['windows']], [/index|ایندکس/,['index']]
++  [/سلامت|health|فضا|حجم/,['health','audit']], [/pdf/,['pdf']], [/عکس|image|photo/,['image']], [/متن|document|سند/,['text','intelligence']], [/ویندوز|windows/,['windows']], [/index|ایندکس/,['index']], [/اکسپلورر|explorer|پوشه|folder/,['explorer']], [/properties|مشخصات/,['properties']], [/copy|کپی|move|انتقال/,['explorer']]
+ ];
+ function retrieveSkills(command,{limit=10,memory=null}={}){const q=tokens(command);const hintWords=HINTS.filter(([rx])=>rx.test(norm(command))).flatMap(([,w])=>w);const rows=listSkills().filter(s=>!s.interactiveOnly&&['active','beta'].includes(s.status)).map(s=>{const hay=tokens(`${s.id} ${s.title} ${s.group} ${s.cycleType}`);let score=overlap(q,hay)*5;for(const h of hintWords)if(norm(`${s.id} ${s.title} ${s.cycleType}`).includes(h))score+=4;if(s.risk==='read')score+=0.6;if(s.risk==='write')score-=0.2;const m=memory?.stats?.(s.id);if(m)score+=(m.reliability-0.5)*1.5;return{...s,score:Number(score.toFixed(3)),reliability:m?.reliability??0.5};}).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));const picked=rows.filter(x=>x.score>0).slice(0,limit);const defaults=rows.filter(x=>['skill.workspace.health','skill.index.search','skill.workspace.intelligence'].includes(x.id));for(const d of defaults)if(picked.length<Math.min(limit,5)&&!picked.some(x=>x.id===d.id))picked.push(d);return picked.slice(0,limit);}
+ module.exports={retrieveSkills,norm,tokens};
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/package.json /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/package.json
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/package.json	2026-08-13 17:49:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/package.json	2026-08-13 19:22:29.529736626 +0000
+@@ -1,16 +1,16 @@
+ {
+   "name": "windows-workspace-agent",
+-  "version": "0.9.3",
++  "version": "0.9.4",
+   "private": true,
+-  "description": "Cycle-driven Windows workspace agent with crash-resilient indexing, managed local AI, production-hardened UIA grounding, adaptive multi-monitor vision mapping, stale-target recovery, and verified-action skill learning.",
++  "description": "Cycle-driven Windows workspace agent with safe File Explorer Skill Pack, crash-resilient indexing, managed local AI, production-hardened UIA grounding, and verified file operations.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+     "build": "vite build --base=./",
+     "desktop": "npm run build && electron .",
+     "build:win": "npm run build && npm run pack:win",
+-    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs",
+-    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs",
++    "check:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/ipc.cjs && node --check electron/services/cycle-engine.cjs && node --check electron/services/file-indexer.cjs && node --check electron/services/file-analyzer.cjs && node --check electron/services/file-insights.cjs && node --check electron/services/file-search.cjs && node --check electron/services/duplicate-finder.cjs && node --check electron/services/path-policy.cjs && node --check electron/services/quarantine.cjs && node --check electron/services/maintenance.cjs && node --check electron/services/organizer.cjs && node --check electron/services/renamer.cjs && node --check electron/services/snapshot-store.cjs && node --check electron/services/goal-planner.cjs && node --check electron/services/workspace-cycles.cjs && node --check electron/services/capability-registry.cjs && node --check electron/services/windows-inspector.cjs && node --check electron/services/automation-store.cjs && node --check electron/services/automation-service.cjs && node --check electron/services/similarity-core.cjs && node --check electron/services/image-similarity.cjs && node --check electron/services/text-similarity.cjs && node --check electron/services/workspace-intelligence.cjs && node --check electron/services/fingerprint-store.cjs && node --check electron/services/office-text-extractor.cjs && node --check electron/services/review-queue-store.cjs && node --check electron/services/recommendation-applier.cjs && node --check electron/services/managed-zone-store.cjs && node --check electron/services/managed-zone-audit.cjs && node --check electron/services/storage-trend-store.cjs && node --check electron/services/drive-audit.cjs && node --check electron/services/startup-advisor.cjs && node --check electron/services/automation-conditions.cjs && node --check electron/services/event-journal.cjs && node --check electron/services/transaction-store.cjs && node --check electron/services/recovery-service.cjs && node --check electron/services/file-watcher-service.cjs && node --check electron/services/pdf-text-extractor.cjs && node --check electron/services/configuration-service.cjs && node --check electron/services/skill-registry.cjs && node --check electron/services/mission-compiler.cjs && node --check electron/services/windows-uia.cjs && node --check electron/services/windows-action-policy.cjs && node --check electron/services/windows-action-session-store.cjs && node --check electron/services/windows-uia-actions.cjs && node --check electron/services/persistent-file-index.cjs && node --check electron/services/indexed-duplicate-finder.cjs && node --check electron/services/persistent-index-cycles.cjs && node --check electron/services/hash-worker.cjs && node --check electron/services/hash-worker-pool.cjs && node --check electron/services/windows-path-utils.cjs && node --check scripts/verify-release-inputs.cjs && node --check scripts/verify-source-hygiene.cjs && node --check electron/services/windows-volume-probe.cjs && node --check electron/services/root-resilience-service.cjs && node --check electron/services/system-resilience-controller.cjs && node --check electron/services/lifecycle-state.cjs && node --check electron/services/resource-pressure-guard.cjs && node --check tests/packaged-app-smoke-v084.cjs && node --check tests/windows-multiroot-v084.uat.cjs && node --check tests/multi-index-isolation-v084.test.cjs && node --check tests/resource-cycle-integration-v084.test.cjs && node --check electron/services/local-ai-config-store.cjs && node --check electron/services/ai-redaction.cjs && node --check electron/services/ai-call-guard.cjs && node --check electron/services/skill-memory-store.cjs && node --check electron/services/skill-retriever.cjs && node --check electron/services/local-openai-provider.cjs && node --check electron/services/ai-planner.cjs && node --check electron/services/local-ai-service.cjs && node --check tests/local-ai-server-v090.uat.cjs && node --check electron/services/hardware-profile-service.cjs && node --check electron/services/local-ai-runtime-manager.cjs && node --check tests/real-local-ai-runtime-v091.test.cjs && node --check tests/local-ai-capability-v091.test.cjs && node --check tests/windows-local-ai-runtime-v091.uat.cjs && node --check electron/services/ui-grounding-core.cjs && node --check electron/services/grounding-memory-store.cjs && node --check electron/services/vision-crop-service.cjs && node --check electron/services/ui-grounding-session-store.cjs && node --check electron/services/ui-grounding-service.cjs && node --check electron/services/ui-outcome-verifier.cjs && node --check tests/ui-grounding-core-v092.test.cjs && node --check tests/ui-grounding-service-v092.test.cjs && node --check tests/ui-grounded-action-v092.test.cjs && node --check tests/local-ai-grounding-vision-v092.test.cjs && node --check tests/windows-intelligent-grounding-v092.uat.cjs && node --check tests/ui-grounding-scale-v092.cjs && node --check electron/services/ui-grounding-layout.cjs && node --check tests/ui-grounding-layout-v093.test.cjs && node --check tests/vision-crop-v093.test.cjs && node --check tests/ui-grounding-recovery-v093.test.cjs && node --check tests/windows-production-grounding-v093.uat.cjs && node --check electron/services/file-explorer-service.cjs && node --check electron/services/file-explorer-cycles.cjs && node --check tests/file-explorer-skill-pack-v094.test.cjs",
++    "test": "node tests/cycle-engine.test.cjs && node tests/file-guardian.test.cjs && node tests/file-cycles.integration.test.cjs && node tests/windows-agent-v03.test.cjs && node tests/mission.integration.test.cjs && node tests/automation-v04.test.cjs && node tests/semantic-intelligence-v05.test.cjs && node tests/semantic-cycles-v05.test.cjs && node tests/office-extractor-v05.test.cjs && node tests/windows-agent-v06.test.cjs && node tests/production-hardening-v07.test.cjs && node tests/upstream-foundation-v071.test.cjs && node tests/windows-uia-action-v072.test.cjs && node tests/persistent-index-v080.test.cjs && node tests/persistent-index-cycles-v080.test.cjs && node tests/production-hardening-v081.test.cjs && node tests/persistent-index-crash-v081.test.cjs && node tests/windows-path-hardening-v082.test.cjs && node tests/windows-volume-probe-v083.test.cjs && node tests/system-resilience-v083.test.cjs && node tests/root-interruption-v083.test.cjs && node tests/cycle-root-guard-v083.test.cjs && node tests/lifecycle-resource-v084.test.cjs && node tests/multi-root-isolation-v084.test.cjs && node tests/multi-index-isolation-v084.test.cjs && node tests/resource-cycle-integration-v084.test.cjs && node tests/local-ai-foundation-v090.test.cjs && node tests/local-ai-guard-v090.test.cjs && node tests/ai-mission-v090.test.cjs && node tests/real-local-ai-runtime-v091.test.cjs && node tests/local-ai-capability-v091.test.cjs && node tests/ui-grounding-core-v092.test.cjs && node tests/ui-grounding-service-v092.test.cjs && node tests/ui-grounded-action-v092.test.cjs && node tests/local-ai-grounding-vision-v092.test.cjs && node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs && node tests/file-explorer-skill-pack-v094.test.cjs",
+     "check": "npm run check:dependency-pins && npm run check:source-hygiene && npm run check:syntax && npm run check:jsx && npm test",
+     "test:scale": "node --max-old-space-size=2048 tests/scale-benchmark-v07.cjs",
+     "check:jsx": "tsc --noEmit --allowJs --checkJs false --jsx preserve --noResolve --skipLibCheck src/App.jsx src/components/CycleTimeline.jsx src/main.jsx",
+@@ -51,7 +51,9 @@
+     "test:windows-grounding-uat": "node tests/windows-intelligent-grounding-v092.uat.cjs",
+     "test:grounding-scale": "node tests/ui-grounding-scale-v092.cjs",
+     "test:grounding-v093": "node tests/ui-grounding-layout-v093.test.cjs && node tests/vision-crop-v093.test.cjs && node tests/ui-grounding-recovery-v093.test.cjs",
+-    "test:windows-grounding-v093-uat": "node tests/windows-production-grounding-v093.uat.cjs"
++    "test:windows-grounding-v093-uat": "node tests/windows-production-grounding-v093.uat.cjs",
++    "test:explorer": "node tests/file-explorer-skill-pack-v094.test.cjs",
++    "test:windows-explorer-uat": "node tests/windows-file-explorer-v094.uat.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/src/App.jsx /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/src/App.jsx
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/src/App.jsx	2026-08-13 17:50:42.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/src/App.jsx	2026-08-13 19:23:04.576457299 +0000
+@@ -4,9 +4,9 @@
+ const fmt=n=>new Intl.NumberFormat('fa-IR').format(n||0);
+ const bytes=n=>{if(!n)return'۰ B';const u=['B','KB','MB','GB','TB'];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${new Intl.NumberFormat('fa-IR',{maximumFractionDigits:1}).format(v)} ${u[i]}`};
+ const actionsForRole=c=>{const t=String(c?.element?.controlType||'');const a=['focus'];if(/Button|MenuItem|Hyperlink|ListItem|TabItem/.test(t))a.push('invoke');if(/CheckBox|RadioButton|ToggleButton/.test(t))a.push('toggle');if(/ComboBox|TreeItem|MenuItem/.test(t))a.push('expand','collapse');if(/Edit|Document|ComboBox/.test(t))a.push('setValue');if(c?.element?.canScrollIntoView)a.push('scrollIntoView');return [...new Set(a)]};
+-const tabs={home:'مرکز فرمان',system:'Windows System',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
++const tabs={home:'مرکز فرمان',system:'Windows System',explorer:'File Explorer Skills',uia:'Windows UI Map',mission:'Agent فارسی',ai:'Local AI',health:'Workspace Doctor',intelligence:'File Intelligence',review:'Review Queue',zones:'Downloads / Desktop',drive:'Drive Audit',index:'Persistent Index',search:'جست‌وجوی فایل',cleanup:'Safe Cleanup',files:'مرتب‌سازی و Rename',duplicates:'Duplicate Guardian',snapshots:'Snapshot / Delta',automation:'Automation',recovery:'Recovery Center',watch:'File Watcher',cert:'Certification',pdf:'PDF Intelligence',settings:'Backup / Settings',cycles:'تاریخچه چرخه‌ها'};
+ export default function App(){
+- const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null);
++ const[tab,setTab]=useState('home'),[root,setRoot]=useState(''),[cycle,setCycle]=useState(null),[cycles,setCycles]=useState([]),[busy,setBusy]=useState(false),[health,setHealth]=useState(null),[dup,setDup]=useState(null),[caps,setCaps]=useState(null),[snaps,setSnaps]=useState([]),[command,setCommand]=useState(''),[goal,setGoal]=useState(null),[query,setQuery]=useState(''),[searchResult,setSearchResult]=useState(null),[rename,setRename]=useState({find:'',replace:'',prefix:'',suffix:'',sequence:false}),[system,setSystem]=useState(null),[rules,setRules]=useState([]),[ruleForm,setRuleForm]=useState({title:'بررسی دوره‌ای Workspace',cycleType:'workspace-health',intervalMinutes:60,conditionType:'always',threshold:10}),[intel,setIntel]=useState(null),[similarImages,setSimilarImages]=useState(null),[similarTexts,setSimilarTexts]=useState(null),[reviewItems,setReviewItems]=useState([]),[selectedReview,setSelectedReview]=useState([]),[zones,setZones]=useState([]),[zoneReport,setZoneReport]=useState(null),[activeZone,setActiveZone]=useState(null),[driveReport,setDriveReport]=useState(null),[recoveries,setRecoveries]=useState([]),[journalRows,setJournalRows]=useState([]),[journalStatus,setJournalStatus]=useState(null),[watches,setWatches]=useState([]),[watchEvents,setWatchEvents]=useState([]),[pdfReport,setPdfReport]=useState(null),[configPreview,setConfigPreview]=useState(null),[skills,setSkills]=useState(null),[uiaMap,setUiaMap]=useState(null),[uiaError,setUiaError]=useState(''),[indexStatus,setIndexStatus]=useState(null),[indexErrors,setIndexErrors]=useState([]),[indexHealth,setIndexHealth]=useState(null),[watchStatus,setWatchStatus]=useState(null),[resilience,setResilience]=useState(null),[certStatus,setCertStatus]=useState(null),[aiStatus,setAiStatus]=useState(null),[aiSettings,setAiSettings]=useState(null),[aiHealth,setAiHealth]=useState(null),[aiCommand,setAiCommand]=useState(''),[aiPlanResult,setAiPlanResult]=useState(null),[aiVision,setAiVision]=useState(null),[aiError,setAiError]=useState(''),[aiHardware,setAiHardware]=useState(null),[aiRuntime,setAiRuntime]=useState(null),[aiSelection,setAiSelection]=useState(null),[aiCapabilities,setAiCapabilities]=useState(null),[aiUiAssist,setAiUiAssist]=useState(null),[uiGroundIntent,setUiGroundIntent]=useState(''),[uiGrounding,setUiGrounding]=useState(null),[groundAction,setGroundAction]=useState('focus'),[groundValue,setGroundValue]=useState(''),[uiVisualVerify,setUiVisualVerify]=useState(null),[explorerForm,setExplorerForm]=useState({relativePath:'',query:'',sourceRelative:'',destinationRelative:'',newName:''}),[explorerResult,setExplorerResult]=useState(null),[explorerError,setExplorerError]=useState('');
+  const refresh=async()=>setCycles(await api.cycles());
+  const refreshSnaps=async r=>setSnaps(await api.snapshots(r||root));
+  const refreshRules=async()=>setRules(await api.automationList());
+@@ -21,6 +21,8 @@
+  useEffect(()=>{refresh();refreshRules();refreshZones();refreshRecovery();refreshJournal();refreshWatches();refreshCert();refreshAI();api.capabilities().then(setCaps);api.skills().then(setSkills)},[]);
+  async function pick(){const p=await api.selectFolder();if(p){setRoot(p);setCycle(null);setHealth(null);setDup(null);setSearchResult(null);setIntel(null);setSimilarImages(null);setSimilarTexts(null);setSelectedReview([]);await refreshSnaps(p);await refreshReviews(p);await refreshIndex(p)}}
+  async function run(type,input={}){const actualRoot=input.root||root;if(!actualRoot&&!['windows-system','windows-ui-map'].includes(type))return;setBusy(true);try{const c=await api.startCycle(type,{root:actualRoot,...input});setCycle(c);if(type==='workspace-health'&&c.result)setHealth(c.result);if((type==='duplicates'||type==='indexed-duplicates')&&c.result)setDup(c.result);if((type==='file-search'||type==='indexed-file-search')&&c.result)setSearchResult(c.result);if(type==='persistent-index-scan'||type==='persistent-index-maintenance')await refreshIndex(actualRoot);if(type==='windows-system'&&c.result)setSystem(c.result);if(type==='windows-ui-map'&&c.result)setUiaMap(c.result);if(type==='workspace-intelligence'&&c.result)setIntel(c.result);if(type==='similar-images'&&c.result)setSimilarImages(c.result);if(type==='similar-texts'&&c.result)setSimilarTexts(c.result);if(type==='managed-zone-audit'&&c.result)setZoneReport(c.result);if(type==='drive-audit'&&c.result)setDriveReport(c.result);if(type==='pdf-intelligence'&&c.result)setPdfReport(c.result);if(type==='review-queue-build'||type==='recommendation-apply')await refreshReviews(actualRoot);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
++ async function explorerRead(type,input={}){setExplorerError('');setExplorerResult(null);const c=await run(type,input);if(c?.result)setExplorerResult(c.result);else if(c?.ok===false)setExplorerError(c.message||c.code||'File Explorer Skill ناموفق بود.');return c}
++ async function explorerWrite(type,input={}){if(!root)return;setExplorerError('');setBusy(true);try{const c=await api.startExplorerWrite(type,{root,...input});if(c?.id){setCycle(c);await refresh();await refreshRecovery();await refreshJournal();return c}setExplorerError(c?.message||c?.code||'Explorer Write Preview ساخته نشد.');return c}finally{setBusy(false)}}
+  async function startUiaAction(target,action,value=''){setUiaError('');setBusy(true);try{const selector={processId:target.processId,windowName:uiaMap?.focusedWindow?.name||'',windowClassName:uiaMap?.focusedWindow?.className||'',automationId:target.automationId||'',name:target.name||'',className:target.className||'',controlType:target.controlType||'',frameworkId:target.frameworkId||''};const c=await api.startWindowsUiAction({action,selector,value,sensitive:false});if(c?.id){setCycle(c);await refresh();await refreshJournal();return c}setUiaError(c?.message||c?.code||'ساخت Action Preview ناموفق بود.');return c}catch(error){setUiaError(error?.message||'خطای UIA Action')}finally{setBusy(false)}}
+  async function confirm(id,d){setBusy(true);try{const c=await api.confirmCycle(id,d);setCycle(c);if(c.type==='recommendation-apply')await refreshReviews(c.input?.root);await refresh();await refreshRecovery();await refreshJournal();if(root)await refreshSnaps();return c}finally{setBusy(false)}}
+  async function undo(id){setBusy(true);try{const r=await api.undoCycle(id);if(r.cycle){setCycle(r.cycle);if(r.cycle.type==='recommendation-apply')await refreshReviews(r.cycle.input?.root)}await refresh()}finally{setBusy(false)}}
+@@ -45,10 +47,11 @@
+  async function auditZone(z){setActiveZone(z);setZoneReport(null);await run('managed-zone-audit',{root:z.root,zoneId:z.id})}
+  const pending=useMemo(()=>reviewItems.filter(x=>x.status==='pending'),[reviewItems]);
+  const rootTabs=['home','mission','ai','health','intelligence','review','zones','drive','index','search','cleanup','files','duplicates','snapshots','automation','watch','pdf'];
+- return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.3</span></header>
++ return <div className="app"><aside><div className="brand"><div className="orb">WA</div><div><b>Workspace Agent</b><small>Windows • Cycle Engine v4</small></div></div>{Object.entries(tabs).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}<div className="safety"><b>Safe by default</b><small>Observe → Analyze → Plan → Preview → Confirm → Execute → Verify → End</small><small>Permanent Delete غیرفعال؛ Writeهای هوشمند فقط از Review Queue و با تأیید اجرا می‌شوند.</small></div></aside><main><header><div><h1>{tabs[tab]}</h1><p>Agent ویندوزی محلی برای مدیریت Workspace، دیسک، فایل‌ها و مأموریت‌های چندچرخه‌ای.</p></div><span className="version">v0.9.4</span></header>
+  {rootTabs.includes(tab)&&<section className="picker"><div><b>Workspace</b><span>{root||'پوشه‌ای انتخاب نشده'}</span></div><button onClick={pick}>انتخاب پوشه</button></section>}
+- {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/><Task title="Local AI" sub="Qwen / llama.cpp · Plan-only" on={()=>setTab('ai')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
++ {tab==='home'&&<><div className="grid4"><Task title="Windows System" sub="OS / Disk / Startup Advisor" on={()=>{setTab('system');run('windows-system')}} disabled={false}/><Task title="File Explorer Skills" sub="Properties / Search / Copy / Move / Rename" on={()=>setTab('explorer')} disabled={false}/><Task title="Windows UI Map" sub="UI Automation / Focused controls" on={()=>{setTab('uia');run('windows-ui-map')}} disabled={false}/><Task title="Workspace Doctor" sub="Score / Large / Stale / Junk" on={()=>run('workspace-health')}/><Task title="Review Queue" sub="Suggestion → Select → Apply → Undo" on={()=>setTab('review')} disabled={false}/><Task title="Downloads / Desktop" sub="Managed Zones / Storage Trend" on={()=>setTab('zones')} disabled={false}/><Task title="Drive Audit" sub="User-data scan / System skip" on={()=>setTab('drive')} disabled={false}/><Task title="Persistent Index" sub="SQLite / Resume / Low RAM" on={()=>setTab('index')} disabled={false}/><Task title="Agent فارسی" sub="فرمان چندمرحله‌ای" on={()=>setTab('mission')} disabled={false}/><Task title="Local AI" sub="Qwen / llama.cpp · Plan-only" on={()=>setTab('ai')} disabled={false}/></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{caps&&<div className="panel"><div className="panel-title"><div><h3>Capability Registry</h3><p>تمرکز نسخه فعلی فقط روی قابلیت‌های Windows Agent و مدیریت امن فایل/دیسک است.</p></div><div className="mini-stats"><b>{fmt(caps.active)}</b><span>فعال/بتا</span><b>{fmt(caps.planned)}</b><span>Planned</span></div></div><div className="cap-grid">{caps.rows.map(c=><div className={`cap ${c.status}`} key={c.id}><div><b>{c.title}</b><span>{c.group} · {c.mode}</span></div><em>{c.status}</em><p>{c.detail}</p></div>)}</div></div>}{skills&&<div className="panel"><div className="panel-title"><div><h3>Reusable Skill Registry</h3><p>هر Mission فقط Skill ثبت‌شده را اجرا می‌کند؛ Write بدون Confirmation مجاز نیست.</p></div><div className="mini-stats"><b>{fmt(skills.read)}</b><span>Read</span><b>{fmt(skills.write)}</b><span>Write</span></div></div><div className="cap-grid">{skills.rows.map(x=><div className={`cap ${x.status}`} key={x.id}><div><b>{x.title}</b><span>{x.group} · {x.risk}</span></div><em>{x.skillId||x.id}</em><p>{x.cycleType} · {x.confirmation?'Confirm required':'No confirmation'}</p></div>)}</div></div>}</>}
+  {tab==='system'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('windows-system')} disabled={busy}>اجرای Windows System Doctor</button><span>Read-only؛ Startup Advisor فقط اولویت Review می‌دهد و Registry/Process را تغییر نمی‌دهد.</span></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{system&&<SystemReport data={system}/>}</>}
++ {tab==='explorer'&&<><div className="panel"><div className="panel-title"><div><h3>File Explorer Skill Pack</h3><p>همه مسیرها نسبت به Workspace هستند. Readها بدون تغییر فایل؛ Writeها فقط Preview → Confirm → Execute → Verify.</p></div><b>v0.9.4</b></div><div className="formgrid"><input value={explorerForm.relativePath} onChange={e=>setExplorerForm(x=>({...x,relativePath:e.target.value}))} placeholder="مسیر نسبی، مثلاً docs/report.pdf"/><button onClick={()=>explorerRead('explorer-properties',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Properties</button><button onClick={()=>explorerRead('explorer-navigate',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Open in Explorer</button><button onClick={()=>explorerRead('explorer-select',{relativePath:explorerForm.relativePath})} disabled={!root||busy}>Reveal / Select</button></div><div className="formgrid"><input value={explorerForm.query} onChange={e=>setExplorerForm(x=>({...x,query:e.target.value}))} placeholder="Search query"/><button className="primary" onClick={()=>explorerRead('explorer-search',{query:explorerForm.query,limit:100})} disabled={!root||!explorerForm.query||busy}>Search</button></div>{explorerError&&<div className="action-error"><b>Explorer Skill متوقف شد</b><p>{explorerError}</p></div>}</div><div className="panel"><h3>Controlled Write Skills</h3><p>Copy در این Foundation فقط فایل معمولی است؛ کپی recursive پوشه عمداً Block است. Symlink/Junction traversal نیز برای Write مسدود است.</p><div className="formgrid"><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی؛ برای New Folder نام پوشه جدید"/><button onClick={()=>explorerWrite('explorer-new-folder',{destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.destinationRelative||busy}>Preview New Folder</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="منبع نسبی"/><input value={explorerForm.destinationRelative} onChange={e=>setExplorerForm(x=>({...x,destinationRelative:e.target.value}))} placeholder="مقصد نسبی دقیق"/><button onClick={()=>explorerWrite('explorer-copy',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Copy</button><button onClick={()=>explorerWrite('explorer-move',{sourceRelative:explorerForm.sourceRelative,destinationRelative:explorerForm.destinationRelative})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.destinationRelative||busy}>Preview Move</button></div><div className="formgrid"><input value={explorerForm.sourceRelative} onChange={e=>setExplorerForm(x=>({...x,sourceRelative:e.target.value}))} placeholder="فایل/پوشه برای Rename"/><input value={explorerForm.newName} onChange={e=>setExplorerForm(x=>({...x,newName:e.target.value}))} placeholder="نام جدید فقط، بدون مسیر"/><button onClick={()=>explorerWrite('explorer-rename',{sourceRelative:explorerForm.sourceRelative,newName:explorerForm.newName})} disabled={!root||!explorerForm.sourceRelative||!explorerForm.newName||busy}>Preview Rename</button></div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{explorerResult&&<ExplorerResult data={explorerResult}/>}</>}
+  {tab==='uia'&&<><div className="toolbar"><button className="primary large" onClick={()=>{setUiaError('');run('windows-ui-map')}} disabled={busy}>خواندن UI پنجره فعال</button><span>Grounding خواندنی + Action کنترل‌شده با Preview/Confirm/Pin/Verify؛ بدون coordinate click، SendKeys عمومی یا Password write.</span></div>{uiaError&&<div className="panel action-error"><b>Action متوقف شد</b><p>{uiaError}</p></div>}<CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{uiaMap&&<UiaReport data={uiaMap} onAction={startUiaAction} busy={busy}/>}</>}
+  {tab==='mission'&&<><div className="panel"><h3>فرمان فارسی</h3><textarea className="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="مثلاً: این پوشه رو هوشمند بررسی کن، پیشنهادها رو برای Review آماده کن و چیزی رو خودکار تغییر نده"/><div className="actions"><button onClick={plan} disabled={!command}>فقط ساخت Plan</button><button className="primary" onClick={mission} disabled={!root||!command||busy}>اجرای Mission</button></div>{goal&&<div className="preview-box"><b>{goal.summary}</b><p>Confidence: {Math.round(goal.confidence*100)}%</p>{goal.notes?.map((n,i)=><small key={i}>{n}</small>)}{goal.steps.map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.type} · {s.requiresConfirmation?'نیازمند تأیید':'Read-only/Local'}</small></div>)}</div>}</div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}
+  {tab==='ai'&&<><div className="health-grid"><div className="panel"><div className="panel-title"><div><h3>Local AI Runtime</h3><p>External loopback endpoint یا Managed llama-server؛ مدل هیچ Tool اجرایی مستقیم دریافت نمی‌کند.</p></div><button onClick={refreshAI}>Refresh</button></div>{aiStatus&&<><div className="meter"><span>AI</span><b>{aiStatus.enabled?'Enabled':'Disabled'}</b></div><div className="meter"><span>Model</span><b>{aiStatus.model||'تنظیم نشده'}</b></div><div className="meter"><span>Runtime</span><b>{aiRuntime?.managed?`${aiRuntime.state} · ${aiRuntime.pid||'-'}`:'External / manual'}</b></div><div className="meter"><span>Circuit</span><b>{aiStatus.guard?.circuitOpen?'OPEN':'Closed'}</b></div><div className="meter"><span>Privacy</span><b>Loopback · no raw prompt · no background screenshot</b></div></>}</div><div className="panel"><h3>Hardware Advisor</h3><p>RAM/CPU و روی Windows اطلاعات WMI GPU خوانده می‌شود. VRAM WMI فقط سیگنال کم‌اعتماد است و Fit تضمین نمی‌شود.</p><div className="actions"><button onClick={probeAIHardware} disabled={busy}>Probe Hardware</button>{aiHardware?.advice&&<button onClick={async()=>{const r=await api.aiApplyHardwareAdvice(aiHardware.advice);if(r?.ok){setAiSettings(r.settings);await refreshAI()}}}>اعمال تنظیمات Runtime پیشنهادی</button>}</div>{aiHardware&&<><div className="meter"><span>RAM</span><b>{bytes(aiHardware.memory?.totalBytes)}</b></div><div className="meter"><span>CPU</span><b>{aiHardware.cpu?.logicalCores||'-'} threads</b></div><div className="meter"><span>GPU</span><b>{(aiHardware.gpus||[]).map(g=>g.name).join(' · ')||'نامشخص'}</b></div><div className="meter"><span>Suggested</span><b>{aiHardware.advice?.modelFamily} · ctx {fmt(aiHardware.advice?.contextSize)}</b></div><small>{aiHardware.advice?.note}</small></>}</div><div className="panel wide"><h3>Managed llama.cpp Runtime</h3><p>Agent فقط فایل <code>llama-server</code> و مدل <code>.gguf</code> انتخاب‌شده توسط کاربر را با آرگومان‌های allowlisted اجرا می‌کند. Host همیشه 127.0.0.1 و Web UI خاموش است.</p>{aiSettings&&<div className="formgrid"><label><span>Managed Runtime</span><input type="checkbox" checked={Boolean(aiSettings.managedRuntime)} onChange={e=>setAiSettings({...aiSettings,managedRuntime:e.target.checked})}/></label><label><span>Start with Agent</span><input type="checkbox" checked={Boolean(aiSettings.runtimeStartOnLaunch)} onChange={e=>setAiSettings({...aiSettings,runtimeStartOnLaunch:e.target.checked})}/></label><div className="inline"><input value={aiSettings.runtimeExecutablePath||''} readOnly placeholder="llama-server.exe"/><button onClick={pickAIRuntimeExe}>انتخاب Runtime</button></div><div className="inline"><input value={aiSettings.runtimeModelPath||''} readOnly placeholder="model.gguf"/><button onClick={pickAIModel}>انتخاب GGUF</button></div><label><span>Port</span><input type="number" value={aiSettings.runtimePort||8080} onChange={e=>setAiSettings({...aiSettings,runtimePort:Number(e.target.value)})}/></label><label><span>Context</span><input type="number" value={aiSettings.runtimeContextSize||8192} onChange={e=>setAiSettings({...aiSettings,runtimeContextSize:Number(e.target.value)})}/></label><label><span>CPU Threads (0=auto)</span><input type="number" value={aiSettings.runtimeThreads||0} onChange={e=>setAiSettings({...aiSettings,runtimeThreads:Number(e.target.value)})}/></label><label><span>GPU Layers</span><select value={String(aiSettings.runtimeGpuLayers||'auto')} onChange={e=>setAiSettings({...aiSettings,runtimeGpuLayers:e.target.value})}><option value="auto">auto</option><option value="all">all</option><option value="0">CPU only</option></select></label><div className="actions"><button onClick={saveAI}>ذخیره تنظیمات</button><button className="primary" disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('start')}>Start</button><button disabled={busy||!aiSettings.managedRuntime} onClick={()=>runtimeAction('restart')}>Restart</button><button disabled={busy} onClick={()=>runtimeAction('stop')}>Stop</button></div></div>}{aiSelection&&<p>{aiSelection.ok?`Model ${aiSelection.modelFile} · ${bytes(aiSelection.modelBytes)} · RAM ratio ${Math.round((aiSelection.ramRatio||0)*100)}%`:`Selection: ${aiSelection.error?.code||'ناقص'}`} {aiSelection.warning||''}</p>}{aiRuntime?.logs?.length>0&&<details><summary>آخرین Runtime Logهای حافظه‌ای</summary><pre className="preview-box">{aiRuntime.logs.slice(-12).map(x=>`${x.kind}: ${x.text}`).join('\n')}</pre></details>}</div><div className="panel"><h3>Provider + Capability</h3>{aiSettings&&<div className="formgrid"><label><span>Enable Local AI</span><input type="checkbox" checked={Boolean(aiSettings.enabled)} onChange={e=>setAiSettings({...aiSettings,enabled:e.target.checked})}/></label><label><span>Enable Vision</span><input type="checkbox" checked={Boolean(aiSettings.allowVision)} onChange={e=>setAiSettings({...aiSettings,allowVision:e.target.checked})}/></label><input value={aiSettings.baseUrl||''} onChange={e=>setAiSettings({...aiSettings,baseUrl:e.target.value})} placeholder="http://127.0.0.1:8080/v1"/><input value={aiSettings.model||''} onChange={e=>setAiSettings({...aiSettings,model:e.target.value})} placeholder="Model id / managed alias"/><div className="actions"><button onClick={saveAI}>ذخیره</button><button onClick={testAI}>Health</button><button onClick={warmupAI}>Warmup</button><button onClick={()=>probeAICapabilities(false)}>Probe JSON</button><button disabled={!aiSettings.allowVision} onClick={()=>probeAICapabilities(true)}>Probe Vision</button></div></div>}{aiHealth&&<p>{aiHealth.ok?`READY · ${aiHealth.latencyMs} ms · ${(aiHealth.models||[]).slice(0,3).join(', ')}`:`${aiHealth.code||'UNAVAILABLE'} · ${aiHealth.message||''}`}</p>}{aiCapabilities&&<div className="preview-box"><b>Capability Probe: {aiCapabilities.ok?'PASS':'CHECK'}</b><small>Schema JSON: {aiCapabilities.schemaJson?.ok?'OK':'NO'} · Vision advertised: {aiCapabilities.vision?.supported?'YES':'NO'} · Vision tested: {aiCapabilities.vision?.tested?(aiCapabilities.vision?.ok?'PASS':'FAIL'):'NO'}</small><small>Context: {fmt(aiCapabilities.props?.contextSize||0)} · Slots: {fmt(aiCapabilities.props?.totalSlots||0)} · Build: {aiCapabilities.props?.buildInfo||'-'}</small></div>}</div><div className="panel wide"><h3>Schema-constrained AI Planner</h3><p>Local AI فقط Skillهای allowlisted را پیشنهاد می‌دهد؛ Root/Path/Shell از خروجی مدل حذف می‌شود و Writeها Confirmation مستقل دارند.</p><textarea className="command" value={aiCommand} onChange={e=>setAiCommand(e.target.value)} placeholder="مثلاً: فایل‌های تکراری را بررسی کن، بعد یک برنامه امن برای مرتب‌سازی بر اساس نوع بساز"/><div className="actions"><button className="primary" disabled={!root||!aiCommand||busy||!aiStatus?.enabled} onClick={makeAIPlan}>ساخت Local AI Plan</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIVision}>Vision روی تصویر انتخابی</button><button disabled={busy||!aiSettings?.allowVision} onClick={runAIUiAssist}>UIA-first / Vision fallback</button></div>{aiError&&<p className="error">{aiError}</p>}{aiPlanResult?.ok&&<div className="preview-box"><b>{aiPlanResult.goalPlan?.summary}</b><p>Model: {aiPlanResult.model} · {aiPlanResult.latencyMs} ms · Confidence {Math.round((aiPlanResult.goalPlan?.confidence||0)*100)}%</p>{(aiPlanResult.goalPlan?.notes||[]).map((n,i)=><small key={i}>{n}</small>)}{(aiPlanResult.goalPlan?.steps||[]).map(s=><div className="preview-row" key={s.id}><span>{s.label}</span><small>{s.skillId} · {s.requiresConfirmation?'Write / Confirm':'Read-only/Local'}</small></div>)}<button className="primary" disabled={busy} onClick={executeAIPlan}>اجرای دقیق همین Plan</button><small>Plan token ده دقیقه اعتبار دارد و به Workspace فعلی bind شده است.</small></div>}</div>{aiVision?.ok&&<div className="panel wide"><h3>Local Vision Advisory</h3><p>{aiVision.summary}</p><small>{aiVision.fileLabel} · {aiVision.model} · {aiVision.latencyMs} ms</small>{(aiVision.warnings||[]).map((w,i)=><p key={i}>{w}</p>)}{(aiVision.elements||[]).slice(0,30).map((x,i)=><div className="file-row" key={`${x.label}-${i}`}><b>{Math.round(x.confidence*100)}%</b><span>{x.label} · {x.role}</span></div>)}</div>}{aiUiAssist?.ok&&<div className="panel wide"><h3>UI Assist</h3><p>Source: <b>{aiUiAssist.source}</b> · {aiUiAssist.reason}</p><small>Policy: UIA first · هیچ Screenshot خودکاری گرفته نمی‌شود.</small>{aiUiAssist.source==='uia'?<p>{fmt(aiUiAssist.uia?.elements?.length)} کنترل از UI Automation کافی بود؛ Vision فراخوانی نشد.</p>:<p>{aiUiAssist.vision?.summary}</p>}</div>}<div className="panel wide"><h3>Intelligent UI Grounding</h3><p>هدف را با زبان طبیعی بگو. UIA Candidate می‌سازد؛ Vision فقط همان Candidateها را تأیید/رد می‌کند و Target یا coordinate جدید نمی‌سازد.</p><div className="formgrid"><input value={uiGroundIntent} onChange={e=>setUiGroundIntent(e.target.value)} placeholder="مثلاً: دکمه ذخیره تنظیمات را پیدا کن"/><div className="actions"><button className="primary" disabled={busy||!uiGroundIntent.trim()} onClick={groundUiIntent}>Ground با UIA</button><button disabled={busy||!uiGrounding?.ok||!aiSettings?.allowVision} onClick={groundUiWithVision}>Vision corroboration</button></div></div>{uiGrounding?.ok&&<><div className="mini-stats"><b>{Math.round((uiGrounding.result?.topConfidence||0)*100)}%</b><span>Top confidence</span><b>{uiGrounding.result?.quality||'-'}</b><span>Quality</span><b>{uiGrounding.result?.visionUsed?'YES':'NO'}</b><span>Vision fused</span></div><div className="formgrid"><label><span>Action فقط با انتخاب کاربر</span><select value={groundAction} onChange={e=>setGroundAction(e.target.value)}><option value="focus">focus</option><option value="invoke">invoke</option><option value="toggle">toggle</option><option value="expand">expand</option><option value="collapse">collapse</option><option value="scrollIntoView">scrollIntoView</option><option value="setValue">setValue</option></select></label>{groundAction==='setValue'&&<input value={groundValue} maxLength={2048} onChange={e=>setGroundValue(e.target.value)} placeholder="مقدار غیرحساس"/>}</div>{(uiGrounding.result?.candidates||[]).map((c,i)=><div className="uia-row" key={c.id}><div><b>#{i+1} · {c.element?.name||'(بدون Name)'}</b><small>{c.element?.controlType} · {c.element?.surfaceKind||'window'} · semantic {Math.round((c.semanticScore||0)*100)}% · context {Math.round((c.contextScore||0)*100)}% · {c.element?.isOffscreen?'offscreen · ':''}{c.vision?.matched?`vision ${Math.round((c.vision.confidence||0)*100)}%`:'UIA only'}</small></div><div className="uia-actions"><span>{Math.round(((c.fusedConfidence??c.confidence)||0)*100)}%</span><button disabled={busy||!actionsForRole(c).includes(groundAction)} onClick={()=>startGroundedAction(c)}>Preview همین Candidate</button></div></div>)}</>}{cycle?.type==='windows-ui-action'&&cycle?.status==='completed'&&<div className="preview-box"><b>Post-action verification</b><small>UIA verification قبلاً انجام شده؛ این مرحله فقط corroboration تصویری روی Screenshot انتخابی است.</small><button disabled={busy||!aiSettings?.allowVision} onClick={verifyCurrentUiaVisual}>Visual Verify آخرین UI Action</button>{uiVisualVerify?.ok&&<small>نتیجه: {uiVisualVerify.visual?.result||'deterministic'} · {Math.round((uiVisualVerify.visual?.confidence||0)*100)}% · overall {uiVisualVerify.overall||'-'}</small>}</div>}</div></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/></>}\n {tab==='health'&&<><div className="toolbar"><button className="primary large" onClick={()=>run('workspace-health')} disabled={!root||busy}>تحلیل کامل Workspace</button></div><CycleTimeline cycle={cycle} onConfirm={confirm} onUndo={undo}/>{health&&<Health data={health}/>}</>}
+@@ -78,6 +81,7 @@
+ function SystemReport({data}){if(!data.supported)return <div className="panel"><h3>Windows System Doctor</h3><p>این قابلیت هنگام اجرای برنامه روی Windows فعال می‌شود. Runtime فعلی: {data.platform}</p></div>;const adv=data.startupAdvisor;return <div className="health-grid"><div className="panel"><h3>Windows</h3><div className="meter"><span>OS</span><b>{data.os?.caption}</b></div><div className="meter"><span>Build</span><b>{data.os?.build}</b></div><div className="meter"><span>RAM</span><b>{bytes(data.computer?.ramBytes)}</b></div><div className="meter"><span>CPU</span><b>{data.cpu?.name}</b></div></div><div className="panel"><h3>Logical Disks</h3>{(data.disks||[]).map(d=><div className="meter" key={d.DeviceID}><span>{d.DeviceID} {d.VolumeName||''}</span><b>{bytes(d.FreeSpace)} آزاد / {bytes(d.Size)}</b></div>)}</div><div className="panel wide"><div className="panel-title"><div><h3>Startup Review Advisor</h3><p>{adv?.note}</p></div>{adv&&<div className="mini-stats"><b>{fmt(adv.summary.high)}</b><span>High Review</span><b>{fmt(adv.summary.medium)}</b><span>Medium</span></div>}</div>{(adv?.rows||data.startup||[]).slice(0,60).map((x,i)=><div className="startup-row" key={`${x.Name}-${i}`}><div><b>{x.Name}</b><small>{x.Command}</small><p>{(x.evidence||[]).join(' · ')}</p></div>{x.reviewPriority&&<span className={`priority ${x.reviewPriority}`}>{x.reviewPriority}</span>}</div>)}</div><div className="panel wide"><h3>Top Processes by Memory</h3>{(data.topProcesses||[]).map(p=><div className="file-row" key={`${p.Name}-${p.Id}`}><b>{bytes(p.WorkingSet64)}</b><span>{p.Name} · PID {p.Id}</span></div>)}</div></div>}
+ function ZoneReport({data,zone}){return <div className="health-grid"><div className="panel"><h3>{zone?.title||'Managed Zone'}</h3><div className="meter"><span>Files</span><b>{fmt(data.files)}</b></div><div className="meter"><span>Scanned size</span><b>{bytes(data.bytes)}</b></div><div className="meter"><span>Loose root files</span><b>{fmt(data.looseFiles)}</b></div><div className="meter"><span>Clutter score</span><b>{fmt(data.clutterScore)}/100</b></div></div><div className="panel"><h3>Age / Downloads</h3><div className="meter"><span>&gt; 90 days</span><b>{fmt(data.old90)}</b></div><div className="meter"><span>Partial downloads</span><b>{fmt(data.partialDownloads?.length)}</b></div><div className="meter"><span>Installers</span><b>{fmt(data.installers?.length)}</b></div><div className="meter"><span>Archives</span><b>{fmt(data.archives?.length)}</b></div></div><div className="panel wide"><h3>پیشنهادهای Zone</h3>{(data.recommendations||[]).map(x=><div className="recommend" key={x.code}><div><b>{x.code}</b><small>{fmt(x.count)} مورد</small></div><span className={`priority ${x.priority}`}>{x.priority}</span><p>{x.text}</p></div>)}{!(data.recommendations||[]).length&&<p>هشدار معناداری پیدا نشد.</p>}</div><div className="panel wide"><h3>Storage Trend</h3><div className="trend-list">{(data.trend||[]).slice(-12).map((x,i)=><div className="trend-row" key={`${x.at}-${i}`}><span>{new Date(x.at).toLocaleString('fa-IR')}</span><b>{fmt(x.files)} فایل</b><b>{bytes(x.scannedBytes)}</b><b>{bytes(x.freeBytes)} آزاد</b><b>Clutter {fmt(x.clutterScore)}</b></div>)}</div></div></div>}
+ function DriveReport({data}){return <div className="health-grid"><div className="panel"><h3>Drive Scope</h3><div className="meter"><span>Root</span><b>{data.root}</b></div><div className="meter"><span>Files scanned</span><b>{fmt(data.scannedFiles)}</b></div><div className="meter"><span>Scanned bytes</span><b>{bytes(data.scannedBytes)}</b></div><div className="meter"><span>Errors</span><b>{fmt(data.errorsTotal)}</b></div></div><div className="panel"><h3>Storage</h3>{data.storage&&<><div className="meter"><span>Total</span><b>{bytes(data.storage.totalBytes)}</b></div><div className="meter"><span>Free</span><b>{bytes(data.storage.freeBytes)}</b></div><div className="meter"><span>Used</span><b>{bytes(data.storage.usedBytes)}</b></div></>}</div><div className="panel wide"><h3>Top folders</h3>{(data.topFolders||[]).slice(0,50).map(f=><button className="file-row" key={f.path} onClick={()=>api.showItem(f.path)}><b>{bytes(f.bytes)}</b><span>{f.path} · {fmt(f.files)} فایل</span></button>)}</div><div className="panel wide"><h3>Large files</h3>{(data.largeFiles||[]).slice(0,60).map(f=><button className="file-row" key={f.path} onClick={()=>api.showItem(f.path)}><b>{bytes(f.size)}</b><span>{f.path}</span></button>)}{!(data.largeFiles||[]).length&&<p>فایل بالاتر از آستانه پیدا نشد.</p>}</div></div>}
++function ExplorerResult({data}){if(data?.rows)return <div className="panel"><h3>Explorer Search · {fmt(data.total)} نتیجه</h3><p>{data.source||data.schemaVersion}</p>{data.rows.slice(0,100).map(f=><button className="file-row" key={f.path} onClick={()=>api.showItem(f.path)}><b>{bytes(f.size)}</b><span>{f.relativePath||f.path}</span></button>)}</div>;return <div className="panel"><h3>Explorer Properties</h3><div className="meter"><span>Type</span><b>{data.type||'-'}</b></div><div className="meter"><span>Name</span><b>{data.name||'-'}</b></div><div className="meter"><span>Relative path</span><b>{data.relativePath||'.'}</b></div><div className="meter"><span>Size</span><b>{bytes(data.size)}</b></div><div className="meter"><span>Modified</span><b>{data.mtimeMs?new Date(data.mtimeMs).toLocaleString('fa-IR'):'-'}</b></div><div className="meter"><span>Link/Reparse</span><b>{data.isSymbolicLink?'Yes':'No'}</b></div></div>}
+ function SearchRows({data}){return <div className="panel"><h3>{fmt(data.total)} نتیجه · {bytes(data.totalBytes)}</h3><p>{data.schemaVersion==='persistent-index-search-v1'?'SQLite Index':'Tree Scan'}{data.hasMore?' · نتایج بیشتر موجود است':''}</p>{(data.rows||[]).map(f=><button className="file-row" key={f.path} onClick={()=>api.showItem(f.path)}><b>{bytes(f.size)}</b><span>{f.path}</span></button>)}</div>}
+ function IndexReport({data,errors=[],health=null}){return <div className="health-grid"><div className="panel"><h3>Index Status</h3><div className="meter"><span>Status</span><b>{data.status}</b></div><div className="meter"><span>Generation</span><b>{fmt(data.generation)}</b></div><div className="meter"><span>Files</span><b>{fmt(data.files)}</b></div><div className="meter"><span>Indexed bytes</span><b>{bytes(data.bytes)}</b></div></div><div className="panel"><h3>Checkpoint</h3><div className="meter"><span>Queue</span><b>{fmt(data.queue)}</b></div><div className="meter"><span>Dirs seen</span><b>{fmt(data.dirsSeen)}</b></div><div className="meter"><span>Errors</span><b>{fmt(data.errors)}</b></div><div className="meter"><span>Pause reason</span><b>{data.pauseReason||'-'}</b></div>{data.runtime&&<><div className="meter"><span>Root availability</span><b>{data.runtime.status||'-'}</b></div><div className="meter"><span>Volume identity</span><b>{data.runtime.identityChanged?'CHANGED':data.runtime.available?'OK':'OFFLINE'}</b></div></>}</div>{health&&<div className="panel"><h3>SQLite Health</h3><div className="meter"><span>Integrity</span><b>{health.ok?'OK':'CHECK'}</b></div><div className="meter"><span>DB</span><b>{bytes(health.dbBytes)}</b></div><div className="meter"><span>WAL</span><b>{bytes(health.walBytes)}</b></div><div className="meter"><span>Free pages</span><b>{fmt(health.freePages)}</b></div></div>}{errors.length>0&&<div className="panel wide"><h3>آخرین خطاهای Index</h3>{errors.slice(0,40).map((e,i)=><div className="file-row" key={`${e.path}-${i}`}><b>{e.code}</b><span>{e.path}</span></div>)}</div>}</div>}
+ function Confidence({value}){const n=Math.round(Number(value||0)*100);return <span className={`confidence ${n>=90?'high':n>=72?'medium':'low'}`}>{fmt(n)}%</span>}
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/tests/file-explorer-skill-pack-v094.test.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/file-explorer-skill-pack-v094.test.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/tests/file-explorer-skill-pack-v094.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/file-explorer-skill-pack-v094.test.cjs	2026-08-13 19:26:37.573541061 +0000
+@@ -0,0 +1,53 @@
++const assert=require('assert');
++const fs=require('fs');
++const fsp=fs.promises;
++const os=require('os');
++const path=require('path');
++const {cleanRelative,describePath,explorerSearch,buildWritePlan,executeWritePlan,verifyCompleted,undoCompleted}=require('../electron/services/file-explorer-service.cjs');
++const {TransactionStore}=require('../electron/services/transaction-store.cjs');
++const {RecoveryService,classifyOp}=require('../electron/services/recovery-service.cjs');
++const {CycleStore}=require('../electron/services/cycle-store.cjs');
++const {CycleEngine}=require('../electron/services/cycle-engine.cjs');
++const {explorerWriteCycle,explorerNavigateCycle,explorerSelectCycle}=require('../electron/services/file-explorer-cycles.cjs');
++const {skillById,validateSkillStep}=require('../electron/services/skill-registry.cjs');
++const {retrieveSkills}=require('../electron/services/skill-retriever.cjs');
++
++(async()=>{
++  const ipcSource=fs.readFileSync(path.join(__dirname,'..','electron','ipc.cjs'),'utf8');assert.ok(ipcSource.includes('RESTRICTED_EXPLORER_WRITE_ENTRYPOINT'));assert.ok(ipcSource.includes("wa:start-explorer-write"));
++  assert.strictEqual(skillById('skill.explorer.copy').interactiveOnly,true);assert.strictEqual(validateSkillStep({skillId:'skill.explorer.copy',type:'explorer-copy'}).code,'SKILL_INTERACTIVE_ONLY');const retrieved=retrieveSkills('این فایل را کپی کن و در پوشه دیگر بگذار',{limit:20});assert.strictEqual(retrieved.some(x=>x.id==='skill.explorer.copy'),false);
++  const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-explorer-v094-'));const root=path.join(base,'workspace');const data=path.join(base,'agent');await fsp.mkdir(root,{recursive:true});await fsp.mkdir(data,{recursive:true});
++  await fsp.writeFile(path.join(root,'alpha.txt'),'alpha');await fsp.mkdir(path.join(root,'docs'));await fsp.writeFile(path.join(root,'docs','note.txt'),'note');
++  assert.strictEqual(cleanRelative('docs/note.txt'),path.normalize('docs/note.txt'));
++  assert.throws(()=>cleanRelative('../escape.txt'),e=>e.code==='EXPLORER_PATH_ESCAPE_BLOCKED');
++  assert.throws(()=>cleanRelative(path.resolve(root,'alpha.txt')),e=>e.code==='EXPLORER_RELATIVE_PATH_REQUIRED');
++  const props=await describePath(root,'docs/note.txt');assert.strictEqual(props.type,'file');assert.strictEqual(props.size,4);
++  const search=await explorerSearch(root,{query:'note',limit:10,index:null,maxFiles:1000});assert.strictEqual(search.total,1);assert.ok(search.rows[0].path.endsWith('note.txt'));
++
++  // Copy: preview plan -> exact SHA verify -> protected undo.
++  const txStore=new TransactionStore(data);const copyPlan=await buildWritePlan({action:'copy',root,sourceRelative:'alpha.txt',destinationRelative:'docs/alpha-copy.txt'});const copied=await executeWritePlan(copyPlan,{cycleId:'copy-test',transactionStore:txStore});const copyVerify=await verifyCompleted(copied);assert.strictEqual(copyVerify.ok,true);assert.strictEqual(await fsp.readFile(path.join(root,'docs','alpha-copy.txt'),'utf8'),'alpha');assert.strictEqual(await fsp.readFile(path.join(root,'alpha.txt'),'utf8'),'alpha');const copyUndo=await undoCompleted(copied);assert.strictEqual(copyUndo[0].ok,true);assert.strictEqual(fs.existsSync(path.join(root,'docs','alpha-copy.txt')),false);
++
++  // New folder and safe undo only while empty.
++  const folderPlan=await buildWritePlan({action:'new-folder',root,destinationRelative:'new-folder'});const made=await executeWritePlan(folderPlan,{cycleId:'mkdir-test',transactionStore:txStore});assert.strictEqual((await verifyCompleted(made)).ok,true);await fsp.writeFile(path.join(root,'new-folder','keep.txt'),'x');let undo=await undoCompleted(made);assert.strictEqual(undo[0].error,'UNDO_FOLDER_NOT_EMPTY');await fsp.rm(path.join(root,'new-folder','keep.txt'));undo=await undoCompleted(made);assert.strictEqual(undo[0].ok,true);
++
++  // Move directory and protect undo if destination changed.
++  await fsp.mkdir(path.join(root,'move-me'));await fsp.writeFile(path.join(root,'move-me','x.txt'),'x');const movePlan=await buildWritePlan({action:'move',root,sourceRelative:'move-me',destinationRelative:'docs/moved-dir'});const moved=await executeWritePlan(movePlan,{cycleId:'move-test',transactionStore:txStore});assert.strictEqual((await verifyCompleted(moved)).ok,true);assert.strictEqual(fs.existsSync(path.join(root,'move-me')),false);assert.strictEqual(fs.existsSync(path.join(root,'docs','moved-dir','x.txt')),true);const moveUndo=await undoCompleted(moved);assert.strictEqual(moveUndo[0].ok,true);assert.strictEqual(fs.existsSync(path.join(root,'move-me','x.txt')),true);
++
++  // Rename file.
++  const renamePlan=await buildWritePlan({action:'rename',root,sourceRelative:'docs/note.txt',newName:'renamed.txt'});const renamed=await executeWritePlan(renamePlan,{cycleId:'rename-test',transactionStore:txStore});assert.strictEqual((await verifyCompleted(renamed)).ok,true);assert.strictEqual(fs.existsSync(path.join(root,'docs','renamed.txt')),true);assert.strictEqual((await undoCompleted(renamed))[0].ok,true);
++
++  // Directory copy intentionally deferred in this foundation.
++  await assert.rejects(()=>buildWritePlan({action:'copy',root,sourceRelative:'docs',destinationRelative:'docs-copy'}),e=>e.code==='EXPLORER_COPY_DIRECTORY_DEFERRED');
++
++  // Symlink/junction-like traversal blocked for writes when supported by host.
++  try{await fsp.symlink(base,path.join(root,'link-out'),'dir');await assert.rejects(()=>buildWritePlan({action:'new-folder',root,destinationRelative:path.join('link-out','bad')}),e=>e.code==='EXPLORER_REPARSE_PATH_BLOCKED');}catch(e){if(!['EPERM','EACCES','UNKNOWN'].includes(e.code))throw e;}
++
++  // Copy transaction recovery semantics: source remains at every state.
++  const src=path.join(root,'recovery-source.txt'),stage=path.join(root,'.workspace-agent-staging','recover','copy.part'),dest=path.join(root,'docs','recovered-copy.txt');await fsp.writeFile(src,'recover');await fsp.mkdir(path.dirname(stage),{recursive:true});const st=await fsp.stat(src);const tx=txStore.create({kind:'explorer-copy',cycleId:'recover-copy',root,operations:[{kind:'explorer-copy-file',source:src,destination:dest,stage,size:st.size}]});let op=txStore.get(tx.id).operations[0];assert.strictEqual(classifyOp(op).state,'copy-source');await fsp.copyFile(src,stage);op=txStore.get(tx.id).operations[0];assert.strictEqual(classifyOp(op).state,'copy-staged');const recovery=new RecoveryService({transactionStore:txStore});const rec=await recovery.act(tx.id,'resume');assert.strictEqual(rec.ok,true);assert.strictEqual(fs.existsSync(src),true);assert.strictEqual(fs.existsSync(dest),true);assert.strictEqual((await fsp.readFile(dest,'utf8')),'recover');
++
++  // Cycle confirmation gate + Shell adapters.
++  const cycleData=path.join(base,'cycles');const store=new CycleStore(cycleData);const engine=new CycleEngine({store});engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore:txStore}));const c=engine.create('explorer-new-folder',{root,destinationRelative:'cycle-folder'});const preview=await engine.run(c.id);assert.strictEqual(preview.status,'waiting-confirmation');assert.strictEqual(fs.existsSync(path.join(root,'cycle-folder')),false);const done=await engine.confirm(c.id,'approve');assert.strictEqual(done.status,'completed');assert.strictEqual(fs.existsSync(path.join(root,'cycle-folder')),true);
++  let reconciles=0;engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore:txStore,onVerified:async()=>({ok:++reconciles>0})}));await fsp.writeFile(path.join(root,'reconcile.txt'),'r');let rc=engine.create('explorer-copy',{root,sourceRelative:'reconcile.txt',destinationRelative:'docs/reconcile-copy.txt'});rc=await engine.run(rc.id);assert.strictEqual(rc.status,'waiting-confirmation');rc=await engine.confirm(rc.id,'approve');assert.strictEqual(rc.status,'completed');assert.strictEqual(reconciles,1);assert.strictEqual(rc.reconcile.ok,true);assert.strictEqual((await engine.rollback(rc.id)).ok,true);
++  const calls=[];engine.register('explorer-navigate',explorerNavigateCycle({platform:'win32',shellAdapter:{openPath:async p=>(calls.push(['open',p]),'')}}));engine.register('explorer-select',explorerSelectCycle({platform:'win32',shellAdapter:{showItemInFolder:p=>calls.push(['select',p])}}));let nav=engine.create('explorer-navigate',{root,relativePath:'docs'});nav=await engine.run(nav.id);assert.strictEqual(nav.status,'completed');let sel=engine.create('explorer-select',{root,relativePath:'alpha.txt'});sel=await engine.run(sel.id);assert.strictEqual(sel.status,'completed');assert.strictEqual(calls.length,2);
++
++  await fsp.rm(base,{recursive:true,force:true});console.log('file-explorer-skill-pack-v094.test.cjs PASS');
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=.git' '--exclude=node_modules' /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/tests/windows-file-explorer-v094.uat.cjs /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/windows-file-explorer-v094.uat.cjs
+--- /mnt/data/wwa093/windows-workspace-agent-v0.9.3-production-grounding/tests/windows-file-explorer-v094.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/windows-workspace-agent-v0.9.4-file-explorer-skill-pack/tests/windows-file-explorer-v094.uat.cjs	2026-08-13 19:23:58.184214922 +0000
+@@ -0,0 +1,19 @@
++const fs=require('fs');
++const fsp=fs.promises;
++const os=require('os');
++const path=require('path');
++const assert=require('assert');
++const {buildWritePlan,executeWritePlan,verifyCompleted,undoCompleted,describePath}=require('../electron/services/file-explorer-service.cjs');
++const {TransactionStore}=require('../electron/services/transaction-store.cjs');
++(async()=>{
++  if(process.platform!=='win32'){console.log('windows-file-explorer-v094.uat.cjs SKIP (Windows only)');return;}
++  const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-explorer-uat-'));const root=path.join(base,'Workspace فارسی 🚀');const data=path.join(base,'AgentData');await fsp.mkdir(path.join(root,'A'),{recursive:true});await fsp.mkdir(data,{recursive:true});const txStore=new TransactionStore(data);
++  const longDir=path.join('A',...Array.from({length:12},(_,i)=>`segment-${i}-${'x'.repeat(14)}`));await fsp.mkdir(path.join(root,longDir),{recursive:true});const sourceRel=path.join(longDir,'نمونه-فایل-🚀.txt');await fsp.writeFile(path.join(root,sourceRel),'Windows Explorer UAT');
++  const props=await describePath(root,sourceRel);assert.strictEqual(props.type,'file');
++  const copyRel=path.join('A','کپی-🚀.txt');const copyPlan=await buildWritePlan({action:'copy',root,sourceRelative:sourceRel,destinationRelative:copyRel});const copy=await executeWritePlan(copyPlan,{cycleId:'uat-copy',transactionStore:txStore});assert.strictEqual((await verifyCompleted(copy)).ok,true);assert.strictEqual((await undoCompleted(copy))[0].ok,true);
++  const moveRel=path.join('A','منتقل-شده.txt');const movePlan=await buildWritePlan({action:'move',root,sourceRelative:sourceRel,destinationRelative:moveRel});const moved=await executeWritePlan(movePlan,{cycleId:'uat-move',transactionStore:txStore});assert.strictEqual((await verifyCompleted(moved)).ok,true);assert.strictEqual((await undoCompleted(moved))[0].ok,true);
++  const renamePlan=await buildWritePlan({action:'rename',root,sourceRelative:sourceRel,newName:'تغییر-نام-🚀.txt'});const renamed=await executeWritePlan(renamePlan,{cycleId:'uat-rename',transactionStore:txStore});assert.strictEqual((await verifyCompleted(renamed)).ok,true);assert.strictEqual((await undoCompleted(renamed))[0].ok,true);
++  const folderPlan=await buildWritePlan({action:'new-folder',root,destinationRelative:path.join('A','پوشه جدید')});const folder=await executeWritePlan(folderPlan,{cycleId:'uat-folder',transactionStore:txStore});assert.strictEqual((await verifyCompleted(folder)).ok,true);assert.strictEqual((await undoCompleted(folder))[0].ok,true);
++  let junction='not-tested';try{const outside=path.join(base,'outside');await fsp.mkdir(outside);const link=path.join(root,'junction-out');await fsp.symlink(outside,link,'junction');await assert.rejects(()=>buildWritePlan({action:'new-folder',root,destinationRelative:path.join('junction-out','blocked')}),e=>e.code==='EXPLORER_REPARSE_PATH_BLOCKED');junction='blocked';}catch(e){if(!['EPERM','EACCES','UNKNOWN'].includes(e.code))throw e;junction='permission-skip';}
++  await fsp.rm(base,{recursive:true,force:true});console.log('windows-file-explorer-v094.uat.cjs PASS',{unicode:true,longPath:props.path.length,junction});
++})().catch(e=>{console.error(e);process.exit(1)});

@@ -1,0 +1,664 @@
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/README_FA.md /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/README_FA.md
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/README_FA.md	2026-08-15 18:27:56.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/README_FA.md	2026-08-15 19:36:05.422835279 +0000
+@@ -50,7 +50,7 @@
+ 
+ جزئیات در `docs/RC1_ACCEPTANCE_MODEL_FA.md` و `docs/RELEASE_READINESS_v1.0.0-rc1.json` است.
+ 
+-## RC1 Windows Certification Kit — cert-kit8
++## RC1 Windows Certification Kit — cert-kit9
+ 
+ Core همچنان Feature Freeze است، اما Certification tooling اکنون علاوه بر ماتریس Windows/Scale، قرارداد Artifact نهایی را هم سخت‌گیرانه می‌بندد. Final PASS به Windows 10 + Windows 11، Scale واقعی 100k + 1M، clean-room build، `package-lock`، هر دو خروجی NSIS و Portable، release manifest معتبر و Manual Evidence شامل upgrade واقعی از v0.9.8 نیاز دارد.
+ 
+@@ -62,7 +62,7 @@
+ npm run certify:windows:rc1
+ ```
+ 
+-در cert-kit8 نتیجه Orchestrator در این مرحله عمداً `INCOMPLETE` است، چون Final Envelope بدون Manual Evidence و Windows family دوم PASS نمی‌شود؛ اما `certification-report.json` محلی می‌تواند PASS باشد و NSIS/Portable تولید می‌شوند.
++در cert-kit9 نتیجه Orchestrator در این مرحله عمداً `INCOMPLETE` است، چون Final Envelope بدون Manual Evidence و Windows family دوم PASS نمی‌شود؛ اما `certification-report.json` محلی می‌تواند PASS باشد و NSIS/Portable تولید می‌شوند.
+ 
+ بعد با **همان NSIS تولیدشده** upgrade واقعی `0.9.8 → 1.0.0-rc1` را انجام دهید و `MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json` را تکمیل کنید. سپس Certification را روی خانواده دیگر Windows هم اجرا کنید.
+ 
+@@ -78,6 +78,22 @@
+ 
+ این جداسازی، پارادوکس «Evidence upgrade قبل از ساخته‌شدن installer» را حذف می‌کند و Final Envelope، Report صاحب Artifact را به SHA256 همان Release Manifest bind می‌کند.
+ 
++## cert-kit9 — Windows-native Edge Hardening
++
++این revision همچنان `1.0.0-rc1` و Feature-Frozen است. تمرکز cert-kit9 روی مرزهایی است که در ویندوز واقعی بیشترین احتمال ابهام یا هزینه عملیاتی دارند، بدون اضافه‌کردن قابلیت محصولی جدید:
++
++- هویت UNC اکنون به ریشه‌ی Share (`\\server\share\`) bind می‌شود، نه به subdirectory؛ در نتیجه پوشه‌های مختلف یک Share به‌اشتباه Volumeهای جدا تلقی نمی‌شوند.
++- Batch روی Windows برای تشخیص same/cross-volume ابتدا از Volume probe قوی استفاده می‌کند و فقط در fallback به drive identity می‌رود.
++- deep Volume/PowerShell probe برای Batch در شروع هر Chunk اجباری است، ولی برای تک‌تک آیتم‌ها از availability + cached identity استفاده می‌شود تا Jobهای 100k/1M دچار PowerShell storm نشوند.
++- نام فایل‌ها برای collision detection روی Windows با Unicode NFC + case-fold مقایسه می‌شوند. نام canonical-equivalent مبهم Block می‌شود؛ case-only rename واقعی همچنان پشتیبانی می‌شود.
++- Single Copy و Batch Copy staging را در Parent مقصد می‌سازند تا فایل Stage از ابتدا در security context همان مقصد ایجاد شود؛ commit همچنان atomic rename داخل همان Parent است.
++- `RootResilienceService.validateRoot()` اکنون relocation candidate یک Volume جابه‌جاشده/USB را به‌صورت `ROOT_RELOCATED_CANDIDATE` صریح برمی‌گرداند و آن را با `ROOT_UNAVAILABLE` گم نمی‌کند. Auto-rebind همچنان انجام نمی‌شود.
++- Windows Certification lane یک UAT جدید برای NTFS، نام فارسی/Unicode/emoji، مسیر بلند، case-only rename و lock واقعی `FileShare.None` دارد. این UAT روی non-Windows عمداً SKIP می‌شود.
++
++این موارد Source-tested هستند؛ ACL inheritance واقعی، removable-drive reconnect/drive-letter change، sharing mode برنامه‌های واقعی و long-path policy هنوز باید در Windows 10/11 Certification اجرا شوند.
++
++Regression این revision در Source برابر `76/76 PASS` و Syntax gate برابر `205 files PASS` است.
++
+ ## cert-kit8 — External Mutation + Power Transition Fence
+ 
+ این revision همچنان `1.0.0-rc1` و Feature-Frozen است و cert-kit7 را حفظ می‌کند، اما روی دو ریسک واقعی استفاده روزمره سخت‌گیری بیشتری دارد: تغییر فایل توسط برنامه‌هایی مثل Office/Corel/Photoshop هم‌زمان با Agent، و Suspend/Resume ویندوز وسط عملیات Write.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md	2026-08-15 19:36:05.423477934 +0000
+@@ -0,0 +1,27 @@
++# Changelog — v1.0.0-rc1 / cert-kit9 Windows-native Edge Hardening
++
++این revision Feature Freeze را حفظ می‌کند و روی NTFS/UNC/Unicode/Volume edgeهای Windows تمرکز دارد.
++
++## تغییرات اصلی
++
++- UNC volume identity به share root پایدار bind شد.
++- Windows batch volume classification ابتدا از `probeVolume()` و Volume UniqueId استفاده می‌کند.
++- Batch root validation به دو سطح تقسیم شد: deep identity در ابتدای Chunk و fast availability/cached identity برای آیتم‌های همان Chunk.
++- Unicode canonical key برای Windows با NFC + case-fold اضافه شد؛ canonical-equivalent sibling collision قبل از Preview و قبل از Commit Block می‌شود.
++- normalization-only rename روی Windows Block می‌شود؛ case-only rename cert-kit8 حفظ شده است.
++- Single-file و Batch staging به Parent مقصد منتقل شد تا Stage در context مقصد ساخته شود و rename نهایی داخل همان Parent انجام شود.
++- relocation candidate در Root validation با `ROOT_RELOCATED_CANDIDATE` صریح surface می‌شود؛ Auto-Rebind وجود ندارد.
++- UAT جدید `windows-native-edge-rc1.uat.cjs` برای NTFS/Unicode/Persian/emoji/long display path/case-only rename/real FileShare.None lock اضافه و به Windows certification script متصل شد.
++- `toolingRevision` از `cert-kit8` به `cert-kit9` ارتقا یافت.
++
++## Validation Source-side
++
++- Source tests: `76/76 PASS`
++- JS/CJS/MJS syntax: `205 files PASS`
++- JSX gate: `PASS`
++- Source hygiene: `PASS`
++- Dependency pins: `PASS`
++- RC1 source contract: `PASS`, toolingRevision=`cert-kit9`
++- RC1 cert-kit suite: `PASS`
++- Windows-native UAT در محیط فعلی: `SKIP (Windows only)`
++- Release input gate: `LOCKFILE_REQUIRED` تا زمان تولید package-lock رسمی روی Release Lane.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit9-windows-native-edge.json /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit9-windows-native-edge.json
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit9-windows-native-edge.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit9-windows-native-edge.json	2026-08-15 19:36:05.747307051 +0000
+@@ -0,0 +1,56 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-v5",
++  "version": "1.0.0-rc1",
++  "channel": "rc",
++  "toolingRevision": "cert-kit9",
++  "featureFreeze": true,
++  "baselineVersion": "0.9.8",
++  "dataEpoch": 1,
++  "sourceContract": "PASS",
++  "regression": "PASS_76_OF_76",
++  "syntax": "PASS_205_FILES",
++  "jsx": "PASS",
++  "sourceHygiene": "PASS",
++  "dependencyPins": "PASS",
++  "rc1CertKitSuite": "PASS",
++  "uncShareIdentity": "SOURCE_TESTED",
++  "strongWindowsVolumeIdentityForBatch": "SOURCE_TESTED",
++  "batchDeepIdentityCadence": "SOURCE_TESTED",
++  "unicodeCanonicalCollisionDefense": "SOURCE_TESTED",
++  "normalizationOnlyRenameBlock": "SOURCE_TESTED",
++  "destinationLocalCopyStaging": "SOURCE_TESTED",
++  "rootRelocationCandidateSignal": "SOURCE_TESTED",
++  "windowsNativeEdgeUat": "READY_PENDING_WINDOWS",
++  "packageLock": "PENDING_REGISTRY_ENVIRONMENT",
++  "npmCi": "PENDING_REGISTRY_ENVIRONMENT",
++  "windows10Certification": "PENDING_WINDOWS",
++  "windows11Certification": "PENDING_WINDOWS",
++  "twoVolumeNtfs": "PENDING_WINDOWS",
++  "realOfficeCorelPhotoshopSharingModeUat": "PENDING_WINDOWS",
++  "aclInheritanceUat": "PENDING_WINDOWS",
++  "ntfsReparseUat": "PENDING_WINDOWS",
++  "sleepResumeUat": "PENDING_WINDOWS",
++  "removableDriveLetterChangeUat": "PENDING_WINDOWS",
++  "unicodeLongPathUat": "PENDING_WINDOWS",
++  "scale100k": "PENDING_WINDOWS",
++  "scale1m": "PENDING_WINDOWS",
++  "winUnpackedSmoke": "PENDING_WINDOWS_BUILD",
++  "nsis": "PENDING_WINDOWS_BUILD",
++  "portable": "PENDING_WINDOWS_BUILD",
++  "realUpgradeFrom0_9_8": "PENDING_MANUAL_WINDOWS_EVIDENCE",
++  "authenticode": "PENDING_CERTIFICATE_POLICY",
++  "finalDualWindowsEnvelope": "PENDING_TWO_OS_REPORTS",
++  "currentValidationRuntime": {
++    "platform": "Linux",
++    "node": "v22.16.0",
++    "npm": "10.9.2"
++  },
++  "officialReleaseRuntime": {
++    "node": "24.14.1",
++    "npm": "11.11.0"
++  },
++  "releaseInputGate": "LOCKFILE_REQUIRED",
++  "strictWindowsUat": "PENDING_WINDOWS",
++  "stagedFinalizer": "SOURCE_TESTED",
++  "artifactOwnerReportBinding": "SOURCE_TESTED"
++}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/VALIDATION_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/VALIDATION_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/VALIDATION_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/VALIDATION_v1.0.0-rc1-cert-kit9-windows-native-edge_FA.md	2026-08-15 19:36:05.747627052 +0000
+@@ -0,0 +1,29 @@
++# Validation — v1.0.0-rc1 / cert-kit9 Windows-native Edge Hardening
++
++Validation این بسته در محیط non-Windows انجام شده و ادعای Windows certification ندارد.
++
++## Source gates
++
++- Source tests: `76/76 PASS` (اجرای full runner تا test 74 بدون failure و دو test پایانی نیز جداگانه PASS شدند؛ timeout محیط فقط زمان کل runner را قطع کرد.)
++- `npm run test:rc1-certkit`: PASS
++- `npm run check:syntax`: `205 files PASS`
++- `npm run check:jsx`: PASS
++- `npm run check:source-hygiene`: PASS
++- `npm run check:dependency-pins`: PASS
++- `npm run check:rc1-source`: PASS با `toolingRevision=cert-kit9`
++- `npm run test:windows-native-edge-rc1-uat`: `SKIP (Windows only)` در این محیط؛ Script syntax/source آماده است.
++- `npm run check:release-inputs`: عمداً `LOCKFILE_REQUIRED`; package-lock مصنوعی تولید نشده است.
++
++## Regressionهای cert-kit9
++
++- UNC subdirectoryهای یک Share identity یکسان دارند.
++- Batch Windows از strong Volume identity قابل تزریق/Probe استفاده می‌کند.
++- Chunk boundary deep identity و item-level fast gate مستقل تست شده است.
++- Unicode NFC/case canonical collision قبل از Write شناسایی می‌شود.
++- normalization-only rename Block و case-only rename مجاز می‌ماند.
++- Stage مسیر destination-local دارد.
++- Root relocation candidate به‌جای generic unavailable صریح surface می‌شود.
++
++## Gateهای خارج از این محیط
++
++Windows 10، Windows 11، NTFS واقعی، ACL inheritance، FileShare واقعی Office/Corel/Photoshop، reparse/junction واقعی، Sleep/Resume واقعی، removable drive reconnect/drive-letter change، long-path policy، Scale 100k/1M، package-lock رسمی با Node 24.14.1/npm 11.11.0، `npm ci`، NSIS/Portable، upgrade واقعی 0.9.8→RC1 و Authenticode در صورت policy همچنان باید در Windows Release Lane اثبات شوند.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/WINDOWS_NATIVE_EDGE_MODEL_v1.0.0-rc1_FA.md /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/WINDOWS_NATIVE_EDGE_MODEL_v1.0.0-rc1_FA.md
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/WINDOWS_NATIVE_EDGE_MODEL_v1.0.0-rc1_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/docs/WINDOWS_NATIVE_EDGE_MODEL_v1.0.0-rc1_FA.md	2026-08-15 19:36:05.423663485 +0000
+@@ -0,0 +1,31 @@
++# مدل Windows-native Edge — Workspace Agent v1.0.0-rc1 / cert-kit9
++
++## اصل طراحی
++
++در ابهام میان «ادامه دادن عملیات» و «حفظ حقیقت فایل‌سیستم»، Agent باید عملیات اثرگذار را متوقف کند. cert-kit9 به‌جای Auto-Rebind/Overwrite یا حدس درباره نام/Volume، identity و canonical-name را دوباره بررسی می‌کند.
++
++## UNC و Volume identity
++
++برای مسیرهای UNC، identity روی `\\server\share\` ثابت می‌شود. برای Driveهای Windows، `Get-Volume` و `UniqueId` identity قوی می‌دهند. Batch از همین identity برای same-volume/cross-volume decision استفاده می‌کند. اگر probe قوی در دسترس نباشد fallback صریح به drive/root identity باقی می‌ماند.
++
++## Probe cadence در Jobهای بزرگ
++
++اجرای PowerShell برای تک‌تک فایل‌ها در Jobهای 100k/1M قابل قبول نیست. بنابراین هر Chunk با deep identity probe شروع می‌شود و آیتم‌های داخل Chunk availability را با identity cache معتبر می‌سنجند. Deep probe دوره‌ای `RootResilienceService` نیز مستقل ادامه دارد.
++
++## Unicode و نام‌های مبهم
++
++روی Windows، نام siblingها با Unicode NFC و case-fold مقایسه می‌شوند. اگر دو نام از نظر canonical key یکسان باشند ولی نام واقعی متفاوت باشد، Write قبل از Commit Block می‌شود. Case-only rename مسیر اختصاصی cert-kit8 را دارد؛ normalization-only rename برای جلوگیری از ambiguity Block است.
++
++## Destination-local staging و ACL context
++
++Stage برای Copy در Parent مقصد ایجاد می‌شود و سپس با rename داخل همان Parent Commit می‌شود. این طراحی احتمال تفاوت security context ناشی از Stage در یک پوشه مرکزی را کم می‌کند. **اثبات ACL inheritance/owner/ACE واقعی همچنان Windows UAT است** و Source test جای آن را نمی‌گیرد.
++
++## Removable volume / Drive-letter change
++
++اگر Root قدیمی ناپدید شود اما همان Volume UniqueId با Drive letter جدید پیدا شود، نتیجه `ROOT_RELOCATED_CANDIDATE` است. Agent مسیر را خودکار عوض نمی‌کند؛ candidate برای تصمیم صریح کاربر/Release UAT ارائه می‌شود.
++
++## Windows-native UAT
++
++UAT cert-kit9 عملیات مخرب روی دیسک کاربر انجام نمی‌دهد و فقط داخل `WA_CERT_ROOT_A` یک workspace موقت می‌سازد. Gateها: NTFS، Unicode/Persian/emoji، canonical collision، long display path، case-only rename + undo و lock واقعی Windows با `FileShare.None`.
++
++این UAT باید در Windows 10 و Windows 11 به‌همراه ماتریس اصلی Certification اجرا شود.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/main.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/main.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/main.cjs	2026-08-15 18:22:29.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/main.cjs	2026-08-15 19:28:29.010722489 +0000
+@@ -56,7 +56,7 @@
+   if(!primaryInstance)return;
+   const userData=app.getPath('userData');const journal=new EventJournal(userData);updateGuard=new VersionUpdateGuard(userData,{currentVersion:app.getVersion(),journal});lifecycleState=new LifecycleState(userData,{journal});const lifecycleStartup=lifecycleState.beginSession({version:app.getVersion(),platform:process.platform,node:process.versions.node});resourcePressureGuard=new ResourcePressureGuard({journal});resourcePressureGuard.start();const store=new CycleStore(userData);const interrupted=store.reconcileInterrupted();if(interrupted)journal.append('STARTUP_INTERRUPTED_CYCLES',{payload:{count:interrupted}});const transactionStore=new TransactionStore(userData,{journal}); const snapshotStore=new SnapshotStore(userData); const automationStore=new AutomationStore(userData); const fingerprintStore=new FingerprintStore(userData); const reviewQueueStore=new ReviewQueueStore(userData);const recoveryService=new RecoveryService({transactionStore,cycleStore:store,journal,onRecovered:async(tx,action)=>{if(tx.kind==='recommendation-apply'){for(const op of tx.operations||[]){const ids=op.meta?.itemIds||[];if(!ids.length)continue;reviewQueueStore.mark(ids,action==='resume'?{status:'applied',lastCycleId:tx.cycleId,appliedDestination:op.destination}:{status:'pending',lastCycleId:tx.cycleId,appliedDestination:null});}}try{await reconcileRecoveryTransaction({tx,action,index:persistentFileIndex,watcher:watcherService,journal});}catch(error){journal.append('RECOVERY_INDEX_RECONCILE_WARNING',{cycleId:tx.cycleId,transactionId:tx.id,payload:{action,error:error.code||error.message}});}}}); const managedZoneStore=new ManagedZoneStore(userData,{knownFolders:{downloads:app.getPath('downloads'),desktop:app.getPath('desktop'),documents:app.getPath('documents')}}); const storageTrendStore=new StorageTrendStore(userData);try{persistentFileIndex=new PersistentFileIndex(userData,{journal});if(lifecycleStartup.previousUnclean){const health=persistentFileIndex.health({deep:true});journal.append('STARTUP_UNCLEAN_INDEX_HEALTH',{payload:{ok:health.ok,check:health.check,previousSessionId:lifecycleStartup.previous?.sessionId||null}});}}catch(error){persistentFileIndex=null;journal.append('INDEX_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message,node:process.versions.node}});}watcherService=new FileWatcherService(userData,{journal,onBatch:persistentFileIndex?batch=>persistentFileIndex.reconcileBatch(batch):null});rootResilienceService=new RootResilienceService({watcherService,index:persistentFileIndex,journal});await rootResilienceService.probeNow({forceIdentity:true});if(lifecycleStartup.previousUnclean){rootResilienceService.markSystemGap('UNCLEAN_SHUTDOWN_GAP');journal.append('STARTUP_UNCLEAN_SHUTDOWN',{payload:{previousSessionId:lifecycleStartup.previous?.sessionId||null,lastHeartbeatAt:lifecycleStartup.previous?.lastHeartbeatAt||null}});}watcherService.startAll();rootResilienceService.start();explorerOperationCoordinator=new ExplorerOperationCoordinator({journal});systemResilienceController=new SystemResilienceController({powerMonitor,watcherService,rootResilienceService,operationCoordinator:explorerOperationCoordinator,journal});systemResilienceController.start();const configurationService=new ConfigurationService({automationStore,managedZoneStore,watcherService,journal}); localAIService=new LocalAIService(userData,{journal}); uiGroundingService=new UIGroundingService(userData,{journal});stateBackupService=new StateBackupService(userData,{appVersion:app.getVersion(),configurationService,localAIService,persistentFileIndex,journal});rcSelfCheckService=new RCSelfCheckService({userData,appVersion:app.getVersion(),journal,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});diagnosticsBundleService=new DiagnosticsBundleService({appVersion:app.getVersion(),journal,selfCheckService:rcSelfCheckService,persistentFileIndex,recoveryService,watcherService,rootResilienceService,lifecycleState,resourcePressureGuard,localAIService,updateGuard});const windowsActionSessionStore=new WindowsActionSessionStore({ttlMs:10*60*1000,maxEntries:64}); try{explorerBatchStore=new ExplorerBatchStore(userData,{journal});}catch(error){explorerBatchStore=null;journal.append('EXPLORER_BATCH_RUNTIME_UNAVAILABLE',{payload:{error:error.code||error.message}});}await reconcileStartupWriteFreshness({cycleStore:store,batchStore:explorerBatchStore,recoveryService,index:persistentFileIndex,watcher:watcherService,journal});const startupSelfCheck=rcSelfCheckService.run({deepIndex:Boolean(lifecycleStartup.previousUnclean)});updateGuard.recordSelfCheck(startupSelfCheck); const engine=new CycleEngine({store,maxIterations:20,maxWallTimeMs:30*60*1000,journal,stepLease:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk!=='write'||!cycle.input?.root||String(cycle.type).startsWith('explorer-')||cycle.type==='windows-ui-action')return{ok:true};const approved=cycle.steps?.some?.(s=>s.id==='confirm'&&s.status==='approved');const pendingWrite=cycle.steps?.some?.(s=>s.kind==='write'&&s.status==='pending');if(!approved||!pendingWrite)return{ok:true};const acquired=explorerOperationCoordinator.acquire(`cycle:${cycle.id}`,{paths:[{path:cycle.input.root,mode:'write'}],metadata:{cycleId:cycle.id,type:cycle.type,scope:'workspace-root'}});if(!acquired.ok)return acquired;return{ok:true,lease:{release:()=>explorerOperationCoordinator.release(acquired.lease)}};},beforeRun:async cycle=>{const skill=skillByCycleType(cycle.type);if(skill?.risk==='write'){const vg=updateGuard.assertWriteAllowed();if(!vg.ok)return vg;}if(skill?.risk!=='write'||!cycle.input?.root)return{ok:true};const gate=await rootResilienceService.validateRoot(cycle.input.root);if(!gate.ok)return gate;if(gate.identityStrength==='weak')journal.append('VOLUME_IDENTITY_WEAK_GUARD',{cycleId:cycle.id,payload:{type:cycle.type,root:cycle.input.root}});return{ok:true};}});
+   const reconcileExplorerWrite=async completed=>reconcilePathsForRoots({index:persistentFileIndex,watcher:watcherService,journal,roots:[completed?.root].filter(Boolean),paths:[completed?.source,completed?.destination].filter(Boolean),reason:'EXPLORER_WRITE_INDEX_RECONCILE_INCOMPLETE'});
+-  const explorerBatchRootGuard=async({sourceRoot,destinationRoot,sourceIdentity='',destinationIdentity=''})=>{const [sg,dg]=await Promise.all([rootResilienceService.validateRoot(sourceRoot),rootResilienceService.validateRoot(destinationRoot)]);if(!sg.ok)return{...sg,code:sg.code||'EXPLORER_BATCH_SOURCE_ROOT_BLOCKED',which:'source'};if(!dg.ok)return{...dg,code:dg.code||'EXPLORER_BATCH_DESTINATION_ROOT_BLOCKED',which:'destination'};const si=String(sg.state?.identityKey||''),di=String(dg.state?.identityKey||'');if(sourceIdentity&&si&&sourceIdentity!==si)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume منبع بعد از Preview تغییر کرده است.',which:'source',expected:sourceIdentity,current:si};if(destinationIdentity&&di&&destinationIdentity!==di)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume مقصد بعد از Preview تغییر کرده است.',which:'destination',expected:destinationIdentity,current:di};return{ok:true,sourceIdentity:si,destinationIdentity:di};};
++  const explorerBatchRootGuard=async({sourceRoot,destinationRoot,sourceIdentity='',destinationIdentity='',forceIdentity=true})=>{const [sg,dg]=await Promise.all([rootResilienceService.validateRoot(sourceRoot,{forceIdentity}),rootResilienceService.validateRoot(destinationRoot,{forceIdentity})]);if(!sg.ok)return{...sg,code:sg.code||'EXPLORER_BATCH_SOURCE_ROOT_BLOCKED',which:'source'};if(!dg.ok)return{...dg,code:dg.code||'EXPLORER_BATCH_DESTINATION_ROOT_BLOCKED',which:'destination'};const si=String(sg.state?.identityKey||''),di=String(dg.state?.identityKey||'');if(sourceIdentity&&si&&sourceIdentity!==si)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume منبع بعد از Preview تغییر کرده است.',which:'source',expected:sourceIdentity,current:si};if(destinationIdentity&&di&&destinationIdentity!==di)return{ok:false,code:'EXPLORER_BATCH_ROOT_IDENTITY_CHANGED',message:'Volume مقصد بعد از Preview تغییر کرده است.',which:'destination',expected:destinationIdentity,current:di};return{ok:true,sourceIdentity:si,destinationIdentity:di};};
+   engine.register('explorer-properties',explorerPropertiesCycle());engine.register('explorer-search',explorerSearchCycle({index:persistentFileIndex}));engine.register('explorer-navigate',explorerNavigateCycle({shellAdapter:shell}));engine.register('explorer-select',explorerSelectCycle({shellAdapter:shell}));engine.register('explorer-new-folder',explorerWriteCycle({action:'new-folder',transactionStore,onVerified:reconcileExplorerWrite,operationCoordinator:explorerOperationCoordinator}));engine.register('explorer-copy',explorerWriteCycle({action:'copy',transactionStore,onVerified:reconcileExplorerWrite,operationCoordinator:explorerOperationCoordinator}));engine.register('explorer-move',explorerWriteCycle({action:'move',transactionStore,onVerified:reconcileExplorerWrite,operationCoordinator:explorerOperationCoordinator}));engine.register('explorer-rename',explorerWriteCycle({action:'rename',transactionStore,onVerified:reconcileExplorerWrite,operationCoordinator:explorerOperationCoordinator}));const reconcileExplorerPaths=async({sourceRoot,destinationRoot,paths=[]})=>reconcilePathsForRoots({index:persistentFileIndex,watcher:watcherService,journal,roots:[sourceRoot,destinationRoot].filter(Boolean),paths,reason:'EXPLORER_BATCH_INDEX_RECONCILE_INCOMPLETE'});if(explorerBatchStore){engine.register('explorer-batch-copy',batchCycle({operation:'copy',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard,operationCoordinator:explorerOperationCoordinator}));engine.register('explorer-batch-move',batchCycle({operation:'move',store:explorerBatchStore,onPathsVerified:reconcileExplorerPaths,rootGuard:explorerBatchRootGuard,operationCoordinator:explorerOperationCoordinator}));}engine.register('scan',scanCycle());engine.register('persistent-index-scan',persistentIndexScanCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('persistent-index-maintenance',persistentIndexMaintenanceCycle({index:persistentFileIndex}));engine.register('indexed-file-search',indexedFileSearchCycle({index:persistentFileIndex}));engine.register('indexed-duplicates',indexedDuplicatesCycle({index:persistentFileIndex,resourceGuard:resourcePressureGuard}));engine.register('workspace-health',healthCycle());engine.register('duplicates',duplicateCycle());engine.register('organize',organizeCycle({transactionStore}));engine.register('duplicate-review',duplicateReviewCycle({transactionStore}));engine.register('file-search',fileSearchCycle());engine.register('snapshot',snapshotCycle(snapshotStore));engine.register('snapshot-diff',snapshotDiffCycle(snapshotStore));engine.register('maintenance-cleanup',maintenanceCleanupCycle({transactionStore}));engine.register('windows-system',windowsSystemCycle());engine.register('windows-ui-map',windowsUiMapCycle());engine.register('windows-ui-action',windowsUiActionCycle({sessionStore:windowsActionSessionStore,onVerified:({context,plan})=>uiGroundingService.recordVerifiedAction(context,plan?.action||'focus')}));engine.register('rename',renameCycle({transactionStore}));engine.register('similar-images',similarImagesCycle({fingerprintStore}));engine.register('similar-texts',similarTextsCycle({fingerprintStore}));engine.register('workspace-intelligence',workspaceIntelligenceCycle());engine.register('review-queue-build',reviewQueueBuildCycle({reviewQueueStore}));engine.register('recommendation-apply',recommendationApplyCycle({reviewQueueStore,transactionStore}));engine.register('managed-zone-audit',managedZoneAuditCycle({storageTrendStore}));engine.register('drive-audit',driveAuditCycle());engine.register('pdf-intelligence',pdfIntelligenceCycle());engine.register('mission',missionCycle({getEngine:()=>engine,onOutcome:(goalPlan,status)=>localAIService.recordMissionOutcome(goalPlan,status)}));
+   automationService=new AutomationService({engine,ruleStore:automationStore,onResult:async(rule,cycle)=>{
+     if(!Notification.isSupported())return;if(cycle.type==='snapshot-diff'&&cycle.result){const c=cycle.result.counts||{};if((c.added||0)+(c.removed||0)+(c.modified||0)>0)new Notification({title:'Workspace Agent',body:`${rule.title}: +${c.added||0} / -${c.removed||0} / ~${c.modified||0}`}).show();}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/explorer-batch-service.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/explorer-batch-service.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/explorer-batch-service.cjs	2026-08-15 18:24:29.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/explorer-batch-service.cjs	2026-08-15 19:28:29.010422701 +0000
+@@ -2,9 +2,10 @@
+ const fsp=fs.promises;
+ const path=require('path');
+ const crypto=require('crypto');
+-const {resolveWrite,assertNoLinkChain,statSnapshot,sameSnapshot,sha256File}=require('./file-explorer-service.cjs');
++const {resolveWrite,assertNoLinkChain,statSnapshot,sameSnapshot,sha256File,assertCanonicalSiblingAvailable}=require('./file-explorer-service.cjs');
+ const {assertInsideRoot,comparable}=require('./path-policy.cjs');
+ const {DEFAULT_RESERVE_BYTES,assertRootAvailable,assertFreeSpace,classifyIoError}=require('./explorer-storage-guard.cjs');
++const {probeVolume}=require('./windows-volume-probe.cjs');
+ const SCHEMA_VERSION='workspace-explorer-batch-v2';
+ const OPS=new Set(['copy','move']);
+ const CONFLICTS=new Set(['skip','rename','replace']);
+@@ -19,7 +20,7 @@
+ }
+ function relation(a,b){const aa=path.resolve(a),bb=path.resolve(b),rel=path.relative(aa,bb);return rel===''?'same':(!rel.startsWith('..')&&!path.isAbsolute(rel))?'inside':'outside';}
+ async function fileIdentical(a,b){const [sa,sb]=await Promise.all([lstatMaybe(a),lstatMaybe(b)]);if(!sa?.isFile()||!sb?.isFile()||Number(sa.size)!==Number(sb.size))return false;const [ha,hb]=await Promise.all([sha256File(a),sha256File(b)]);return ha===hb;}
+-async function defaultVolumeIdentity(p){const st=await fsp.stat(p);if(process.platform==='win32'){const drive=path.win32.parse(path.win32.resolve(p)).root.toLowerCase();if(drive)return`drive:${drive}`;}return`dev:${String(st.dev)}`;}
++async function defaultVolumeIdentity(p,{platform=process.platform,probe=probeVolume}={}){if(platform==='win32'){try{const v=await probe(p,{platform});if(v?.available&&v.identityKey)return String(v.identityKey);}catch{}const drive=path.win32.parse(path.win32.resolve(p)).root.toLowerCase();if(drive)return`drive:${drive}`;}const st=await fsp.stat(p);return`dev:${String(st.dev)}`;}
+ async function sourceRecord(root,relative){const r=resolveWrite(root,relative);if(!r.relativePath)throw err('EXPLORER_BATCH_SOURCE_REQUIRED','منبع Batch لازم است.');await assertNoLinkChain(r.root,r.path,{includeTarget:true});const st=await lstatMaybe(r.path);if(!st)throw err('EXPLORER_BATCH_SOURCE_MISSING','یکی از منابع Batch پیدا نشد.',{relative});if(st.isSymbolicLink())throw err('EXPLORER_BATCH_LINK_BLOCKED','Symlink/Junction به‌عنوان منبع Batch مجاز نیست.',{relative});if(!st.isFile()&&!st.isDirectory())throw err('EXPLORER_BATCH_SOURCE_TYPE_BLOCKED','نوع منبع پشتیبانی نمی‌شود.',{relative});return{root:r.root,relative:r.relativePath,path:r.path,st,snapshot:statSnapshot(st)};}
+ async function accessPreflight(sourceRoot,destinationRoot,destinationDir){try{await fsp.access(sourceRoot,fs.constants.R_OK);await fsp.access(destinationRoot,fs.constants.R_OK);await fsp.access(destinationDir,fs.constants.W_OK);}catch(error){throw err('EXPLORER_BATCH_PERMISSION_PREFLIGHT_FAILED','مجوز خواندن منبع یا نوشتن مقصد برای Batch کافی نیست.',{cause:error.code||error.message,sourceRoot,destinationRoot,destinationDir});}}
+ async function buildBatchManifest({root,sourceRoot=root,destinationRoot=root,operation='copy',sourcesRelative=[],destinationDirRelative='',conflictPolicy='skip',duplicateAware=true,maxItems=50000,reserveBytes=DEFAULT_RESERVE_BYTES,volumeIdentityFn=defaultVolumeIdentity,storageCheck=assertFreeSpace}={}){
+@@ -34,7 +35,7 @@
+   const push=item=>{if(items.length>=Math.max(1,Number(maxItems)||50000))throw err('EXPLORER_BATCH_MANIFEST_LIMIT','تعداد آیتم‌های recursive از سقف امن Batch عبور کرد.',{maxItems});items.push(item);totalBytes+=Number(item.size||0);if(['file-copy','file-xmove'].includes(item.kind))requiredBytes+=Number(item.size||0);reserved.add(comparable(item.destination||item.source||''));};
+   for(const src of sources){
+     if(sameRoot&&src.st.isDirectory()&&relation(src.path,destRec.path)!=='outside')throw err('EXPLORER_BATCH_DESTINATION_INSIDE_SOURCE','مقصد داخل منبع پوشه قرار دارد و باعث recursion می‌شود.',{source:src.relative,destination:destRec.relativePath});
+-    let top=assertInsideRoot(path.join(destRec.path,path.basename(src.path)),dstBase),topExists=await lstatMaybe(top),preSkip=null;const reservedConflict=reserved.has(comparable(top));
++    let top=assertInsideRoot(path.join(destRec.path,path.basename(src.path)),dstBase);await assertCanonicalSiblingAvailable(top,{ignorePath:sameRoot?src.path:null});let topExists=await lstatMaybe(top),preSkip=null;const reservedConflict=reserved.has(comparable(top));
+     if(topExists||reservedConflict){
+       if(topExists&&src.st.isFile()&&topExists.isFile()&&duplicateAware&&Number(src.st.size)===Number(topExists.size)&&await fileIdentical(src.path,top))preSkip='identical-existing';
+       else if(conflict==='skip')preSkip='conflict-skip';
+@@ -75,12 +76,12 @@
+   if(allowDuplicateSkip&&item.state==='pending'&&dstSt?.isFile()&&job.duplicate_aware&&Number(dstSt.size)===Number(srcSt.size)&&!hadBackup&&await fileIdentical(item.source,item.destination)){const h=await sha256File(item.source);store.updateItem(job.id,item.seq,{state:'skipped',reason:'identical-existing',sourceHash:h,destinationHash:h});return{state:'skipped',paths:[]};}
+   if(dstSt&&job.conflict_policy==='skip'){store.updateItem(job.id,item.seq,{state:'skipped',reason:'conflict-skip'});return{state:'skipped',paths:[]};}
+   if(dstSt&&job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد بعد از Preview اشغال شده است.',{destination:item.destination});if(dstSt&&!dstSt.isFile())throw err('EXPLORER_BATCH_REPLACE_TYPE_BLOCKED','Replace فقط روی فایل موجود مجاز است.');
+-  await storageGuard(job,item);await fsp.mkdir(path.dirname(item.destination),{recursive:true});await fsp.mkdir(artifacts.stageDir,{recursive:true});await fsp.mkdir(artifacts.backupDir,{recursive:true});
+-  const stage=item.stage_path||path.join(artifacts.stageDir,`${item.seq}.part`),backup=item.backup_path||path.join(artifacts.backupDir,`${item.seq}-${path.basename(item.destination)}`);
++  await storageGuard(job,item);await fsp.mkdir(path.dirname(item.destination),{recursive:true});await fsp.mkdir(artifacts.backupDir,{recursive:true});
++  const stage=item.stage_path||path.join(path.dirname(item.destination),`.workspace-agent-batch-stage-${safeId(job.id)}-${item.seq}.part`),backup=item.backup_path||path.join(artifacts.backupDir,`${item.seq}-${path.basename(item.destination)}`);
+   store.updateItem(job.id,item.seq,{state:item.state==='backed-up'?'backed-up':'processing',stagePath:stage,backupPath:(dstSt||hadBackup)?backup:null});
+   const stageExisting=await lstatMaybe(stage);if(stageExisting&&!stageExisting.isFile())throw err('EXPLORER_BATCH_STAGE_TYPE_CHANGED','Staging path دیگر فایل معمولی نیست.',{stage});if(!stageExisting){await fsp.copyFile(item.source,stage,fs.constants.COPYFILE_EXCL);await syncFile(stage);}if(item.state!=='backed-up')store.updateItem(job.id,item.seq,{state:'staged',stagePath:stage,backupPath:(dstSt||hadBackup)?backup:null});
+   const srcAfter=await fsp.lstat(item.source);if(!sameSnapshot(srcAfter,expectedSnapshot))throw err('EXPLORER_BATCH_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد.');
+-  const [hs,hstage]=await Promise.all([sha256File(item.source),sha256File(stage)]);if(hs!==hstage)throw err('EXPLORER_BATCH_STAGE_HASH_MISMATCH','Hash فایل Stage با منبع برابر نیست.');await assertNoLinkChain(job.destination_root||job.root,path.dirname(item.destination),{includeTarget:true});if(commitGuard)await commitGuard({phase:'before-batch-copy-destination-mutation',job,item,sourceHash:hs,stageHash:hstage});
++  const [hs,hstage]=await Promise.all([sha256File(item.source),sha256File(stage)]);if(hs!==hstage)throw err('EXPLORER_BATCH_STAGE_HASH_MISMATCH','Hash فایل Stage با منبع برابر نیست.');await assertNoLinkChain(job.destination_root||job.root,path.dirname(item.destination),{includeTarget:true});await assertCanonicalSiblingAvailable(item.destination);if(commitGuard)await commitGuard({phase:'before-batch-copy-destination-mutation',job,item,sourceHash:hs,stageHash:hstage});
+   dstSt=await lstatMaybe(item.destination);if(dstSt&&!hadBackup){if(job.conflict_policy!=='replace')throw err('EXPLORER_BATCH_DESTINATION_CHANGED','مقصد قبل از Commit اشغال شد.');if(await lstatMaybe(backup))throw err('EXPLORER_BATCH_BACKUP_COLLISION','Backup path اشغال است.');await fsp.rename(item.destination,backup);store.updateItem(job.id,item.seq,{state:'backed-up',sourceHash:hs,destinationHash:hstage,stagePath:stage,backupPath:backup});}
+   const replaceUsed=hadBackup||Boolean(dstSt);if(replaceUsed&&!(await lstatMaybe(backup)))throw err('EXPLORER_BATCH_BACKUP_MISSING','Backup قبل از Commit ناپدید شد؛ Commit متوقف شد.',{backup});
+   store.updateItem(job.id,item.seq,{state:'commit-ready',sourceHash:hs,destinationHash:hstage,stagePath:stage,backupPath:replaceUsed?backup:null});
+@@ -115,12 +116,12 @@
+   if(item.kind==='file-copy')return processCopy(item,job,store,artifacts,{commitGuard});if(item.kind==='file-move'||item.kind==='dir-move'||item.kind==='file-xmove')return processMove(item,job,store,artifacts,{commitGuard});throw err('EXPLORER_BATCH_ITEM_KIND_UNKNOWN','نوع آیتم Batch ناشناخته است.',{kind:item.kind});
+ }
+ async function resetRecoverableItem(store,jobId,item){const cur=store.item(jobId,item.seq)||item;if(['processing','staged'].includes(cur.state)&&!cur.backup_path){try{if(cur.stage_path&&await lstatMaybe(cur.stage_path))await fsp.rm(cur.stage_path,{force:true});}catch{}store.updateItem(jobId,item.seq,{state:'pending',stagePath:null,reason:null});}}
+-async function validateJobRoots(job,rootGate){const sourceRoot=job.source_root||job.root,destinationRoot=job.destination_root||job.root;await assertRootAvailable(sourceRoot);await assertRootAvailable(destinationRoot);const dst=await lstatMaybe(job.destination_dir);if(!dst?.isDirectory())throw err('EXPLORER_BATCH_DESTINATION_DIRECTORY_CHANGED','پوشه مقصد Batch دیگر در دسترس نیست.',{destinationDir:job.destination_dir});if(typeof rootGate==='function'){const gate=await rootGate({sourceRoot,destinationRoot,sourceIdentity:job.source_identity||'',destinationIdentity:job.destination_identity||''});if(!gate?.ok)throw err(gate?.code||'EXPLORER_BATCH_ROOT_GUARD_BLOCKED',gate?.message||'Root guard عملیات Batch را متوقف کرد.',gate);return gate;}return{ok:true};}
++async function validateJobRoots(job,rootGate,{forceIdentity=true}={}){const sourceRoot=job.source_root||job.root,destinationRoot=job.destination_root||job.root;await assertRootAvailable(sourceRoot);await assertRootAvailable(destinationRoot);const dst=await lstatMaybe(job.destination_dir);if(!dst?.isDirectory())throw err('EXPLORER_BATCH_DESTINATION_DIRECTORY_CHANGED','پوشه مقصد Batch دیگر در دسترس نیست.',{destinationDir:job.destination_dir});if(typeof rootGate==='function'){const gate=await rootGate({sourceRoot,destinationRoot,sourceIdentity:job.source_identity||'',destinationIdentity:job.destination_identity||'',forceIdentity});if(!gate?.ok)throw err(gate?.code||'EXPLORER_BATCH_ROOT_GUARD_BLOCKED',gate?.message||'Root guard عملیات Batch را متوقف کرد.',gate);return gate;}return{ok:true};}
+ async function processBatchChunk(store,jobId,{limit=16,onProgress=null,rootGate=null,commitGuard=null}={}){
+   let job=store.get(jobId);if(!job)throw err('EXPLORER_BATCH_JOB_NOT_FOUND','Batch job پیدا نشد.');if(job.cancel_requested){store.mark(jobId,{status:'cancelled',finished_at:now()});return{status:'cancelled',progress:store.status(jobId),paths:[]};}
+-  try{await validateJobRoots(job,rootGate);}catch(error){const c=classifyIoError(error);const category=error.code?.includes('IDENTITY')?'identity':error.code?.includes('PERMISSION')?'permission':'root';store.mark(jobId,{status:`paused-${category}`,summary_json:{code:error.code||c.code,message:error.message,category}});return{status:'paused',blocker:{code:error.code||c.code,message:error.message,category},progress:store.status(jobId),paths:[]};}
++  try{await validateJobRoots(job,rootGate,{forceIdentity:true});}catch(error){const c=classifyIoError(error);const category=error.code?.includes('IDENTITY')?'identity':error.code?.includes('PERMISSION')?'permission':'root';store.mark(jobId,{status:`paused-${category}`,summary_json:{code:error.code||c.code,message:error.message,category}});return{status:'paused',blocker:{code:error.code||c.code,message:error.message,category},progress:store.status(jobId),paths:[]};}
+   store.mark(jobId,{status:'running',summary_json:null});const items=store.next(jobId,limit),artifacts=artifactsFor(job);const paths=[];
+-  for(const item of items){job=store.get(jobId);if(job.cancel_requested){store.mark(jobId,{status:'cancelled',finished_at:now()});break;}try{await validateJobRoots(job,rootGate);const r=await processItem(item,job,store,artifacts,{commitGuard});paths.push(...(r.paths||[]));}catch(error){const c=classifyIoError(error),customRecoverable=['EXPLORER_BATCH_INSUFFICIENT_SPACE','EXPLORER_BATCH_PERMISSION_PREFLIGHT_FAILED','EXPLORER_ROOT_UNAVAILABLE','EXPLORER_BATCH_ROOT_IDENTITY_CHANGED','EXPLORER_SYSTEM_TRANSITION','EXPLORER_OPERATION_FENCE_STALE'].includes(error.code);if(c.recoverable||customRecoverable){await resetRecoverableItem(store,jobId,item);const category=['EXPLORER_SYSTEM_TRANSITION','EXPLORER_OPERATION_FENCE_STALE'].includes(error.code)?'system':error.code==='EXPLORER_BATCH_INSUFFICIENT_SPACE'||c.category==='storage'?'storage':c.category==='locked'?'locked':c.category==='permission-or-lock'?'permission-or-lock':c.category==='permission'||String(error.code).includes('PERMISSION')?'permission':'root';store.mark(jobId,{status:`paused-${category}`,summary_json:{code:error.code||c.code,message:error.message,category,seq:item.seq,cause:c.cause||null}});return{status:'paused',blocker:{code:error.code||c.code,message:error.message,category,seq:item.seq,details:error.details||null},progress:store.status(jobId),paths:[...new Set(paths)]};}store.updateItem(jobId,item.seq,{state:'failed',reason:error.code||error.message});store.mark(jobId,{status:'failed',finished_at:now(),summary_json:{code:error.code||'EXPLORER_BATCH_ITEM_FAILED',message:error.message,seq:item.seq}});throw error;}onProgress?.(store.status(jobId));await new Promise(r=>setImmediate(r));}
++  for(const item of items){job=store.get(jobId);if(job.cancel_requested){store.mark(jobId,{status:'cancelled',finished_at:now()});break;}try{await validateJobRoots(job,rootGate,{forceIdentity:false});const r=await processItem(item,job,store,artifacts,{commitGuard});paths.push(...(r.paths||[]));}catch(error){const c=classifyIoError(error),customRecoverable=['EXPLORER_BATCH_INSUFFICIENT_SPACE','EXPLORER_BATCH_PERMISSION_PREFLIGHT_FAILED','EXPLORER_ROOT_UNAVAILABLE','EXPLORER_BATCH_ROOT_IDENTITY_CHANGED','EXPLORER_SYSTEM_TRANSITION','EXPLORER_OPERATION_FENCE_STALE'].includes(error.code);if(c.recoverable||customRecoverable){await resetRecoverableItem(store,jobId,item);const category=['EXPLORER_SYSTEM_TRANSITION','EXPLORER_OPERATION_FENCE_STALE'].includes(error.code)?'system':error.code==='EXPLORER_BATCH_INSUFFICIENT_SPACE'||c.category==='storage'?'storage':c.category==='locked'?'locked':c.category==='permission-or-lock'?'permission-or-lock':c.category==='permission'||String(error.code).includes('PERMISSION')?'permission':'root';store.mark(jobId,{status:`paused-${category}`,summary_json:{code:error.code||c.code,message:error.message,category,seq:item.seq,cause:c.cause||null}});return{status:'paused',blocker:{code:error.code||c.code,message:error.message,category,seq:item.seq,details:error.details||null},progress:store.status(jobId),paths:[...new Set(paths)]};}store.updateItem(jobId,item.seq,{state:'failed',reason:error.code||error.message});store.mark(jobId,{status:'failed',finished_at:now(),summary_json:{code:error.code||'EXPLORER_BATCH_ITEM_FAILED',message:error.message,seq:item.seq}});throw error;}onProgress?.(store.status(jobId));await new Promise(r=>setImmediate(r));}
+   const progress=store.status(jobId);if(progress.status==='cancelled')return{status:'cancelled',progress,paths:[...new Set(paths)]};const remaining=Number(progress.totalItems)-Number(progress.doneItems)-Number(progress.skippedItems)-Number(progress.failedItems);if(remaining<=0){store.mark(jobId,{status:progress.failedItems?'failed':'completed',finished_at:now()});return{status:progress.failedItems?'failed':'completed',progress:store.status(jobId),paths:[...new Set(paths)]};}store.mark(jobId,{status:'paused'});return{status:'paused',progress:store.status(jobId),paths:[...new Set(paths)]};
+ }
+ async function copyBackAtomic(source,destination,sha256,size){await assertFreeSpace(path.dirname(destination),Number(size||0),{reserveBytes:64*1024*1024});const stage=`${destination}.workspace-agent-restore-${crypto.randomBytes(6).toString('hex')}.part`;try{await fsp.copyFile(source,stage,fs.constants.COPYFILE_EXCL);await syncFile(stage);const h=await sha256File(stage);if(h!==sha256)throw err('UNDO_CROSS_MOVE_HASH_MISMATCH','Hash فایل بازگردانی‌شده برابر نیست.');if(await lstatMaybe(destination))throw err('UNDO_DESTINATION_EXISTS','مقصد Restore قبل از Commit اشغال شد.');await fsp.rename(stage,destination);}catch(error){try{await fsp.rm(stage,{force:true});}catch{}throw error;}}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/file-explorer-service.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/file-explorer-service.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/file-explorer-service.cjs	2026-08-15 18:24:29.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/file-explorer-service.cjs	2026-08-15 19:32:56.171621826 +0000
+@@ -3,6 +3,7 @@
+ const path=require('path');
+ const crypto=require('crypto');
+ const {assertWriteRoot,assertInsideRoot,normalize,comparable}=require('./path-policy.cjs');
++const {canonicalNameKey}=require('./windows-path-utils.cjs');
+ const {validateFilename}=require('./renamer.cjs');
+ const {scanTree}=require('./file-indexer.cjs');
+ const {searchFiles}=require('./file-search.cjs');
+@@ -48,6 +49,22 @@
+ }
+ function samePathIdentity(st,snap){if(!st||!snap)return false;if(statType(st)!==String(snap.type||''))return false;if(Number(snap.dev||0)&&Number(st.dev||0)&&Number(snap.dev)!==Number(st.dev))return false;if(Number(snap.ino||0)&&Number(st.ino||0)&&Number(snap.ino)!==Number(st.ino))return false;return true;}
+ function isCaseOnlyPathChange(source='',destination='',{platform=process.platform}={}){if(platform!=='win32')return false;const a=path.win32.normalize(String(source||'')),b=path.win32.normalize(String(destination||''));return Boolean(a&&b&&a!==b&&a.toLocaleLowerCase('en-US')===b.toLocaleLowerCase('en-US'));}
++
++async function canonicalSiblingCollision(destination,{ignorePath=null,platform=process.platform}={}){
++  if(platform!=='win32')return null;const parent=path.dirname(destination),targetName=path.basename(destination),targetKey=canonicalNameKey(targetName,{platform});let names;try{names=await fsp.readdir(parent);}catch(error){if(error.code==='ENOENT')return null;throw error;}
++  for(const name of names){if(canonicalNameKey(name,{platform})!==targetKey)continue;const candidate=path.join(parent,name);if(ignorePath&&comparable(candidate)===comparable(ignorePath))continue;if(comparable(candidate)===comparable(destination)&&name===targetName)continue;return{path:candidate,name,targetName};}
++  return null;
++}
++async function assertCanonicalSiblingAvailable(destination,{ignorePath=null,platform=process.platform}={}){const hit=await canonicalSiblingCollision(destination,{ignorePath,platform});if(hit)throw err('EXPLORER_UNICODE_CANONICAL_COLLISION','نام مقصد با یک فایل/پوشه موجود از نظر Unicode/Case معادل است و برای جلوگیری از نام‌های مبهم مسدود شد.',hit);return true;}
++function localStagePath(destination,cycleId=''){const parent=path.dirname(destination);return path.join(parent,`.workspace-agent-stage-${safeCycleId(cycleId||Date.now())}-${crypto.randomBytes(8).toString('hex')}.part`);}
++function isUnicodeCanonicalOnlyNameChange(source,destination,{platform=process.platform}={}){
++  if(platform!=='win32')return false;
++  const a=path.win32.basename(String(source||'')),b=path.win32.basename(String(destination||''));
++  if(!a||!b||a===b)return false;
++  if(canonicalNameKey(a,{platform})!==canonicalNameKey(b,{platform}))return false;
++  return !isCaseOnlyPathChange(source,destination,{platform});
++}
++
+ async function assertDestinationParentStable(root,destination,parentSnapshot=null){const parent=path.dirname(destination);await assertNoLinkChain(root,parent,{includeTarget:true});const st=await lstatMaybe(parent);if(!st?.isDirectory())throw err('EXPLORER_DESTINATION_PARENT_CHANGED','پوشه والد مقصد دیگر پوشه معتبر نیست.',{parent});if(parentSnapshot&&!samePathIdentity(st,parentSnapshot))throw err('EXPLORER_DESTINATION_PARENT_CHANGED','هویت پوشه والد مقصد بعد از Preview تغییر کرده است.',{parent});return st;}
+ async function describePath(root,relativePath=''){
+   const r=resolveRead(root,relativePath);const st=await lstatMaybe(r.path);if(!st)throw err('EXPLORER_ITEM_NOT_FOUND','فایل/پوشه پیدا نشد.',{relativePath:r.relativePath});
+@@ -66,7 +83,7 @@
+   const base=resolveWrite(root,'');await assertNoLinkChain(base.root,base.root);
+   let source=null,destination=null,sourceSnapshot=null,destinationParentSnapshot=null,caseOnlyRename=false;
+   if(a==='new-folder'){
+-    const d=resolveWrite(base.root,destinationRelative);if(!d.relativePath)throw err('EXPLORER_FOLDER_NAME_REQUIRED','نام/مسیر پوشه جدید لازم است.');destination=d.path;await assertNoLinkChain(base.root,path.dirname(destination),{includeTarget:true});const parent=await lstatMaybe(path.dirname(destination));if(!parent?.isDirectory())throw err('EXPLORER_DESTINATION_PARENT_MISSING','پوشه والد مقصد وجود ندارد.');destinationParentSnapshot=statSnapshot(parent);if(exists(destination))throw err('EXPLORER_DESTINATION_EXISTS','مقصد از قبل وجود دارد.',{destination});
++    const d=resolveWrite(base.root,destinationRelative);if(!d.relativePath)throw err('EXPLORER_FOLDER_NAME_REQUIRED','نام/مسیر پوشه جدید لازم است.');destination=d.path;await assertNoLinkChain(base.root,path.dirname(destination),{includeTarget:true});const parent=await lstatMaybe(path.dirname(destination));if(!parent?.isDirectory())throw err('EXPLORER_DESTINATION_PARENT_MISSING','پوشه والد مقصد وجود ندارد.');destinationParentSnapshot=statSnapshot(parent);await assertCanonicalSiblingAvailable(destination);if(exists(destination))throw err('EXPLORER_DESTINATION_EXISTS','مقصد از قبل وجود دارد.',{destination});
+   }else{
+     const s=resolveWrite(base.root,sourceRelative);if(!s.relativePath)throw err('EXPLORER_SOURCE_REQUIRED','منبع File Explorer لازم است.');source=s.path;await assertNoLinkChain(base.root,source,{includeTarget:true});const st=await lstatMaybe(source);if(!st)throw err('EXPLORER_SOURCE_MISSING','منبع پیدا نشد.',{source});if(st.isSymbolicLink())throw err('EXPLORER_SOURCE_LINK_BLOCKED','عملیات Write روی symlink/junction مجاز نیست.');if(!st.isFile()&&!st.isDirectory())throw err('EXPLORER_SOURCE_TYPE_BLOCKED','نوع منبع برای این Skill پشتیبانی نمی‌شود.');sourceSnapshot=statSnapshot(st);
+     if(a==='rename'){
+@@ -74,7 +91,7 @@
+     }else{
+       const d=resolveWrite(base.root,destinationRelative);if(!d.relativePath)throw err('EXPLORER_DESTINATION_REQUIRED','مقصد File Explorer لازم است.');destination=d.path;
+     }
+-    await assertNoLinkChain(base.root,path.dirname(destination),{includeTarget:true});const parent=await lstatMaybe(path.dirname(destination));if(!parent?.isDirectory())throw err('EXPLORER_DESTINATION_PARENT_MISSING','پوشه والد مقصد وجود ندارد.');destinationParentSnapshot=statSnapshot(parent);if(comparable(source)===comparable(destination)&&!caseOnlyRename)throw err('EXPLORER_NOOP','مبدأ و مقصد یکسان هستند.');if(exists(destination)&&!caseOnlyRename)throw err('EXPLORER_DESTINATION_EXISTS','مقصد از قبل وجود دارد.',{destination});
++    await assertNoLinkChain(base.root,path.dirname(destination),{includeTarget:true});const parent=await lstatMaybe(path.dirname(destination));if(!parent?.isDirectory())throw err('EXPLORER_DESTINATION_PARENT_MISSING','پوشه والد مقصد وجود ندارد.');destinationParentSnapshot=statSnapshot(parent);if(a==='rename'&&isUnicodeCanonicalOnlyNameChange(source,destination))throw err('EXPLORER_UNICODE_CANONICAL_RENAME_BLOCKED','تغییر نامی که فقط در نرمال‌سازی Unicode تفاوت دارد روی ویندوز برای جلوگیری از نام مبهم مسدود شد.',{source,destination});await assertCanonicalSiblingAvailable(destination,{ignorePath:caseOnlyRename?source:null});if(comparable(source)===comparable(destination)&&!caseOnlyRename)throw err('EXPLORER_NOOP','مبدأ و مقصد یکسان هستند.');if(exists(destination)&&!caseOnlyRename)throw err('EXPLORER_DESTINATION_EXISTS','مقصد از قبل وجود دارد.',{destination});
+     if(a==='copy'&&sourceSnapshot.type!=='file')throw err('EXPLORER_COPY_DIRECTORY_DEFERRED','در v0.9.4 کپی recursive پوشه عمداً غیرفعال است؛ Copy فقط برای فایل معمولی فعال است.');
+     if(a==='rename'&&path.dirname(source)!==path.dirname(destination))throw err('EXPLORER_RENAME_SAME_PARENT_REQUIRED','Rename باید داخل همان پوشه انجام شود.');
+   }
+@@ -83,7 +100,7 @@
+ async function preflightPlan(plan){
+   if(!plan||plan.schemaVersion!=='workspace-file-explorer-write-plan-v1')throw err('EXPLORER_PLAN_INVALID','Explorer plan نامعتبر است.');if(planHash(plan)!==plan.planHash)throw err('EXPLORER_PLAN_TAMPERED','Explorer plan بعد از Preview تغییر کرده است.');const rr=assertWriteRoot(plan.root);if(comparable(rr)!==comparable(plan.root))throw err('EXPLORER_PLAN_ROOT_CHANGED','Workspace plan تغییر کرده است.');
+   if(plan.source){assertInsideRoot(plan.source,rr);await assertNoLinkChain(rr,plan.source,{includeTarget:true});const st=await lstatMaybe(plan.source);if(!sameSnapshot(st,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_SINCE_PREVIEW','منبع از زمان Preview تغییر کرده است.',{source:plan.source});}
+-  assertInsideRoot(plan.destination,rr);await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);if(exists(plan.destination)&&!plan.caseOnlyRename)throw err('EXPLORER_DESTINATION_NOW_EXISTS','مقصد بعد از Preview ایجاد شده است.',{destination:plan.destination});return true;
++  assertInsideRoot(plan.destination,rr);await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);await assertCanonicalSiblingAvailable(plan.destination,{ignorePath:plan.caseOnlyRename?plan.source:null});if(exists(plan.destination)&&!plan.caseOnlyRename)throw err('EXPLORER_DESTINATION_NOW_EXISTS','مقصد بعد از Preview ایجاد شده است.',{destination:plan.destination});return true;
+ }
+ async function sha256File(file){return await new Promise((resolve,reject)=>{const h=crypto.createHash('sha256');const s=fs.createReadStream(file);s.on('data',d=>h.update(d));s.on('error',reject);s.on('end',()=>resolve(h.digest('hex')));});}
+ function safeCycleId(v=''){return String(v||'cycle').replace(/[^a-zA-Z0-9_-]/g,'_');}
+@@ -93,11 +110,11 @@
+     await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);if(commitGuard)await commitGuard({phase:'before-mkdir',plan});await fsp.mkdir(plan.destination,{recursive:false});const st=await fsp.lstat(plan.destination);if(!st.isDirectory())throw err('EXPLORER_MKDIR_VERIFY_FAILED','پوشه جدید بعد از ساخت تأیید نشد.');completed.after=statSnapshot(st);completed.undo={kind:'remove-empty-directory',path:plan.destination,after:completed.after};return completed;
+   }
+   if(plan.action==='copy'){
+-    const stagingRoot=assertInsideRoot(path.join(rr,'.workspace-agent-staging',safeCycleId(cycleId||Date.now())),rr);await fsp.mkdir(stagingRoot,{recursive:true});const stage=assertInsideRoot(path.join(stagingRoot,`copy-${crypto.randomBytes(8).toString('hex')}.part`),rr);const tx=transactionStore?.create({kind:'explorer-copy',cycleId,root:rr,operations:[{kind:'explorer-copy-file',source:plan.source,destination:plan.destination,stage,size:plan.sourceSnapshot.size}]})||null;
+-    let destinationCommitted=false,committedHash='';try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.copyFile(plan.source,stage,fs.constants.COPYFILE_EXCL);transactionStore?.markOp(tx.id,0,{state:'staged'});const sourceAfter=await fsp.lstat(plan.source);if(!sameSnapshot(sourceAfter,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد؛ مقصد commit نشد.');const fh=await fsp.open(stage,'r');try{await fh.sync();}finally{await fh.close();}const [sourceHash,stageHash]=await Promise.all([sha256File(plan.source),sha256File(stage)]);if(sourceHash!==stageHash)throw err('EXPLORER_COPY_STAGE_HASH_MISMATCH','Hash فایل Stage با منبع قبل از Commit برابر نیست.');if(commitGuard)await commitGuard({phase:'before-copy-commit',plan,sourceHash,stageHash});await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);if(exists(plan.destination))throw err('EXPLORER_DESTINATION_RACE','مقصد هنگام Copy ایجاد شد؛ برای جلوگیری از overwrite عملیات متوقف شد.',{destination:plan.destination});await fsp.rename(stage,plan.destination);destinationCommitted=true;committedHash=stageHash;transactionStore?.markOp(tx.id,0,{state:'committed',recoveryHash:stageHash});const destinationHash=await sha256File(plan.destination);if(destinationHash!==stageHash)throw err('EXPLORER_COPY_HASH_MISMATCH','SHA-256 مقصد Copy با Hash Stage ثبت‌شده برابر نیست.');const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.sha256=destinationHash;completed.undo={kind:'remove-copied-file',path:plan.destination,sha256:destinationHash,size:Number(st.size||0)};transactionStore?.mark(tx.id,{status:'completed'});try{await fsp.rm(stagingRoot,{recursive:true,force:true});}catch{}return completed;}catch(error){let cleanupOk=true;try{if(exists(stage))await fsp.rm(stage,{force:true});}catch{cleanupOk=false;}if(destinationCommitted&&exists(plan.destination)){try{const currentHash=await sha256File(plan.destination);if(committedHash&&currentHash===committedHash)await fsp.rm(plan.destination,{force:false});else{cleanupOk=false;error.details={...(error.details||{}),destinationPreserved:true,destinationChangedAfterCommit:true,currentHash,committedHash:committedHash||null};}}catch{cleanupOk=false;}}cleanupOk=cleanupOk&&!exists(stage)&&(!destinationCommitted||!exists(plan.destination))&&exists(plan.source);transactionStore?.mark(tx.id,{status:cleanupOk?'rolled-back':'rollback-failed',error:error.code||error.message});if(!cleanupOk)error.details={...(error.details||{}),rollbackIncomplete:true,stageExists:exists(stage),destinationExists:exists(plan.destination),sourceExists:exists(plan.source)};throw error;}
++    const stage=assertInsideRoot(localStagePath(plan.destination,cycleId),rr);await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);const tx=transactionStore?.create({kind:'explorer-copy',cycleId,root:rr,operations:[{kind:'explorer-copy-file',source:plan.source,destination:plan.destination,stage,size:plan.sourceSnapshot.size}]})||null;
++    let destinationCommitted=false,committedHash='';try{transactionStore?.mark(tx.id,{status:'executing'});await fsp.copyFile(plan.source,stage,fs.constants.COPYFILE_EXCL);transactionStore?.markOp(tx.id,0,{state:'staged'});const sourceAfter=await fsp.lstat(plan.source);if(!sameSnapshot(sourceAfter,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_DURING_COPY','منبع حین Copy تغییر کرد؛ مقصد commit نشد.');const fh=await fsp.open(stage,'r');try{await fh.sync();}finally{await fh.close();}const [sourceHash,stageHash]=await Promise.all([sha256File(plan.source),sha256File(stage)]);if(sourceHash!==stageHash)throw err('EXPLORER_COPY_STAGE_HASH_MISMATCH','Hash فایل Stage با منبع قبل از Commit برابر نیست.');if(commitGuard)await commitGuard({phase:'before-copy-commit',plan,sourceHash,stageHash});await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);await assertCanonicalSiblingAvailable(plan.destination);if(exists(plan.destination))throw err('EXPLORER_DESTINATION_RACE','مقصد هنگام Copy ایجاد شد؛ برای جلوگیری از overwrite عملیات متوقف شد.',{destination:plan.destination});await fsp.rename(stage,plan.destination);destinationCommitted=true;committedHash=stageHash;transactionStore?.markOp(tx.id,0,{state:'committed',recoveryHash:stageHash});const destinationHash=await sha256File(plan.destination);if(destinationHash!==stageHash)throw err('EXPLORER_COPY_HASH_MISMATCH','SHA-256 مقصد Copy با Hash Stage ثبت‌شده برابر نیست.');const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.sha256=destinationHash;completed.undo={kind:'remove-copied-file',path:plan.destination,sha256:destinationHash,size:Number(st.size||0)};transactionStore?.mark(tx.id,{status:'completed'});return completed;}catch(error){let cleanupOk=true;try{if(exists(stage))await fsp.rm(stage,{force:true});}catch{cleanupOk=false;}if(destinationCommitted&&exists(plan.destination)){try{const currentHash=await sha256File(plan.destination);if(committedHash&&currentHash===committedHash)await fsp.rm(plan.destination,{force:false});else{cleanupOk=false;error.details={...(error.details||{}),destinationPreserved:true,destinationChangedAfterCommit:true,currentHash,committedHash:committedHash||null};}}catch{cleanupOk=false;}}cleanupOk=cleanupOk&&!exists(stage)&&(!destinationCommitted||!exists(plan.destination))&&exists(plan.source);transactionStore?.mark(tx.id,{status:cleanupOk?'rolled-back':'rollback-failed',error:error.code||error.message});if(!cleanupOk)error.details={...(error.details||{}),rollbackIncomplete:true,stageExists:exists(stage),destinationExists:exists(plan.destination),sourceExists:exists(plan.source)};throw error;}
+   }
+   const opKind=plan.sourceSnapshot.type==='directory'?'explorer-move-dir':'explorer-move-file';const caseStage=plan.caseOnlyRename?assertInsideRoot(path.join(path.dirname(plan.source),`.workspace-agent-case-${crypto.randomBytes(8).toString('hex')}.tmp`),rr):null;const tx=transactionStore?.create({kind:plan.action==='rename'?'explorer-rename':'explorer-move',cycleId,root:rr,operations:[{kind:opKind,source:plan.source,destination:plan.destination,stage:caseStage,size:plan.sourceSnapshot.size}]})||null;
+-  let stagedCase=false;try{transactionStore?.mark(tx.id,{status:'executing'});const sourceNow=await lstatMaybe(plan.source);if(!sameSnapshot(sourceNow,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_SINCE_PREFLIGHT','منبع بین Preflight و Commit تغییر کرده است.',{source:plan.source});if(commitGuard)await commitGuard({phase:'before-move-commit',plan});await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);if(plan.caseOnlyRename){if(exists(caseStage))throw err('EXPLORER_CASE_RENAME_STAGE_COLLISION','مسیر موقت Case-only Rename اشغال است.',{stage:caseStage});await fsp.rename(plan.source,caseStage);stagedCase=true;transactionStore?.markOp(tx.id,0,{state:'staged'});if(commitGuard)await commitGuard({phase:'before-case-rename-finalize',plan});if(exists(plan.destination))throw err('EXPLORER_CASE_RENAME_DESTINATION_RACE','مقصد Case-only Rename بعد از Stage اشغال شد.',{destination:plan.destination});await fsp.rename(caseStage,plan.destination);stagedCase=false;}else{if(exists(plan.destination))throw err('EXPLORER_DESTINATION_RACE','مقصد در آخرین لحظه قبل از Move/Rename ایجاد شد؛ برای جلوگیری از overwrite عملیات متوقف شد.',{destination:plan.destination});await fsp.rename(plan.source,plan.destination);}transactionStore?.markOp(tx.id,0,{state:'committed'});const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.caseOnlyRename=Boolean(plan.caseOnlyRename);completed.externalMutation=!sameSnapshot(st,plan.sourceSnapshot);completed.undo=plan.caseOnlyRename?{kind:'case-rename-back',source:plan.destination,destination:plan.source,after:completed.after}:{kind:'move-back',source:plan.destination,destination:plan.source,after:completed.after};transactionStore?.mark(tx.id,{status:'completed'});return completed;}catch(error){let rolledBack=false;if(stagedCase&&caseStage&&exists(caseStage)&&!exists(plan.source)){try{await fsp.rename(caseStage,plan.source);stagedCase=false;}catch{}}rolledBack=exists(plan.source)&&!exists(caseStage||'')&&(plan.caseOnlyRename||!exists(plan.destination));transactionStore?.mark(tx.id,{status:rolledBack?'rolled-back':'rollback-failed',error:error.code||error.message});if(!rolledBack)error.details={...(error.details||{}),rollbackIncomplete:true,sourceExists:exists(plan.source),stageExists:caseStage?exists(caseStage):false,destinationExists:exists(plan.destination)};throw error;}
++  let stagedCase=false;try{transactionStore?.mark(tx.id,{status:'executing'});const sourceNow=await lstatMaybe(plan.source);if(!sameSnapshot(sourceNow,plan.sourceSnapshot))throw err('EXPLORER_SOURCE_CHANGED_SINCE_PREFLIGHT','منبع بین Preflight و Commit تغییر کرده است.',{source:plan.source});if(commitGuard)await commitGuard({phase:'before-move-commit',plan});await assertDestinationParentStable(rr,plan.destination,plan.destinationParentSnapshot||null);await assertCanonicalSiblingAvailable(plan.destination,{ignorePath:plan.caseOnlyRename?plan.source:null});if(plan.caseOnlyRename){if(exists(caseStage))throw err('EXPLORER_CASE_RENAME_STAGE_COLLISION','مسیر موقت Case-only Rename اشغال است.',{stage:caseStage});await fsp.rename(plan.source,caseStage);stagedCase=true;transactionStore?.markOp(tx.id,0,{state:'staged'});if(commitGuard)await commitGuard({phase:'before-case-rename-finalize',plan});if(exists(plan.destination))throw err('EXPLORER_CASE_RENAME_DESTINATION_RACE','مقصد Case-only Rename بعد از Stage اشغال شد.',{destination:plan.destination});await fsp.rename(caseStage,plan.destination);stagedCase=false;}else{if(exists(plan.destination))throw err('EXPLORER_DESTINATION_RACE','مقصد در آخرین لحظه قبل از Move/Rename ایجاد شد؛ برای جلوگیری از overwrite عملیات متوقف شد.',{destination:plan.destination});await fsp.rename(plan.source,plan.destination);}transactionStore?.markOp(tx.id,0,{state:'committed'});const st=await fsp.lstat(plan.destination);completed.after=statSnapshot(st);completed.caseOnlyRename=Boolean(plan.caseOnlyRename);completed.externalMutation=!sameSnapshot(st,plan.sourceSnapshot);completed.undo=plan.caseOnlyRename?{kind:'case-rename-back',source:plan.destination,destination:plan.source,after:completed.after}:{kind:'move-back',source:plan.destination,destination:plan.source,after:completed.after};transactionStore?.mark(tx.id,{status:'completed'});return completed;}catch(error){let rolledBack=false;if(stagedCase&&caseStage&&exists(caseStage)&&!exists(plan.source)){try{await fsp.rename(caseStage,plan.source);stagedCase=false;}catch{}}rolledBack=exists(plan.source)&&!exists(caseStage||'')&&(plan.caseOnlyRename||!exists(plan.destination));transactionStore?.mark(tx.id,{status:rolledBack?'rolled-back':'rollback-failed',error:error.code||error.message});if(!rolledBack)error.details={...(error.details||{}),rollbackIncomplete:true,sourceExists:exists(plan.source),stageExists:caseStage?exists(caseStage):false,destinationExists:exists(plan.destination)};throw error;}
+ }
+ async function verifyCompleted(completed){
+   const mismatches=[];if(completed.action==='new-folder'){const st=await lstatMaybe(completed.destination);if(!st?.isDirectory())mismatches.push({code:'FOLDER_MISSING',path:completed.destination});return{ok:!mismatches.length,mismatches,mode:'directory-exists'};}
+@@ -123,4 +140,4 @@
+   return[{ok:false,error:'EXPLORER_UNDO_KIND_UNKNOWN'}];
+ }
+ 
+-module.exports={SCHEMA_VERSION,WRITE_ACTIONS,cleanRelative,resolveRead,resolveWrite,assertNoLinkChain,assertDestinationParentStable,describePath,explorerSearch,buildWritePlan,preflightPlan,executeWritePlan,verifyCompleted,undoCompleted,sha256File,statSnapshot,sameSnapshot,samePathIdentity,isCaseOnlyPathChange};
++module.exports={SCHEMA_VERSION,WRITE_ACTIONS,cleanRelative,resolveRead,resolveWrite,assertNoLinkChain,assertDestinationParentStable,canonicalSiblingCollision,assertCanonicalSiblingAvailable,localStagePath,describePath,explorerSearch,buildWritePlan,preflightPlan,executeWritePlan,verifyCompleted,undoCompleted,sha256File,statSnapshot,sameSnapshot,samePathIdentity,isCaseOnlyPathChange,isUnicodeCanonicalOnlyNameChange};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/root-resilience-service.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/root-resilience-service.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/root-resilience-service.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/root-resilience-service.cjs	2026-08-15 19:36:32.487621826 +0000
+@@ -3,7 +3,7 @@
+ const {probeVolume,basicAvailability,locateVolumeByUniqueId,volumeRootFor}=require('./windows-volume-probe.cjs');
+ function now(){return new Date().toISOString();}
+ function sameIdentity(a,b){return Boolean(a&&b&&a===b);}
+-function strongIdentity(v){const s=String(v||'');return s.startsWith('volume:')||s.startsWith('path:');}
++function strongIdentity(v){const s=String(v||'');return s.startsWith('volume:')||s.startsWith('path:')||s.startsWith('unc:');}
+ class RootResilienceService{
+  constructor({watcherService,index=null,journal=null,probe=null,identityProbe=probeVolume,availabilityProbe=basicAvailability,locate=locateVolumeByUniqueId,intervalMs=5000,deepIdentityIntervalMs=60000,platform=process.platform}={}){
+   this.watcherService=watcherService;this.index=index;this.journal=journal;this.customProbe=typeof probe==='function'?probe:null;this.identityProbe=typeof identityProbe==='function'?identityProbe:probeVolume;this.availabilityProbe=availabilityProbe;this.locate=locate;this.intervalMs=Math.max(1000,Number(intervalMs)||5000);this.deepIdentityIntervalMs=Math.max(this.intervalMs,Number(deepIdentityIntervalMs)||60000);this.platform=platform;this.timer=null;this.states=new Map();this.running=false;this.probing=false;this.lastDeepProbeAt=new Map();this.lastLocateAt=new Map();
+@@ -15,7 +15,7 @@
+  _schedule(ms=this.intervalMs){if(!this.running||this.timer)return;this.timer=setTimeout(async()=>{this.timer=null;try{await this.probeNow()}catch{}this._schedule();},ms);this.timer.unref?.();}
+  async probeNow({forceIdentity=false}={}){if(this.probing)return this.status();this.probing=true;try{for(const root of this.roots())await this._probeRoot(root,{forceIdentity});return this.status();}finally{this.probing=false;}}
+  async probeRoot(root,{forceIdentity=true}={}){return this._probeRoot(normalizeDisplayPath(String(root||''),{platform:this.platform}),{forceIdentity});}
+- async validateRoot(root){const state=await this.probeRoot(root,{forceIdentity:true});if(!state?.available)return{ok:false,code:'ROOT_UNAVAILABLE',message:'Root در دسترس نیست؛ عملیات اثرگذار متوقف شد.',state};if(state.identityChanged)return{ok:false,code:'VOLUME_IDENTITY_CHANGED',message:'Volume پشت این Root تغییر کرده است؛ ابتدا Fresh Reindex لازم است.',state};if(state.status==='relocated-candidate')return{ok:false,code:'ROOT_RELOCATED_CANDIDATE',message:'Volume قبلی روی مسیر دیگری پیدا شده است؛ Auto-Rebind مجاز نیست.',state};return{ok:true,state,identityStrength:strongIdentity(state.identityKey)?'strong':'weak'};}
++ async validateRoot(root,{forceIdentity=true}={}){const state=await this.probeRoot(root,{forceIdentity});if(state?.status==='relocated-candidate')return{ok:false,code:'ROOT_RELOCATED_CANDIDATE',message:'Volume قبلی روی مسیر دیگری پیدا شده است؛ Auto-Rebind مجاز نیست.',state,candidate:state.rebindCandidate||null};if(!state?.available)return{ok:false,code:'ROOT_UNAVAILABLE',message:'Root در دسترس نیست؛ عملیات اثرگذار متوقف شد.',state};if(state.identityChanged)return{ok:false,code:'VOLUME_IDENTITY_CHANGED',message:'Volume پشت این Root تغییر کرده است؛ ابتدا Fresh Reindex لازم است.',state};return{ok:true,state,identityStrength:strongIdentity(state.identityKey)?'strong':'weak'};}
+  async _probeRoot(root,{forceIdentity=false}={}){const rr=normalizeDisplayPath(root,{platform:this.platform}),k=keyPath(rr,{platform:this.platform});const prev=this.states.get(k)||this.index?.rootRuntime?.(rr)||null;let result;try{if(this.customProbe){result=await this.customProbe(rr,{platform:this.platform});}else{const base=await this.availabilityProbe(rr,{platform:this.platform});if(!base.available){result={...base,identityKey:'',volume:null,driveLetter:prev?.driveLetter||''};}else{const last=this.lastDeepProbeAt.get(k)||0;const deepDue=forceIdentity||!prev||prev.available===false||!strongIdentity(prev.identityKey)||(Date.now()-last>=this.deepIdentityIntervalMs);if(deepDue){result=await this.identityProbe(rr,{platform:this.platform});this.lastDeepProbeAt.set(k,Date.now());}else{result={...base,identityKey:prev.identityKey||'',driveLetter:prev.driveLetter||'',volume:{uniqueId:prev.volumeUniqueId||'',driveLetter:prev.driveLetter||'',fileSystem:prev.fileSystem||'',driveType:prev.driveType||'',healthStatus:prev.healthStatus||'',volumePath:''}};}}}}catch(error){result={available:false,root:rr,code:error.code||'ROOT_PROBE_FAILED',identityKey:''};}
+   const at=now();const volume=result.volume||null;const observedIdentity=String(result.identityKey||'');const effectiveIdentity=(!strongIdentity(observedIdentity)&&strongIdentity(prev?.identityKey))?String(prev.identityKey):String(observedIdentity||prev?.identityKey||'');let next={root:rr,available:Boolean(result.available),status:result.available?'available':'unavailable',identityKey:effectiveIdentity,volumeUniqueId:String(volume?.uniqueId||prev?.volumeUniqueId||''),driveLetter:String(result.driveLetter||volume?.driveLetter||prev?.driveLetter||''),fileSystem:String(volume?.fileSystem||prev?.fileSystem||''),driveType:String(volume?.driveType||prev?.driveType||''),healthStatus:String(volume?.healthStatus||prev?.healthStatus||''),lastProbeAt:at,lastSeenAt:result.available?at:(prev?.lastSeenAt||null),unavailableSince:result.available?null:(prev?.unavailableSince||at),identityChanged:Boolean(prev?.identityChanged),rebindCandidate:prev?.rebindCandidate||null,lastCode:String(result.code||result.probeWarning||'')};
+   if(!result.available){this.watcherService?.blockRoot?.(rr,prev?.identityChanged?'VOLUME_IDENTITY_CHANGED_LATCH':'ROOT_UNAVAILABLE');if(prev?.available){this.watcherService?._markDirty?.(rr,'ROOT_UNAVAILABLE');this.journal?.append('ROOT_UNAVAILABLE',{payload:{root:rr,identityKey:prev.identityKey||'',code:next.lastCode||'ROOT_UNAVAILABLE'}});}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-path-utils.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-path-utils.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-path-utils.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-path-utils.cjs	2026-08-15 19:28:29.007161445 +0000
+@@ -1,6 +1,7 @@
+ const path=require('path');
+ 
+-function normalizeUnicode(v=''){return String(v);}
++function normalizeUnicode(v=''){const s=String(v);try{return s.normalize('NFC')}catch{return s;}}
++function canonicalNameKey(v='',{platform=process.platform}={}){const s=normalizeUnicode(v);return platform==='win32'?s.toLocaleLowerCase('en-US'):s;}
+ function pathImpl(platform=process.platform){return platform==='win32'?path.win32:path.posix;}
+ function stripNamespacePrefix(input='',platform=process.platform){
+   let v=String(input||'');
+@@ -33,4 +34,4 @@
+   const isUnc=platform==='win32'&&display.startsWith('\\\\');
+   return{display,fsPath,isUnc,isNamespaced:platform==='win32'&&String(fsPath).startsWith('\\\\?\\'),displayLength:display.length,longPathCandidate:platform==='win32'&&display.length>=240};
+ }
+-module.exports={normalizeUnicode,stripNamespacePrefix,normalizeDisplayPath,toFsPath,keyPath,inside,pathDiagnostics,pathImpl};
++module.exports={normalizeUnicode,canonicalNameKey,stripNamespacePrefix,normalizeDisplayPath,toFsPath,keyPath,inside,pathDiagnostics,pathImpl};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-volume-probe.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-volume-probe.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-volume-probe.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/electron/services/windows-volume-probe.cjs	2026-08-15 19:29:00.312235308 +0000
+@@ -9,9 +9,17 @@
+   const p=normalizeDisplayPath(String(root||''),{platform});
+   const m=/^([A-Za-z]):(?:\\|\/|$)/.exec(p);return m?m[1].toUpperCase():'';
+ }
++function uncShareRootFor(root,{platform=process.platform}={}){
++  if(platform!=='win32')return'';
++  const p=normalizeDisplayPath(String(root||''),{platform});
++  if(!p.startsWith('\\\\'))return'';
++  const parts=p.split('\\');
++  return parts.length>=4&&parts[2]&&parts[3]?`\\\\${parts[2]}\\${parts[3]}\\`:'';
++}
+ function volumeRootFor(root,{platform=process.platform}={}){
+   if(platform!=='win32')return normalizeDisplayPath(String(root||''),{platform});
+-  const letter=driveLetterFor(root,{platform});return letter?`${letter}:\\`:normalizeDisplayPath(String(root||''),{platform});
++  const letter=driveLetterFor(root,{platform});if(letter)return`${letter}:\\`;
++  return uncShareRootFor(root,{platform})||normalizeDisplayPath(String(root||''),{platform});
+ }
+ function safeJson(text){try{return JSON.parse(String(text||'').trim())}catch{return null}}
+ function runPowerShell(command,{env={},timeoutMs=6000,spawnImpl=spawn}={}){
+@@ -40,7 +48,7 @@
+   if(!base.available)return{...base,identityKey:'',volume:null,driveLetter:driveLetterFor(root,{platform})};
+   if(platform!=='win32')return{...base,identityKey:`root:${keyPath(base.root,{platform})}`,volume:{driveLetter:'',label:'',fileSystem:'',driveType:'',healthStatus:'',size:0,sizeRemaining:0,uniqueId:'',volumePath:''},driveLetter:''};
+   const driveLetter=driveLetterFor(base.root,{platform});
+-  if(!driveLetter)return{...base,identityKey:`root:${keyPath(base.root,{platform})}`,volume:null,driveLetter:''};
++  if(!driveLetter){const uncRoot=uncShareRootFor(base.root,{platform});return{...base,identityKey:uncRoot?`unc:${keyPath(uncRoot,{platform})}`:`root:${keyPath(base.root,{platform})}`,volume:null,driveLetter:'',uncRoot:uncRoot||''};}
+   const ps=await runPowerShell(GET_VOLUME_COMMAND,{env:{WA_DRIVE_LETTER:driveLetter},timeoutMs,spawnImpl});
+   if(!ps.ok)return{...base,driveLetter,identityKey:`drive:${driveLetter}`,volume:null,probeWarning:ps.code};
+   const volume=normalizeVolume(safeJson(ps.stdout));
+@@ -53,4 +61,4 @@
+   const volume=normalizeVolume(safeJson(ps.stdout));if(!volume)return{found:false,code:'VOLUME_LOOKUP_PARSE_FAILED'};
+   return{found:true,volume,driveRoot:volume.driveLetter?`${volume.driveLetter}:\\`:''};
+ }
+-module.exports={driveLetterFor,volumeRootFor,basicAvailability,probeVolume,locateVolumeByUniqueId,normalizeVolume,runPowerShell,GET_VOLUME_COMMAND,FIND_VOLUME_COMMAND};
++module.exports={driveLetterFor,uncShareRootFor,volumeRootFor,basicAvailability,probeVolume,locateVolumeByUniqueId,normalizeVolume,runPowerShell,GET_VOLUME_COMMAND,FIND_VOLUME_COMMAND};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/package.json /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/package.json
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/package.json	2026-08-15 18:25:43.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/package.json	2026-08-15 19:32:56.175790745 +0000
+@@ -2,7 +2,7 @@
+   "name": "windows-workspace-agent",
+   "version": "1.0.0-rc1",
+   "private": true,
+-  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit8 external-mutation and power-transition hardening: suspend/resume write fences, stale-lease commit prevention, destination-parent/reparse revalidation, external-editor-safe copy rollback, case-only rename semantics, while retaining cert-kit7 concurrency leasing and prior release/write/recovery hardening.",
++  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit9 Windows-native edge hardening: stable UNC/volume identity, Unicode canonical-name collision defense, destination-local staging for stronger NTFS security-context behavior, removable/root relocation signaling, and bounded deep volume probing for large batch jobs, while retaining cert-kit8 power/external-mutation fences and prior concurrency/recovery/release hardening.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+@@ -74,11 +74,12 @@
+     "verify:manual-evidence:rc1": "node scripts/verify-manual-evidence-rc1.cjs",
+     "certify:envelope:rc1": "node scripts/rc1-certification-envelope.cjs",
+     "certify:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-certify.ps1",
+-    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs && node tests/external-mutation-ntfs-hardening-rc1.test.cjs",
++    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs && node tests/write-integrity-hardening-rc1.test.cjs && node tests/long-job-recovery-index-rc1.test.cjs && node tests/index-freshness-guard-rc1.test.cjs && node tests/startup-write-freshness-rc1.test.cjs && node tests/watcher-config-resilience-rc1.test.cjs && node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs && node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/windows-native-edge-hardening-rc1.test.cjs",
+     "verify:release-manifest:rc1": "node scripts/verify-release-manifest-rc1.cjs",
+     "finalize:rc1": "node scripts/rc1-finalize.cjs",
+     "test:concurrency": "node tests/cycle-engine-concurrency-rc1.test.cjs && node tests/explorer-operation-coordinator-rc1.test.cjs && node tests/explorer-concurrency-cycle-rc1.test.cjs && node tests/explorer-file-lock-classification-rc1.test.cjs",
+-    "test:external-mutation": "node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs"
++    "test:external-mutation": "node tests/external-mutation-ntfs-hardening-rc1.test.cjs && node tests/power-transition-write-fence-rc1.test.cjs && node tests/batch-power-fence-rc1.test.cjs",
++    "test:windows-native-edge-rc1-uat": "node tests/windows-native-edge-rc1.uat.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+@@ -137,6 +138,6 @@
+     "dataEpoch": 1,
+     "releaseCandidate": "rc1",
+     "coreFeatureAdditionsAllowed": false,
+-    "toolingRevision": "cert-kit8"
++    "toolingRevision": "cert-kit9"
+   }
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/rc1-finalize.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/rc1-finalize.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/rc1-finalize.cjs	2026-08-15 18:25:43.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/rc1-finalize.cjs	2026-08-15 19:28:29.011494235 +0000
+@@ -8,7 +8,7 @@
+ function meta(p){const a=path.resolve(root,p),s=fs.statSync(a);return{path:a,bytes:s.size,sha256:shaFile(a)}}
+ function fail(code,message,extra={}){console.error(JSON.stringify({ok:false,code,message,...extra},null,2));process.exit(1)}
+ const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+-if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit8'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT8_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit8 معتبر است.');
++if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit9'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT9_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit9 معتبر است.');
+ const artifactReport=arg('artifact-report'),peerReport=arg('peer-report'),releaseManifest=arg('release-manifest'),manualEvidence=arg('manual-evidence');
+ for(const [name,value] of Object.entries({artifactReport,peerReport,releaseManifest,manualEvidence}))if(!value||!fs.existsSync(path.resolve(root,value)))fail('FINALIZATION_INPUT_REQUIRED',`${name} معتبر لازم است.`,{name,value});
+ const requireSigning=process.argv.includes('--require-signing');
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/verify-rc1-source.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/verify-rc1-source.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/verify-rc1-source.cjs	2026-08-15 18:25:43.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/verify-rc1-source.cjs	2026-08-15 19:36:32.491797404 +0000
+@@ -7,12 +7,12 @@
+ const rc=pkg.workspaceAgentRelease||{};
+ if(pkg.version!=='1.0.0-rc1')fail('RC1_VERSION_REQUIRED','Source candidate باید دقیقاً version=1.0.0-rc1 باشد.',{version:pkg.version});
+ if(rc.channel!=='rc'||rc.releaseCandidate!=='rc1'||rc.featureFreeze!==true||rc.coreFeatureAdditionsAllowed!==false)fail('RC1_FREEZE_CONTRACT_INVALID','RC channel / feature-freeze contract نامعتبر است.',{workspaceAgentRelease:rc});
+-if(rc.toolingRevision!=='cert-kit8')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit8 باشد.',{toolingRevision:rc.toolingRevision});
++if(rc.toolingRevision!=='cert-kit9')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit9 باشد.',{toolingRevision:rc.toolingRevision});
+ if(rc.baselineVersion!=='0.9.8'||compareVersions(pkg.version,rc.baselineVersion)<=0)fail('RC1_BASELINE_INVALID','Baseline باید 0.9.8 و RC جدیدتر از آن باشد.',{baseline:rc.baselineVersion,version:pkg.version});
+ if(Number(rc.dataEpoch)!==Number(DATA_EPOCH))fail('RC1_DATA_EPOCH_MISMATCH','Data Epoch package با Update Guard تطابق ندارد.',{packageEpoch:rc.dataEpoch,runtimeEpoch:DATA_EPOCH});
+ if(pkg.build?.appId!=='com.workspaceagent.windows')fail('RC1_APP_ID_CHANGED','App ID در RC نباید تغییر کند.',{appId:pkg.build?.appId});
+ if(pkg.engines?.node!=='24.14.1'||pkg.engines?.npm!=='11.11.0'||pkg.packageManager!=='npm@11.11.0')fail('RC1_RUNTIME_PINS_CHANGED','Runtime pins RC با lane مصوب تطابق ندارد.',{engines:pkg.engines,packageManager:pkg.packageManager});
+-for(const file of ['scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/rc1-finalize.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/verify-release-manifest-rc1.cjs','scripts/check-source-syntax.cjs','scripts/run-source-tests.cjs','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
+-for(const s of ['check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','finalize:rc1','verify:manual-evidence:rc1','verify:release-manifest:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
++for(const file of ['scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/rc1-finalize.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/verify-release-manifest-rc1.cjs','scripts/check-source-syntax.cjs','scripts/run-source-tests.cjs','tests/windows-native-edge-hardening-rc1.test.cjs','tests/windows-native-edge-rc1.uat.cjs','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
++for(const s of ['check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','finalize:rc1','verify:manual-evidence:rc1','verify:release-manifest:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit','test:windows-native-edge-rc1-uat'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
+ if(compareVersions('1.0.0-rc1','1.0.0')>=0)fail('RC1_SEMVER_ORDER_INVALID','RC باید از نسخه stable همان ورژن کوچک‌تر باشد.');
+ console.log('verify-rc1-source PASS',{version:pkg.version,channel:rc.channel,featureFreeze:rc.featureFreeze,baseline:rc.baselineVersion,dataEpoch:DATA_EPOCH,toolingRevision:rc.toolingRevision,lockfile:fs.existsSync(path.join(root,'package-lock.json'))?'present':'pending'});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/windows-certification-v097.ps1 /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/windows-certification-v097.ps1
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/windows-certification-v097.ps1	2026-08-15 15:08:02.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/scripts/windows-certification-v097.ps1	2026-08-15 19:30:02.807669680 +0000
+@@ -51,6 +51,8 @@
+ 
+ $uatEnv=@{WA_CERT_STRICT='1';WA_CERT_ROOT_A=$RootA;WA_CERT_ROOT_B=$RootB;WA_CERT_RESULT=(Join-Path $out 'windows-certification-v097-uat.json')}
+ Run-NpmGate 'test:windows-certification-v097-uat' $true $uatEnv | Out-Null
++$nativeEnv=@{WA_CERT_STRICT='1';WA_CERT_ROOT_A=$RootA}
++Run-NpmGate 'test:windows-native-edge-rc1-uat' $true $nativeEnv | Out-Null
+ $scaleMatrix=@()
+ if($RunScale){
+   $scaleMatrix=if($pkg.version -eq '1.0.0-rc1'){@(100000,1000000)}else{@([Math]::Max(10000,[Math]::Min(1000000,$ScaleFiles)))}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-release-matrix-contract.test.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-release-matrix-contract.test.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-15 18:25:43.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-15 19:28:29.011929420 +0000
+@@ -5,9 +5,9 @@
+ const {detectWindowsFamily,validatePeerPair,MANUAL_KEYS}=require('../scripts/rc1-certification-envelope.cjs');
+ assert.equal(detectWindowsFamily({windowsFamily:'Windows10'}),'Windows10');
+ assert.equal(detectWindowsFamily({os:{caption:'Microsoft Windows 11 Pro',build:'26100'}}),'Windows11');
+-const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit8',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit8',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit8'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit8'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
++const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit9',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit9',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit9'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit9'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
+ assert(MANUAL_KEYS.includes('realUpgradeFrom0_9_8'),'real packaged upgrade evidence must be required');
+ const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');
+ for(const token of ['PeerWindowsReport','--require-dual-windows','100000,1000000','yyyyMMdd-HHmmss-fff','windows-runs'])assert(orchestrator.includes(token),`missing RC1 matrix invariant: ${token}`);
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-source-contract.test.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-source-contract.test.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-source-contract.test.cjs	2026-08-15 18:25:43.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/rc1-source-contract.test.cjs	2026-08-15 19:28:29.011734206 +0000
+@@ -8,7 +8,7 @@
+ assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+ assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+ assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+-assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit8');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
++assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit9');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
+ const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+ assert(/PASS/.test(out));
+ console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-hardening-rc1.test.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-hardening-rc1.test.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-hardening-rc1.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-hardening-rc1.test.cjs	2026-08-15 19:36:47.957072350 +0000
+@@ -0,0 +1,58 @@
++const assert=require('assert');
++const fs=require('fs');
++const fsp=fs.promises;
++const os=require('os');
++const path=require('path');
++const {uncShareRootFor,volumeRootFor}=require('../electron/services/windows-volume-probe.cjs');
++const {canonicalNameKey}=require('../electron/services/windows-path-utils.cjs');
++const {canonicalSiblingCollision,assertCanonicalSiblingAvailable,localStagePath,isUnicodeCanonicalOnlyNameChange}=require('../electron/services/file-explorer-service.cjs');
++const {defaultVolumeIdentity,validateJobRoots}=require('../electron/services/explorer-batch-service.cjs');
++const {RootResilienceService,strongIdentity}=require('../electron/services/root-resilience-service.cjs');
++
++(async()=>{
++  // UNC identity must be anchored to the share, not to an arbitrary subdirectory.
++  assert.strictEqual(uncShareRootFor('\\\\server\\share\\a\\b',{platform:'win32'}),'\\\\server\\share\\');
++  assert.strictEqual(volumeRootFor('\\\\server\\share\\a\\b',{platform:'win32'}),'\\\\server\\share\\');
++  assert.strictEqual(uncShareRootFor('C:\\Data',{platform:'win32'}),'');
++  assert.strictEqual(strongIdentity('unc:server-share'),true);
++
++  // Windows batch volume identity should prefer a strong probe identity when available.
++  let probes=0;
++  const fakeProbe=async p=>({available:true,identityKey:'volume:VOL-123',root:p,volume:{uniqueId:'VOL-123'}});
++  const idA=await defaultVolumeIdentity('C:\\Data\\A',{platform:'win32',probe:async p=>{probes++;return fakeProbe(p)}});
++  const idB=await defaultVolumeIdentity('C:\\Data\\B',{platform:'win32',probe:async p=>{probes++;return fakeProbe(p)}});
++  assert.strictEqual(idA,'volume:VOL-123');assert.strictEqual(idB,'volume:VOL-123');assert.strictEqual(probes,2);
++
++  // Canonically equivalent Unicode names are intentionally treated as ambiguous on Windows.
++  assert.strictEqual(canonicalNameKey('CAFÉ.txt',{platform:'win32'}),canonicalNameKey('cafe\u0301.TXT',{platform:'win32'}));
++  assert.strictEqual(isUnicodeCanonicalOnlyNameChange('C:\\x\\cafe\u0301.txt','C:\\x\\caf\u00e9.txt',{platform:'win32'}),true);
++  assert.strictEqual(isUnicodeCanonicalOnlyNameChange('C:\\x\\File.TXT','C:\\x\\file.txt',{platform:'win32'}),false);
++  const base=await fsp.mkdtemp(path.join(os.tmpdir(),'wa-native-edge-'));
++  try{
++    const existing=path.join(base,'cafe\u0301.txt');await fsp.writeFile(existing,'x');
++    const desired=path.join(base,'café.txt');
++    const hit=await canonicalSiblingCollision(desired,{platform:'win32'});assert(hit);assert.strictEqual(hit.name,'cafe\u0301.txt');
++    await assert.rejects(()=>assertCanonicalSiblingAvailable(desired,{platform:'win32'}),e=>e.code==='EXPLORER_UNICODE_CANONICAL_COLLISION');
++
++    // Copy staging is destination-local so a Windows-created staging file inherits the destination parent context.
++    const staged=localStagePath(path.join(base,'dest','file.txt'),'cycle-1');
++    assert.strictEqual(path.dirname(staged),path.join(base,'dest'));
++    assert(path.basename(staged).startsWith('.workspace-agent-stage-cycle-1-'));
++
++    // Per-item batch guards must be able to use a fast availability/cached identity pass.
++    const src=path.join(base,'src'),dst=path.join(base,'dst');await fsp.mkdir(src);await fsp.mkdir(dst);const out=path.join(dst,'out');await fsp.mkdir(out);
++    const observed=[];const job={root:src,source_root:src,destination_root:dst,destination_dir:out,source_identity:'volume:S',destination_identity:'volume:D'};
++    const rootGate=async args=>(observed.push(args.forceIdentity),{ok:true});
++    await validateJobRoots(job,rootGate,{forceIdentity:true});await validateJobRoots(job,rootGate,{forceIdentity:false});
++    assert.deepStrictEqual(observed,[true,false]);
++  }finally{await fsp.rm(base,{recursive:true,force:true});}
++
++  // A drive-letter relocation candidate must surface its specific blocker, not collapse to ROOT_UNAVAILABLE.
++  const watcher={configs:()=>[{id:'x',root:'E:\\Workspace',enabled:true}],blockRoot:()=>{},unblockRoot:()=>{},startRoot:()=>{},_markDirty:()=>{}};
++  const index={listRoots:()=>[],rootRuntime:()=>({available:true,status:'available',identityKey:'volume:USB-X',volumeUniqueId:'USB-X',driveLetter:'E',identityChanged:false}),setRootRuntime:()=>{}};
++  const resilience=new RootResilienceService({watcherService:watcher,index,platform:'win32',probe:async()=>({available:false,root:'E:\\Workspace',code:'ENOENT'}),locate:async()=>({found:true,driveRoot:'F:\\',volume:{driveLetter:'F',uniqueId:'USB-X'}})});
++  const gate=await resilience.validateRoot('E:\\Workspace');
++  assert.strictEqual(gate.ok,false);assert.strictEqual(gate.code,'ROOT_RELOCATED_CANDIDATE');assert.strictEqual(gate.candidate.root,'F:\\Workspace');
++
++  console.log('windows-native-edge-hardening-rc1.test.cjs PASS',{uncShareIdentity:true,strongVolumeIdentity:true,unicodeCollision:true,destinationLocalStage:true,batchedIdentityCadence:true,relocationSignal:true});
++})().catch(e=>{console.error(e);process.exit(1)});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit9.txt' '--exclude=FILE_INVENTORY_v1.0.0-rc1-cert-kit9.txt' /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-rc1.uat.cjs /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-rc1.uat.cjs
+--- /mnt/data/wa_cert9_base/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-rc1.uat.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_cert9_work/windows-workspace-agent-v1.0.0-rc1-cert-kit8-external-mutation-power-fence-source/tests/windows-native-edge-rc1.uat.cjs	2026-08-15 19:30:00.815621826 +0000
+@@ -0,0 +1,54 @@
++const assert=require('assert');
++const fs=require('fs');
++const fsp=fs.promises;
++const path=require('path');
++const {spawn}=require('child_process');
++const {buildWritePlan,executeWritePlan,verifyCompleted,undoCompleted,assertCanonicalSiblingAvailable}=require('../electron/services/file-explorer-service.cjs');
++const {classifyIoError}=require('../electron/services/explorer-storage-guard.cjs');
++const {probeVolume}=require('../electron/services/windows-volume-probe.cjs');
++
++function waitForLine(child,needle,timeoutMs=8000){return new Promise((resolve,reject)=>{let out='';const timer=setTimeout(()=>reject(new Error(`LOCK_HELPER_TIMEOUT ${out}`)),timeoutMs);child.stdout.on('data',d=>{out+=String(d);if(out.includes(needle)){clearTimeout(timer);resolve(out)}});child.on('error',e=>{clearTimeout(timer);reject(e)});child.on('exit',code=>{if(!out.includes(needle)){clearTimeout(timer);reject(new Error(`LOCK_HELPER_EXIT_${code} ${out}`))}});});}
++
++(async()=>{
++  if(process.platform!=='win32'){console.log('windows-native-edge-rc1.uat.cjs SKIP (Windows only)');return;}
++  const certRoot=String(process.env.WA_CERT_ROOT_A||'').trim();
++  if(!certRoot){console.log('windows-native-edge-rc1.uat.cjs SKIP (WA_CERT_ROOT_A required)');return;}
++  const root=path.join(certRoot,`wa-native-edge-${Date.now()}-${process.pid}`);
++  await fsp.mkdir(root,{recursive:true});
++  let lockChild=null;
++  try{
++    const volume=await probeVolume(root);assert(volume.available,'cert root must be available');assert(String(volume.volume?.fileSystem||'').toUpperCase()==='NTFS','native edge UAT requires NTFS');
++
++    await fsp.mkdir(path.join(root,'dest'));
++    const unicodeSource='طرح-آزمایشی-😀.txt';await fsp.writeFile(path.join(root,unicodeSource),'unicode-safe');
++    let p=await buildWritePlan({action:'copy',root,sourceRelative:unicodeSource,destinationRelative:path.join('dest','کپی-طرح-😀.txt')});
++    let c=await executeWritePlan(p,{cycleId:'native-unicode'});assert((await verifyCompleted(c)).ok);assert((await undoCompleted(c))[0].ok);
++
++    // Canonically-equivalent sibling names are blocked before a confusing Windows destination is created.
++    await fsp.writeFile(path.join(root,'dest','cafe\u0301.txt'),'x');
++    await assert.rejects(()=>assertCanonicalSiblingAvailable(path.join(root,'dest','café.txt'),{platform:'win32'}),e=>e.code==='EXPLORER_UNICODE_CANONICAL_COLLISION');
++
++    // Long path exercise (> 300 display characters) through the actual Explorer copy pipeline.
++    const segments=[];let longParent=root;while(longParent.length<310){segments.push(`بخش-${String(segments.length).padStart(2,'0')}-${'x'.repeat(28)}`);longParent=path.join(root,...segments)}
++    await fsp.mkdir(longParent,{recursive:true});await fsp.writeFile(path.join(root,'long-source.txt'),'long-path-data');
++    const relLong=path.join(...segments,'نتیجه-طولانی.txt');assert(path.join(root,relLong).length>300);
++    p=await buildWritePlan({action:'copy',root,sourceRelative:'long-source.txt',destinationRelative:relLong});c=await executeWritePlan(p,{cycleId:'native-longpath'});assert((await verifyCompleted(c)).ok);assert((await undoCompleted(c))[0].ok);
++
++    // Real case-only rename on NTFS.
++    await fsp.writeFile(path.join(root,'CaseFile.TXT'),'case-only');
++    p=await buildWritePlan({action:'rename',root,sourceRelative:'CaseFile.TXT',newName:'casefile.txt'});c=await executeWritePlan(p,{cycleId:'native-case'});assert(c.caseOnlyRename);assert((await verifyCompleted(c)).ok);assert((await undoCompleted(c))[0].ok);
++
++    // Real Windows share-mode lock: the write must fail safely and classify as recoverable.
++    const locked=path.join(root,'locked-by-editor.txt');await fsp.writeFile(locked,'locked');
++    const lockCmd="$ErrorActionPreference='Stop'; $fs=[System.IO.File]::Open($env:WA_LOCK_FILE,[System.IO.FileMode]::Open,[System.IO.FileAccess]::ReadWrite,[System.IO.FileShare]::None); [Console]::Out.WriteLine('LOCKED'); [Console]::Out.Flush(); Start-Sleep -Seconds 20; $fs.Dispose()";
++    lockChild=spawn('powershell.exe',['-NoProfile','-NonInteractive','-Command',lockCmd],{windowsHide:true,env:{...process.env,WA_LOCK_FILE:locked},stdio:['ignore','pipe','pipe']});
++    await waitForLine(lockChild,'LOCKED');
++    p=await buildWritePlan({action:'move',root,sourceRelative:'locked-by-editor.txt',destinationRelative:path.join('dest','locked-by-editor.txt')});let lockError=null;try{await executeWritePlan(p,{cycleId:'native-lock'});}catch(e){lockError=e;}assert(lockError,'locked file move must fail');const cls=classifyIoError(lockError);assert(cls.recoverable,'locked file failure must be recoverable');assert(['locked','permission-or-lock','permission'].includes(cls.category),`unexpected lock category ${cls.category}/${lockError.code}`);assert(fs.existsSync(locked),'source must remain after locked move failure');
++    try{lockChild.kill();}catch{}lockChild=null;
++
++    console.log('windows-native-edge-rc1.uat.cjs PASS',{ntfs:true,unicode:true,longPath:true,caseOnlyRename:true,realShareModeLock:true,displayPathLength:path.join(root,relLong).length,volumeIdentity:volume.identityKey});
++  }finally{
++    if(lockChild){try{lockChild.kill()}catch{}}
++    await fsp.rm(root,{recursive:true,force:true}).catch(()=>{});
++  }
++})().catch(e=>{console.error(e);process.exit(1)});

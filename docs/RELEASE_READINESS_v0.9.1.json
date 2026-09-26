@@ -1,0 +1,21 @@
+{
+  "version": "0.9.1",
+  "track": "real-local-ai-runtime",
+  "coreSource": "READY",
+  "legacyRegression": "PASS",
+  "testSuitesInNpmTest": 31,
+  "localAIRuntimeUnit": "PASS",
+  "capabilityProbeUnit": "PASS",
+  "dependencyPins": "PASS",
+  "sourceHygiene": "PASS",
+  "syntax": "PASS",
+  "jsx": "PASS",
+  "windowsRealLlamaCppUAT": "PENDING_WINDOWS",
+  "windowsRealQwenTextUAT": "PENDING_WINDOWS",
+  "windowsRealQwenVisionUAT": "PENDING_WINDOWS",
+  "packageLock": "PENDING_LOCKFILE_REQUIRED",
+  "sourceBuild": "PENDING_DEPENDENCIES_VITE_NOT_INSTALLED",
+  "nsis": "PENDING",
+  "portable": "PENDING",
+  "authenticode": "PENDING"
+}

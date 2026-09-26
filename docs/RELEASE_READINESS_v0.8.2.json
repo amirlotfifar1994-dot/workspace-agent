@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "workspace-agent-release-readiness-v1",
+  "version": "0.8.2",
+  "validatedAt": "2026-08-13",
+  "source": {
+    "dependencyPins": "pass",
+    "sourceHygiene": "pass",
+    "syntax": "pass",
+    "jsx": "pass",
+    "regression": "pass",
+    "windowsPathHardening": "pass"
+  },
+  "windows": {
+    "longPathUnicodeUat": "pending-windows",
+    "junctionReparseUat": "pending-windows",
+    "uiaUat": "pending-windows",
+    "ntfsScaleMatrix": "pending-windows"
+  },
+  "release": {
+    "packageLock": "pending-online-generation",
+    "winUnpackedBuild": "pending-lock-and-windows",
+    "packagedWorkerSmoke": "pending-build",
+    "nsis": "pending-build",
+    "portable": "pending-build",
+    "authenticode": "pending-signed-build"
+  },
+  "releaseEligible": false,
+  "reason": "Windows UAT, real package-lock and binary/signature verification are still required."
+}

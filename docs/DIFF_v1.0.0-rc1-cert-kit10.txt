@@ -1,0 +1,26 @@
+# DIFF cert-kit9 -> cert-kit10
+
+Files README_FA.md and README_FA.md differ
+Only in docs: CERTIFICATION_EVIDENCE_CHAIN_v1.0.0-rc1_FA.md
+Only in docs: CHANGELOG_v1.0.0-rc1-cert-kit10-evidence-chain-hardening_FA.md
+Only in docs: DIFF_v1.0.0-rc1-cert-kit10.txt
+Only in docs: FILE_INVENTORY_v1.0.0-rc1-cert-kit10.txt
+Files docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md and docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md differ
+Only in docs: RELEASE_READINESS_v1.0.0-rc1-cert-kit10-evidence-chain-hardening.json
+Files docs/RELEASE_READINESS_v1.0.0-rc1.json and docs/RELEASE_READINESS_v1.0.0-rc1.json differ
+Only in docs: VALIDATION_v1.0.0-rc1-cert-kit10-evidence-chain-hardening_FA.md
+Files package.json and package.json differ
+Only in scripts: certification-evidence-bundle.cjs
+Files scripts/rc1-certification-envelope.cjs and scripts/rc1-certification-envelope.cjs differ
+Files scripts/rc1-finalize.cjs and scripts/rc1-finalize.cjs differ
+Files scripts/verify-rc1-source.cjs and scripts/verify-rc1-source.cjs differ
+Files scripts/windows-certification-v097.ps1 and scripts/windows-certification-v097.ps1 differ
+Files scripts/windows-rc1-certify.ps1 and scripts/windows-rc1-certify.ps1 differ
+Only in tests: certification-evidence-integrity-rc1.test.cjs
+Files tests/rc1-certification-envelope.test.cjs and tests/rc1-certification-envelope.test.cjs differ
+Files tests/rc1-certification-kit-contract.test.cjs and tests/rc1-certification-kit-contract.test.cjs differ
+Files tests/rc1-finalizer-contract.test.cjs and tests/rc1-finalizer-contract.test.cjs differ
+Files tests/rc1-release-artifact-contract.test.cjs and tests/rc1-release-artifact-contract.test.cjs differ
+Files tests/rc1-release-matrix-contract.test.cjs and tests/rc1-release-matrix-contract.test.cjs differ
+Files tests/rc1-source-contract.test.cjs and tests/rc1-source-contract.test.cjs differ
+Files tests/windows-native-edge-rc1.uat.cjs and tests/windows-native-edge-rc1.uat.cjs differ

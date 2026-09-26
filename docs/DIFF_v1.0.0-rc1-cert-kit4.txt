@@ -1,0 +1,1433 @@
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/README_FA.md /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/README_FA.md
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/README_FA.md	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/README_FA.md	2026-08-15 15:14:44.197133899 +0000
+@@ -50,29 +50,37 @@
+ 
+ جزئیات در `docs/RC1_ACCEPTANCE_MODEL_FA.md` و `docs/RELEASE_READINESS_v1.0.0-rc1.json` است.
+ 
+-## RC1 Windows Certification Kit — cert-kit3
++## RC1 Windows Certification Kit — cert-kit4
+ 
+-Core همچنان Feature Freeze است، اما Certification tooling سخت‌گیرانه‌تر شده است. Final PASS اکنون به هر دو خانواده Windows 10 و Windows 11، هر دو Scale واقعی 100k و 1M، clean-room artifact build، lockfile binding و Manual Evidence شامل upgrade واقعی از v0.9.8 نیاز دارد.
++Core همچنان Feature Freeze است، اما Certification tooling اکنون علاوه بر ماتریس Windows/Scale، قرارداد Artifact نهایی را هم سخت‌گیرانه می‌بندد. Final PASS به Windows 10 + Windows 11، Scale واقعی 100k + 1M، clean-room build، `package-lock`، هر دو خروجی NSIS و Portable، release manifest معتبر و Manual Evidence شامل upgrade واقعی از v0.9.8 نیاز دارد.
+ 
+-Run اول روی یکی از Windowsها:
++Run اول روی یکی از Windowsها برای ساخت Artifact و Report:
+ 
+ ```powershell
+ $env:WA_CERT_ROOT_A='C:\WA-Cert'
+ $env:WA_CERT_ROOT_B='D:\WA-Cert'
+-npm run certify:windows:rc1 -- -RequireManualEvidence -ManualEvidenceFile '.\manual-evidence-rc1.json'
++npm run certify:windows:rc1
+ ```
+ 
+-Run دوم روی خانواده دیگر Windows با Report Run اول:
++در cert-kit4 نتیجه Orchestrator در این مرحله عمداً `INCOMPLETE` است، چون Final Envelope بدون Manual Evidence و Windows family دوم PASS نمی‌شود؛ اما `certification-report.json` محلی می‌تواند PASS باشد و NSIS/Portable تولید می‌شوند.
++
++بعد با **همان NSIS تولیدشده** upgrade واقعی `0.9.8 → 1.0.0-rc1` را انجام دهید و `MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json` را تکمیل کنید. سپس Certification را روی خانواده دیگر Windows هم اجرا کنید.
++
++Finalization را جداگانه و با Report مربوط به Artifactی که واقعاً برای upgrade استفاده شده انجام دهید:
+ 
+ ```powershell
+-npm run certify:windows:rc1 -- -PeerWindowsReport '.\peer\certification-report.json' -RequireManualEvidence -ManualEvidenceFile '.\manual-evidence-rc1.json'
++npm run finalize:rc1 -- `
++  --artifact-report=.\evidence\artifact-owner-certification-report.json `
++  --peer-report=.\evidence\other-windows-certification-report.json `
++  --release-manifest=.\evidence\release\release-manifest.json `
++  --manual-evidence=.\evidence\manual-evidence-rc1.json
+ ```
+ 
+-بدون Report خانواده دوم Windows، Envelope عمداً `INCOMPLETE` می‌ماند و PASS نهایی صادر نمی‌شود. جزئیات در `docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md` و `docs/RC1_CERTIFICATION_ENVELOPE_FA.md` است.
++این جداسازی، پارادوکس «Evidence upgrade قبل از ساخته‌شدن installer» را حذف می‌کند و Final Envelope، Report صاحب Artifact را به SHA256 همان Release Manifest bind می‌کند.
+ 
+-## cert-kit3 — Production Resilience Hardening
++## cert-kit4 — Release Lane Closure + Production Resilience
+ 
+-این revision همچنان `1.0.0-rc1` و Feature-Frozen است؛ قابلیت اصلی جدیدی به محصول اضافه نشده، اما چند خطای correctness و recovery که می‌توانستند در عملیات طولانی فایل رخ دهند بسته شده‌اند:
++این revision همچنان `1.0.0-rc1` و Feature-Frozen است؛ hardeningهای cert-kit3 حفظ شده‌اند و cert-kit4 خلأهای Release Lane را می‌بندد. قابلیت اصلی جدیدی به محصول اضافه نشده است:
+ 
+ - زمان انتظار برای Confirm/Pause دیگر از بودجه active runtime چرخه کم نمی‌شود.
+ - Retention هیچ Cycle فعال یا Transaction قابل Recovery را حذف نمی‌کند.
+@@ -82,4 +90,6 @@
+ - Advanced Batch بعد از تأیید، checkpointها را در UI به‌صورت خودکار ادامه می‌دهد؛ Pause و Cancel در مرز امن chunk حفظ شده‌اند و دیگر برای هزاران chunk به هزاران کلیک Resume نیاز نیست.
+ - برچسب نسخه در UI با `v1.0.0-rc1` هماهنگ شده است.
+ 
+-این hardening جای Windows Certification واقعی را نمی‌گیرد؛ Gateهای Windows 10/11، NTFS دو Volume، Scale 100k/1M، installer/portable و upgrade واقعی همچنان باید روی Release Lane اجرا شوند.
++علاوه بر hardening قبلی، Release Lane اکنون دقیقاً یک `Workspace-Agent-Setup-...-x64.exe` و یک `Workspace-Agent-Portable-...-x64.exe` می‌خواهد، برای آن‌ها `SHA256SUMS.txt` و `release-manifest.json` نسخه v7 می‌سازد و Envelope نیز همین قرارداد را دوباره verify می‌کند. Manual Evidence v2 زمان مشاهده و مشخصات upgrade را می‌خواهد و SHA256 installer upgrade باید با NSIS همان Release Manifest یکی باشد.
++
++این‌ها جای Windows Certification واقعی را نمی‌گیرند؛ Gateهای Windows 10/11، NTFS دو Volume، Scale 100k/1M، `npm ci` رسمی و upgrade واقعی همچنان باید روی Release Lane اجرا شوند.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/CHANGELOG_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md	2026-08-15 15:15:17.219086957 +0000
+@@ -0,0 +1,46 @@
++# Changelog — v1.0.0-rc1 / cert-kit4 Release Lane Closure
++
++تاریخ: 2026-08-15
++
++این revision تحت Feature Freeze انجام شده و capability اصلی جدیدی به Agent اضافه نمی‌کند. تمرکز روی بستن خلأهای Release/Certification است.
++
++## Artifact Contract
++
++- RC1 دیگر صرفاً «وجود یک exe» را قبول نمی‌کند؛ دقیقاً NSIS x64 و Portable x64 با نام نسخه جاری لازم‌اند.
++- `release-manifest.json` به schema `workspace-agent-release-v7` ارتقا یافت.
++- Manifest شامل kind/arch/bytes/SHA256، lock hash، source fingerprint، runtime pins و builder OS است.
++- `SHA256SUMS.txt` از همان دو Artifact ساخته و با verifier مستقل cross-check می‌شود.
++- `scripts/verify-release-manifest-rc1.cjs` هم در Release Lane، هم Orchestrator و هم Final Envelope قابل استفاده است.
++
++## Fingerprint Correctness
++
++- در certification standalone، Source Fingerprint بعد از lockfile generation/resolution گرفته می‌شود؛ بنابراین `-GenerateLockfile` دیگر Reportی با fingerprint قبل از lockfile تولید نمی‌کند.
++
++## Manual Evidence v2
++
++- هر PASS دارای `observedAt` معتبر است.
++- Evidence مربوط به upgrade، `fromVersion`، `toVersion`، `installerSha256`، Self-Check قبل/بعد و `statePreserved` را ثبت می‌کند.
++- Final Envelope SHA256 installer upgrade را به NSIS همان Release Manifest bind می‌کند.
++
++## Staged Finalization
++
++- Final PASS دیگر به اجرای هم‌زمان build و Evidence upgrade وابسته نیست.
++- Artifact-owner Run ابتدا installer را می‌سازد؛ سپس upgrade واقعی انجام می‌شود؛ سپس `finalize:rc1` Reportهای دو Windows، Manifest همان Artifact و Manual Evidence را جمع می‌کند.
++- Envelope، `releaseManifestSha256` و Artifact rows داخل Report را با Manifest منتخب cross-check می‌کند.
++- Orchestrator RC1 همیشه Final Envelope را نیازمند Manual Evidence می‌داند؛ نبود Evidence دیگر نمی‌تواند PASS نهایی بسازد.
++
++## Session Evidence Isolation
++
++- Orchestrator snapshot از Release Manifest، SHA256SUMS و Peer Windows Report را داخل Session نگه می‌دارد.
++- Result schema به v3 ارتقا یافت.
++
++## Regression Evidence
++
++- Source tests: `63/63 PASS`
++- Recursive JS syntax: `189 files PASS`
++- JSX syntax gate: PASS
++- Source hygiene: PASS
++- Dependency pins: PASS
++- RC1 source contract: PASS
++
++Windows 10/11 واقعی، package-lock رسمی، npm ci رسمی، dual NTFS، Scale واقعی، NSIS/Portable واقعی، upgrade واقعی و Authenticode هنوز در این محیط PASS اعلام نشده‌اند.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit4.txt /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit4.txt
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit4.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit4.txt	2026-08-15 15:15:35.947511411 +0000
+@@ -0,0 +1,342 @@
++./.node-version
++./.npmrc
++./.nvmrc
++./README_FA.md
++./docs/ADVANCED_FILE_EXPLORER_v0.9.5_FA.md
++./docs/ARCHITECTURE_FA.md
++./docs/CERTIFICATION_MODEL_v0.8.4_FA.md
++./docs/CHANGELOG_v0.4_FA.md
++./docs/CHANGELOG_v0.5_FA.md
++./docs/CHANGELOG_v0.6_FA.md
++./docs/CHANGELOG_v0.7.1_FA.md
++./docs/CHANGELOG_v0.7.2_FA.md
++./docs/CHANGELOG_v0.7_FA.md
++./docs/CHANGELOG_v0.8.0_FA.md
++./docs/CHANGELOG_v0.8.1_FA.md
++./docs/CHANGELOG_v0.8.2_FA.md
++./docs/CHANGELOG_v0.8.3_FA.md
++./docs/CHANGELOG_v0.8.4_FA.md
++./docs/CHANGELOG_v0.9.0_FA.md
++./docs/CHANGELOG_v0.9.1_FA.md
++./docs/CHANGELOG_v0.9.2_FA.md
++./docs/CHANGELOG_v0.9.3_FA.md
++./docs/CHANGELOG_v0.9.4_FA.md
++./docs/CHANGELOG_v0.9.5_FA.md
++./docs/CHANGELOG_v0.9.6_FA.md
++./docs/CHANGELOG_v0.9.7_FA.md
++./docs/CHANGELOG_v0.9.8_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit1_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit2_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
++./docs/CHANGELOG_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md
++./docs/CHANGELOG_v1.0.0-rc1_FA.md
++./docs/DIFF_v0.7.1.txt
++./docs/DIFF_v0.7.2.txt
++./docs/DIFF_v0.8.0.txt
++./docs/DIFF_v0.8.1.txt
++./docs/DIFF_v0.8.2.txt
++./docs/DIFF_v0.8.3.txt
++./docs/DIFF_v0.8.4.txt
++./docs/DIFF_v0.9.0.txt
++./docs/DIFF_v0.9.1.txt
++./docs/DIFF_v0.9.2.txt
++./docs/DIFF_v0.9.3.txt
++./docs/DIFF_v0.9.4.txt
++./docs/DIFF_v0.9.5.txt
++./docs/DIFF_v0.9.6.txt
++./docs/DIFF_v0.9.7.txt
++./docs/DIFF_v0.9.8.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit1.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit2.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit3.txt
++./docs/DIFF_v1.0.0-rc1-cert-kit4.txt
++./docs/DIFF_v1.0.0-rc1.txt
++./docs/FILE_EXPLORER_PRODUCTION_HARDENING_v0.9.6_FA.md
++./docs/FILE_EXPLORER_SKILL_PACK_v0.9.4_FA.md
++./docs/FILE_INVENTORY_v0.8.2.txt
++./docs/FILE_INVENTORY_v0.8.3.txt
++./docs/FILE_INVENTORY_v0.8.4.txt
++./docs/FILE_INVENTORY_v0.9.0.txt
++./docs/FILE_INVENTORY_v0.9.1.txt
++./docs/FILE_INVENTORY_v0.9.2.txt
++./docs/FILE_INVENTORY_v0.9.3.txt
++./docs/FILE_INVENTORY_v0.9.4.txt
++./docs/FILE_INVENTORY_v0.9.5.txt
++./docs/FILE_INVENTORY_v0.9.6.txt
++./docs/FILE_INVENTORY_v0.9.7.txt
++./docs/FILE_INVENTORY_v0.9.8.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit1.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit2.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit3.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1-cert-kit4.txt
++./docs/FILE_INVENTORY_v1.0.0-rc1.txt
++./docs/INTELLIGENT_GROUNDING_MODEL_v0.9.2_FA.md
++./docs/LOCAL_AI_MODEL_v0.9_FA.md
++./docs/LOCAL_AI_RUNTIME_v0.9.1_FA.md
++./docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json
++./docs/MANUAL_CERTIFICATION_EVIDENCE_v0.9.7.template.json
++./docs/PERSISTENT_INDEX_MODEL_FA.md
++./docs/PRODUCTION_GROUNDING_MODEL_v0.9.3_FA.md
++./docs/PRODUCTION_HARDENING_v0.8.1_FA.md
++./docs/RC1_ACCEPTANCE_MODEL_FA.md
++./docs/RC1_CERTIFICATION_ENVELOPE_FA.md
++./docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
++./docs/RC_READINESS_MODEL_v0.9.8_FA.md
++./docs/RECOVERY_MODEL_FA.md
++./docs/RELEASE_READINESS_v0.8.2.json
++./docs/RELEASE_READINESS_v0.8.3.json
++./docs/RELEASE_READINESS_v0.8.4.json
++./docs/RELEASE_READINESS_v0.9.0.json
++./docs/RELEASE_READINESS_v0.9.1.json
++./docs/RELEASE_READINESS_v0.9.2.json
++./docs/RELEASE_READINESS_v0.9.3.json
++./docs/RELEASE_READINESS_v0.9.4.json
++./docs/RELEASE_READINESS_v0.9.5.json
++./docs/RELEASE_READINESS_v0.9.6.json
++./docs/RELEASE_READINESS_v0.9.7.json
++./docs/RELEASE_READINESS_v0.9.8.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit1.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit2.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit3-resilience-hardening.json
++./docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit4-release-lane-closure.json
++./docs/RELEASE_READINESS_v1.0.0-rc1.json
++./docs/ROADMAP_FA.md
++./docs/SOURCE_REUSE_AUDIT_FA.md
++./docs/SYSTEM_RESILIENCE_MODEL_v0.8.3_FA.md
++./docs/UPSTREAM_INTEGRATION_FA.md
++./docs/UPSTREAM_PROVENANCE.md
++./docs/VALIDATION_v0.4_FA.md
++./docs/VALIDATION_v0.5_FA.md
++./docs/VALIDATION_v0.6_FA.md
++./docs/VALIDATION_v0.7.1_FA.md
++./docs/VALIDATION_v0.7.2_FA.md
++./docs/VALIDATION_v0.7_FA.md
++./docs/VALIDATION_v0.8.0_FA.md
++./docs/VALIDATION_v0.8.1_FA.md
++./docs/VALIDATION_v0.8.2_FA.md
++./docs/VALIDATION_v0.8.3_FA.md
++./docs/VALIDATION_v0.8.4_FA.md
++./docs/VALIDATION_v0.9.0_FA.md
++./docs/VALIDATION_v0.9.1_FA.md
++./docs/VALIDATION_v0.9.2_FA.md
++./docs/VALIDATION_v0.9.3_FA.md
++./docs/VALIDATION_v0.9.4_FA.md
++./docs/VALIDATION_v0.9.5_FA.md
++./docs/VALIDATION_v0.9.6_FA.md
++./docs/VALIDATION_v0.9.7_FA.md
++./docs/VALIDATION_v0.9.8_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit1_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit2_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit3-resilience-hardening_FA.md
++./docs/VALIDATION_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md
++./docs/VALIDATION_v1.0.0-rc1_FA.md
++./docs/WINDOWS_CERTIFICATION_MODEL_v0.9.7_FA.md
++./docs/WINDOWS_FILE_EXPLORER_PRODUCTION_UAT_v0.9.6_FA.md
++./docs/WINDOWS_PATH_RELEASE_MODEL_v0.8.2_FA.md
++./docs/WINDOWS_RELEASE_CHECKLIST_FA.md
++./docs/WINDOWS_SYSTEM_UAT_v0.8.3_FA.md
++./docs/WINDOWS_UIA_ACTION_MODEL_FA.md
++./docs/deferred/corel-bridge.cjs.txt
++./electron/ipc.cjs
++./electron/main.cjs
++./electron/preload.cjs
++./electron/services/ai-call-guard.cjs
++./electron/services/ai-planner.cjs
++./electron/services/ai-redaction.cjs
++./electron/services/automation-conditions.cjs
++./electron/services/automation-service.cjs
++./electron/services/automation-store.cjs
++./electron/services/capability-registry.cjs
++./electron/services/certification-core.cjs
++./electron/services/configuration-service.cjs
++./electron/services/cycle-engine.cjs
++./electron/services/cycle-store.cjs
++./electron/services/diagnostic-redaction.cjs
++./electron/services/diagnostics-bundle-service.cjs
++./electron/services/drive-audit.cjs
++./electron/services/duplicate-finder.cjs
++./electron/services/event-journal.cjs
++./electron/services/explorer-batch-cycles.cjs
++./electron/services/explorer-batch-service.cjs
++./electron/services/explorer-batch-store.cjs
++./electron/services/explorer-storage-guard.cjs
++./electron/services/file-analyzer.cjs
++./electron/services/file-cycles.cjs
++./electron/services/file-explorer-cycles.cjs
++./electron/services/file-explorer-service.cjs
++./electron/services/file-indexer.cjs
++./electron/services/file-insights.cjs
++./electron/services/file-search.cjs
++./electron/services/file-watcher-service.cjs
++./electron/services/fingerprint-store.cjs
++./electron/services/goal-planner.cjs
++./electron/services/grounding-memory-store.cjs
++./electron/services/hardware-profile-service.cjs
++./electron/services/hash-worker-pool.cjs
++./electron/services/hash-worker.cjs
++./electron/services/image-similarity.cjs
++./electron/services/indexed-duplicate-finder.cjs
++./electron/services/lifecycle-state.cjs
++./electron/services/local-ai-config-store.cjs
++./electron/services/local-ai-runtime-manager.cjs
++./electron/services/local-ai-service.cjs
++./electron/services/local-openai-provider.cjs
++./electron/services/maintenance.cjs
++./electron/services/managed-zone-audit.cjs
++./electron/services/managed-zone-store.cjs
++./electron/services/mission-compiler.cjs
++./electron/services/office-text-extractor.cjs
++./electron/services/organizer.cjs
++./electron/services/path-policy.cjs
++./electron/services/pdf-text-extractor.cjs
++./electron/services/persistent-file-index.cjs
++./electron/services/persistent-index-cycles.cjs
++./electron/services/quarantine.cjs
++./electron/services/rc-self-check-service.cjs
++./electron/services/recommendation-applier.cjs
++./electron/services/recovery-service.cjs
++./electron/services/renamer.cjs
++./electron/services/resource-pressure-guard.cjs
++./electron/services/review-queue-store.cjs
++./electron/services/root-resilience-service.cjs
++./electron/services/similarity-core.cjs
++./electron/services/skill-memory-store.cjs
++./electron/services/skill-registry.cjs
++./electron/services/skill-retriever.cjs
++./electron/services/snapshot-store.cjs
++./electron/services/startup-advisor.cjs
++./electron/services/state-backup-service.cjs
++./electron/services/storage-trend-store.cjs
++./electron/services/system-resilience-controller.cjs
++./electron/services/text-similarity.cjs
++./electron/services/transaction-store.cjs
++./electron/services/ui-grounding-core.cjs
++./electron/services/ui-grounding-layout.cjs
++./electron/services/ui-grounding-service.cjs
++./electron/services/ui-grounding-session-store.cjs
++./electron/services/ui-outcome-verifier.cjs
++./electron/services/version-update-guard.cjs
++./electron/services/vision-crop-service.cjs
++./electron/services/windows-action-policy.cjs
++./electron/services/windows-action-session-store.cjs
++./electron/services/windows-inspector.cjs
++./electron/services/windows-path-utils.cjs
++./electron/services/windows-uia-actions.cjs
++./electron/services/windows-uia.cjs
++./electron/services/windows-volume-probe.cjs
++./electron/services/workspace-cycles.cjs
++./electron/services/workspace-intelligence.cjs
++./index.html
++./package.json
++./scripts/check-source-syntax.cjs
++./scripts/generate-lockfile.ps1
++./scripts/local-ai-smoke.ps1
++./scripts/lockfile-provenance.cjs
++./scripts/prepare-update-v098.cjs
++./scripts/rc1-certification-envelope.cjs
++./scripts/rc1-finalize.cjs
++./scripts/rc1-source-manifest.cjs
++./scripts/run-source-tests.cjs
++./scripts/source-tree-fingerprint.cjs
++./scripts/verify-manual-evidence-rc1.cjs
++./scripts/verify-manual-evidence-v097.cjs
++./scripts/verify-rc1-source.cjs
++./scripts/verify-release-inputs.cjs
++./scripts/verify-release-manifest-rc1.cjs
++./scripts/verify-source-hygiene.cjs
++./scripts/windows-certification-v097.ps1
++./scripts/windows-certification.ps1
++./scripts/windows-rc1-certify.ps1
++./scripts/windows-release.ps1
++./src/App.jsx
++./src/components/CycleTimeline.jsx
++./src/main.jsx
++./src/styles/app.css
++./tests/ai-mission-v090.test.cjs
++./tests/automation-v04.test.cjs
++./tests/certification-core-v097.test.cjs
++./tests/cycle-engine.test.cjs
++./tests/cycle-rollback-truthfulness-rc1.test.cjs
++./tests/cycle-root-guard-v083.test.cjs
++./tests/diagnostics-v098.test.cjs
++./tests/explorer-batch-recovery-v095.test.cjs
++./tests/explorer-batch-schema-v096.test.cjs
++./tests/file-cycles.integration.test.cjs
++./tests/file-explorer-batch-v095.test.cjs
++./tests/file-explorer-production-v096.test.cjs
++./tests/file-explorer-skill-pack-v094.test.cjs
++./tests/file-guardian.test.cjs
++./tests/fixtures/lifecycle-crash-child-v084.cjs
++./tests/fixtures/persistent-index-crash-child-v081.cjs
++./tests/lifecycle-resource-v084.test.cjs
++./tests/local-ai-capability-v091.test.cjs
++./tests/local-ai-foundation-v090.test.cjs
++./tests/local-ai-grounding-vision-v092.test.cjs
++./tests/local-ai-guard-v090.test.cjs
++./tests/local-ai-server-v090.uat.cjs
++./tests/manual-evidence-rc1.test.cjs
++./tests/manual-evidence-v097.test.cjs
++./tests/mission.integration.test.cjs
++./tests/multi-index-isolation-v084.test.cjs
++./tests/multi-root-isolation-v084.test.cjs
++./tests/office-extractor-v05.test.cjs
++./tests/packaged-app-smoke-v084.cjs
++./tests/packaged-worker-smoke-v082.cjs
++./tests/persistent-index-crash-v081.test.cjs
++./tests/persistent-index-cycles-v080.test.cjs
++./tests/persistent-index-scale-v080.cjs
++./tests/persistent-index-v080.test.cjs
++./tests/persistent-index-windows.uat.cjs
++./tests/product-resilience-hardening-vrc1.test.cjs
++./tests/production-hardening-v07.test.cjs
++./tests/production-hardening-v081.test.cjs
++./tests/rc-self-check-v098.test.cjs
++./tests/rc1-certification-envelope.test.cjs
++./tests/rc1-certification-kit-contract.test.cjs
++./tests/rc1-finalizer-contract.test.cjs
++./tests/rc1-release-artifact-contract.test.cjs
++./tests/rc1-release-matrix-contract.test.cjs
++./tests/rc1-source-contract.test.cjs
++./tests/rc1-upgrade-gate.test.cjs
++./tests/real-local-ai-runtime-v091.test.cjs
++./tests/resource-cycle-integration-v084.test.cjs
++./tests/root-interruption-v083.test.cjs
++./tests/scale-benchmark-v07.cjs
++./tests/semantic-cycles-v05.test.cjs
++./tests/semantic-intelligence-v05.test.cjs
++./tests/source-tree-fingerprint-generated-vrc1.test.cjs
++./tests/source-tree-fingerprint-v097.test.cjs
++./tests/state-backup-v098.test.cjs
++./tests/system-resilience-v083.test.cjs
++./tests/ui-batch-auto-progress-rc1.test.cjs
++./tests/ui-grounded-action-v092.test.cjs
++./tests/ui-grounding-core-v092.test.cjs
++./tests/ui-grounding-layout-v093.test.cjs
++./tests/ui-grounding-recovery-v093.test.cjs
++./tests/ui-grounding-scale-v092.cjs
++./tests/ui-grounding-service-v092.test.cjs
++./tests/update-preflight-v098.test.cjs
++./tests/upstream-foundation-v071.test.cjs
++./tests/version-update-guard-v098.test.cjs
++./tests/vision-crop-v093.test.cjs
++./tests/windows-agent-v03.test.cjs
++./tests/windows-agent-v06.test.cjs
++./tests/windows-certification-v097.uat.cjs
++./tests/windows-file-explorer-v094.uat.cjs
++./tests/windows-file-explorer-v095.uat.cjs
++./tests/windows-file-explorer-v096.uat.cjs
++./tests/windows-intelligent-grounding-v092.uat.cjs
++./tests/windows-local-ai-runtime-v091.uat.cjs
++./tests/windows-multiroot-v084.uat.cjs
++./tests/windows-path-hardening-v082.test.cjs
++./tests/windows-production-grounding-v093.uat.cjs
++./tests/windows-production-v081.uat.cjs
++./tests/windows-removable-drive-v083.uat.cjs
++./tests/windows-scale-resilience-v083.uat.cjs
++./tests/windows-scale-v097.uat.cjs
++./tests/windows-system-resilience-v083.uat.cjs
++./tests/windows-uia-action-v072.test.cjs
++./tests/windows-uia-action.uat.cjs
++./tests/windows-verification-v082.uat.cjs
++./tests/windows-volume-probe-v083.test.cjs
++./vite.config.js
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json	2026-08-15 15:07:22.830658547 +0000
+@@ -1,14 +1,25 @@
+ {
+-  "schemaVersion": "workspace-agent-manual-evidence-rc1-v1",
++  "schemaVersion": "workspace-agent-manual-evidence-rc1-v2",
+   "version": "1.0.0-rc1",
+   "operator": "",
+   "machine": "",
+   "createdAt": "",
+   "evidence": {
+-    "physicalUsbDisconnectReconnect": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
+-    "actualDiskFullRecovery": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
+-    "realAclReadOnlyRecovery": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
+-    "uncleanShutdownPowerLoss": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""},
+-    "realUpgradeFrom0_9_8": {"status": "PENDING_MANUAL", "notes": "", "attachment": ""}
++    "physicalUsbDisconnectReconnect": {"status": "PENDING_MANUAL", "observedAt": "", "notes": "", "attachment": ""},
++    "actualDiskFullRecovery": {"status": "PENDING_MANUAL", "observedAt": "", "notes": "", "attachment": ""},
++    "realAclReadOnlyRecovery": {"status": "PENDING_MANUAL", "observedAt": "", "notes": "", "attachment": ""},
++    "uncleanShutdownPowerLoss": {"status": "PENDING_MANUAL", "observedAt": "", "notes": "", "attachment": ""},
++    "realUpgradeFrom0_9_8": {
++      "status": "PENDING_MANUAL",
++      "observedAt": "",
++      "notes": "",
++      "attachment": "",
++      "fromVersion": "0.9.8",
++      "toVersion": "1.0.0-rc1",
++      "installerSha256": "",
++      "preSelfCheckOverall": "",
++      "postSelfCheckOverall": "",
++      "statePreserved": false
++    }
+   }
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RC1_ACCEPTANCE_MODEL_FA.md /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RC1_ACCEPTANCE_MODEL_FA.md
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RC1_ACCEPTANCE_MODEL_FA.md	2026-08-15 15:14:44.197550850 +0000
+@@ -1,4 +1,4 @@
+-# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit3
++# مدل پذیرش Workspace Agent v1.0.0-rc1 — cert-kit4
+ 
+ ## قرارداد ثابت RC
+ 
+@@ -25,11 +25,13 @@
+ 8. Scale UAT با 1M فایل؛
+ 9. win-unpacked + packaged worker/app smoke؛
+ 10. NSIS + Portable؛
+-11. SHA256 release manifest؛
++11. `release-manifest.json` v7 با دقیقاً NSIS + Portable x64 و `SHA256SUMS.txt`؛
+ 12. Authenticode در صورت policy اجباری؛
+ 13. fresh userData startup بدون RC Self-Check BLOCK؛
+ 14. upgrade واقعی `0.9.8 → 1.0.0-rc1` با pre-update backup؛
+-15. Manual Evidence معتبر برای سناریوهای فیزیکی/سیستمی؛
+-16. Final Envelope v2 که دو Windows family و همه Hash/Manifestها را bind کند.
++15. Manual Evidence v2 معتبر برای سناریوهای فیزیکی/سیستمی، با observedAt و bind شدن upgrade installer SHA256 به NSIS همان Release؛
++16. Final Envelope v2 که دو Windows family، lock/source/artifact contract و Manual Evidence را bind کند؛
++17. snapshot شواهد release manifest / SHA256SUMS / peer report در Sessionهای Certification؛
++18. Finalization مستقل با `finalize:rc1` و Artifact-owner Report که `releaseManifestSha256` آن با Manifest منتخب یکی باشد.
+ 
+ هر Gate اجباری که انجام نشده باشد `INCOMPLETE` است و Final PASS نمی‌گیرد.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RC1_CERTIFICATION_ENVELOPE_FA.md	2026-08-15 15:14:44.197375418 +0000
+@@ -1,28 +1,33 @@
+-# RC1 Certification Envelope v2
++# RC1 Certification Envelope v2 — cert-kit4
+ 
+-Envelope v2 برای جلوگیری از PASS کاذب، شواهد Release را cross-check می‌کند.
++Envelope برای جلوگیری از PASS کاذب، شواهد Release را cross-check می‌کند.
+ 
+ ## Bindهای اجباری
+ 
+-- Source Tree Fingerprint
+-- Certification Report همان Session
+-- SHA256 واقعی `package-lock.json`
+-- Version / tooling revision / feature freeze
+-- Release Manifest و Source Fingerprint آن
+-- SHA256 واقعی Artifactها در برابر Manifest
+-- وضعیت Authenticode در صورت `--require-signing`
+-- Manual Evidence در صورت اجباری بودن
+-- Report خانواده دوم Windows در صورت `--require-dual-windows`
++- Source Tree Fingerprint؛
++- Certification Report همان Session؛
++- SHA256 واقعی `package-lock.json`؛
++- Version / tooling revision / feature freeze؛
++- Release Manifest v7؛
++- SHA256 خود Release Manifest در `certification-report.json` Artifact-owner؛
++- دقیقاً NSIS x64 + Portable x64؛
++- SHA256 و bytes فایل‌های Artifact در برابر Manifest و `SHA256SUMS.txt`؛
++- Authenticode در صورت `--require-signing`؛
++- Manual Evidence v2؛
++- bind شدن `realUpgradeFrom0_9_8.installerSha256` به NSIS همان Release؛
++- Report خانواده دوم Windows در صورت `--require-dual-windows`.
+ 
+ ## Dual-Windows
+ 
+-Final Envelope در RC1 باید یک Report Windows 10 و یک Report Windows 11 با Source Fingerprint و lock hash یکسان داشته باشد. نبود Report دوم `INCOMPLETE` است؛ mismatch یا Report نامعتبر `FAIL` است.
++Final Envelope باید یک Report Windows 10 و یک Report Windows 11 با Source Fingerprint، lock hash، version و tooling revision یکسان داشته باشد. نبود Report دوم `INCOMPLETE` است؛ mismatch یا Report نامعتبر `FAIL` است.
+ 
+-## تفکیک FAIL و INCOMPLETE
++## Artifact Contract
++
++وقتی `--require-artifacts` فعال باشد، Envelope علاوه بر hash داخلی خودش، verifier مستقل `verify-release-manifest-rc1.cjs` را هم اجرا می‌کند. همچنین `releaseManifestSha256` و لیست Artifactهای Certification Report باید با Manifest انتخاب‌شده یکی باشند؛ بنابراین نمی‌توان Report یک build را به Artifactهای build دیگری وصل کرد. Manifest ناقص، Portable مفقود، اسم/معماری اشتباه یا SHA mismatch باعث `FAIL` می‌شود.
+ 
+-- prerequisite موجود نیست: `INCOMPLETE`
+-- Artifact/Hash/Fingerprint/Version/Tooling mismatch: `FAIL`
+-- Certification Report خودش `INCOMPLETE` است: Envelope نیز `INCOMPLETE`
+-- Certification Report `FAIL` است: Envelope `FAIL`
++## تفکیک FAIL و INCOMPLETE
+ 
+-این تفکیک جلوی تبدیل اشتباه «کار هنوز انجام نشده» به «خرابی قطعی» را می‌گیرد.
++- prerequisite هنوز موجود نیست: `INCOMPLETE`؛
++- Artifact/Hash/Fingerprint/Version/Tooling mismatch: `FAIL`؛
++- Certification Report خودش `INCOMPLETE` است: Envelope نیز `INCOMPLETE`؛
++- Certification Report `FAIL` است: Envelope `FAIL`.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RC1_WINDOWS_CERTIFICATION_KIT_FA.md	2026-08-15 15:14:44.197316432 +0000
+@@ -1,73 +1,84 @@
+-# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit3
++# کیت Certification ویندوز — Workspace Agent v1.0.0-rc1 / cert-kit4
+ 
+-این کیت قابلیت جدیدی به Core اضافه نمی‌کند. هدف، تبدیل Source Candidate فریز‌شده به شواهد Release قابل ممیزی است.
++این کیت قابلیت جدیدی به Core اضافه نمی‌کند. هدف، تبدیل Source Candidate فریز‌شده به Evidence قابل ممیزی و Artifact قابل انتشار است.
+ 
+-## تفاوت مهم cert-kit3
++## تفاوت مهم cert-kit4
+ 
+-cert-kit3 علاوه بر ماتریس Certification نسخه قبل، Source Candidate را با hardening چرخه/transaction/recovery و UX کنترل‌شده Batch bind می‌کند. هر Report باید `toolingRevision=cert-kit3` و fingerprint همین سورس را داشته باشد؛ Reportهای cert-kit2 peer معتبر این revision نیستند.
++هر Report باید `toolingRevision=cert-kit4` و fingerprint همین Source را داشته باشد. Reportهای cert-kit3 یا قدیمی‌تر Peer معتبر این revision نیستند.
+ 
++Final PASS فقط وقتی ممکن است که:
+ 
+-Final PASS دیگر با یک Windows و یک Scale Run ممکن نیست. برای Release نهایی باید:
+-
+-1. یک Report واقعی روی Windows 10 داشته باشیم؛
+-2. یک Report واقعی روی Windows 11 داشته باشیم؛
+-3. هر Report به همان Source Fingerprint و همان `package-lock.json` bind شده باشد؛
+-4. Scale واقعی 100k و 1M هر دو PASS شوند؛
++1. Windows 10 واقعی PASS باشد؛
++2. Windows 11 واقعی PASS باشد؛
++3. هر دو Report به همان Source Fingerprint و همان `package-lock.json` bind باشند؛
++4. Scale واقعی 100k و 1M هر دو PASS باشند؛
+ 5. Artifactها از build تمیز همین Run تولید شوند؛
+-6. Manual Evidence اجباری شامل upgrade واقعی از v0.9.8 باشد.
++6. دقیقاً یک NSIS x64 و یک Portable x64 با نام نسخه فعلی وجود داشته باشد؛
++7. `release-manifest.json` v7 و `SHA256SUMS.txt` با Artifactهای واقعی match باشند؛
++8. Manual Evidence v2 شامل upgrade واقعی از v0.9.8 باشد؛
++9. SHA256 installer استفاده‌شده در upgrade با NSIS همان Release Manifest یکی باشد.
++
++## جریان صحیح Certification و Finalization
++
++### مرحله A — Artifact-owner run
+ 
+-## Run اول — خانواده اول Windows
++روی یکی از Windowsها:
+ 
+ ```powershell
+ $env:WA_CERT_ROOT_A='C:\WA-Cert'
+ $env:WA_CERT_ROOT_B='D:\WA-Cert'
+ $env:WA_CERT_SCALE_ROOT='C:\WA-Cert'
+ 
+-npm run certify:windows:rc1 -- `
+-  -RequireManualEvidence `
+-  -ManualEvidenceFile '.\manual-evidence-rc1.json'
++npm run certify:windows:rc1
+ ```
+ 
+-این Run می‌تواند Certification محلی را PASS کند، اما Envelope نهایی بدون Report خانواده دوم Windows عمداً `INCOMPLETE` می‌ماند.
++در این مرحله `certification-report.json` می‌تواند PASS باشد، ولی Result کلی Orchestrator عمداً `INCOMPLETE` می‌ماند چون Manual Evidence و Peer Windows هنوز کامل نیستند. پوشه `release` این Run را حفظ کنید.
++
++### مرحله B — upgrade واقعی
++
++با NSIS همین Artifact-owner run، روی baseline واقعی `0.9.8` upgrade کنید. Manual Evidence v2 را تکمیل و `installerSha256` را دقیقاً از `release-manifest.json` همان Run وارد کنید.
++
++### مرحله C — خانواده دوم Windows
+ 
+-## Run دوم — خانواده دیگر Windows
++همان Source + package-lock را روی خانواده دیگر Windows Certification کنید. این Run نیز Artifact خودش را می‌سازد، اما برای Final Release فقط یکی از Runها «Artifact Owner» انتخاب می‌شود.
+ 
+-Report Run اول را به ماشین دوم منتقل کنید و همان Source/Lockfile را استفاده کنید:
++### مرحله D — Finalization
+ 
+ ```powershell
+-npm run certify:windows:rc1 -- `
+-  -PeerWindowsReport '.\peer\certification-report.json' `
+-  -RequireManualEvidence `
+-  -ManualEvidenceFile '.\manual-evidence-rc1.json'
++npm run finalize:rc1 -- `
++  --artifact-report='.\evidence\owner\certification-report.json' `
++  --peer-report='.\evidence\peer\certification-report.json' `
++  --release-manifest='.\evidence\owner\release\release-manifest.json' `
++  --manual-evidence='.\evidence\manual-evidence-rc1.json'
+ ```
+ 
+-اگر دو Report یکی Windows 10 و دیگری Windows 11 باشند و Source/Lockfile/Version/Tooling همه match شوند، Dual-Windows gate تکمیل می‌شود.
++در صورت policy امضا، `--require-signing` هم اضافه شود. Finalizer همه Gateهای Dual-Windows + Artifact + Manual Evidence را اجباری می‌کند و فقط Envelope `PASS` را به `rc1-final-verdict.json` تبدیل می‌کند.
+ 
+-## Scale
++## Artifact Contract
+ 
+-در RC1، `-RunScale` در Certification داخلی هر دو اندازه زیر را اجرا می‌کند:
++برای نسخه فعلی، Release Lane باید دقیقاً این دو فایل را تولید کند:
+ 
+-- 100,000 فایل
+-- 1,000,000 فایل
++- `Workspace-Agent-Setup-1.0.0-rc1-x64.exe`
++- `Workspace-Agent-Portable-1.0.0-rc1-x64.exe`
+ 
+-`-SkipScale` فقط برای تشخیص/عیب‌یابی است و Final Result را `INCOMPLETE` نگه می‌دارد.
++Manifest v7 شامل نوع Artifact، معماری، bytes و SHA256 است. `scripts/verify-release-manifest-rc1.cjs` فایل واقعی، SHA256SUMS، source fingerprint و package-lock hash را cross-check می‌کند.
+ 
+-## Clean-room artifacts
++## Manual Evidence v2
+ 
+-پیش از build، `release/` پاک می‌شود. بنابراین Artifactهای یک Run قبلی نمی‌توانند به‌عنوان خروجی Run فعلی وارد Report شوند.
++هر PASS باید `observedAt` معتبر و notes یا attachment داشته باشد. برای `realUpgradeFrom0_9_8` علاوه بر آن موارد زیر اجباری‌اند:
+ 
+-## Manual Evidence
++- `fromVersion = 0.9.8`
++- `toVersion = 1.0.0-rc1`
++- `installerSha256`
++- Self-Check قبل و بعد = `pass`
++- `statePreserved = true`
+ 
+-برای `--require-all` موارد زیر باید PASS باشند و هر PASS توضیح معتبر یا attachment reference داشته باشد:
++Final Envelope، `installerSha256` را با SHA256 خروجی NSIS همان Release bind می‌کند.
+ 
+-- physical USB disconnect/reconnect
+-- actual disk-full recovery
+-- real ACL/read-only recovery
+-- unclean shutdown/power-loss recovery
+-- real upgrade `0.9.8 → 1.0.0-rc1`
++## Evidence Snapshot
+ 
+-همچنین `operator`، `machine` و `createdAt` معتبر اجباری‌اند.
++هر RC1 Session نسخه snapshot از Release Manifest، SHA256SUMS و در صورت وجود Peer Report را کنار Result نگه می‌دارد تا Run بعدی نتواند Evidence این Session را بی‌صدا عوض کند.
+ 
+ ## اصل غیرمخرب Harness
+ 
+-Harness خودش Format/Initialize/Clear Disk، eject اجباری USB، پرکردن عمدی کامل دیسک، تغییر ACL سیستم یا shutdown/restart را انجام نمی‌دهد. این سناریوها روی محیط کنترل‌شده توسط اپراتور انجام و Evidence ثبت می‌شوند.
++Harness خودش Format/Initialize/Clear Disk، eject اجباری USB، پرکردن عمدی کامل دیسک، تغییر ACL سیستم یا shutdown/restart را انجام نمی‌دهد. سناریوهای فیزیکی در محیط کنترل‌شده توسط اپراتور انجام و Evidence ثبت می‌شوند.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit4-release-lane-closure.json /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit4-release-lane-closure.json
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit4-release-lane-closure.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RELEASE_READINESS_v1.0.0-rc1-cert-kit4-release-lane-closure.json	2026-08-15 15:15:17.218846324 +0000
+@@ -0,0 +1,47 @@
++{
++  "schemaVersion": "workspace-agent-release-readiness-rc1-cert-kit4-v1",
++  "version": "1.0.0-rc1",
++  "channel": "rc",
++  "toolingRevision": "cert-kit4",
++  "featureFreeze": true,
++  "baselineVersion": "0.9.8",
++  "dataEpoch": 1,
++  "sourceContract": "PASS",
++  "regression": "PASS_63_OF_63",
++  "syntax": "PASS_189_FILES",
++  "jsx": "PASS",
++  "sourceHygiene": "PASS",
++  "dependencyPins": "PASS",
++  "resilienceHardening": "SOURCE_TESTED",
++  "releaseManifestContract": "SOURCE_TESTED",
++  "nsisPortableExactArtifactContract": "SOURCE_TESTED",
++  "releaseEvidenceSnapshots": "SOURCE_TESTED",
++  "manualEvidenceV2": "SOURCE_TESTED",
++  "upgradeInstallerHashBinding": "SOURCE_TESTED",
++  "packageLock": "PENDING_REGISTRY_ENVIRONMENT",
++  "npmCi": "PENDING_REGISTRY_ENVIRONMENT",
++  "windows10Certification": "PENDING_WINDOWS",
++  "windows11Certification": "PENDING_WINDOWS",
++  "twoVolumeNtfs": "PENDING_WINDOWS",
++  "scale100k": "PENDING_WINDOWS",
++  "scale1m": "PENDING_WINDOWS",
++  "winUnpackedSmoke": "PENDING_WINDOWS_BUILD",
++  "nsis": "PENDING_WINDOWS_BUILD",
++  "portable": "PENDING_WINDOWS_BUILD",
++  "realUpgradeFrom0_9_8": "PENDING_MANUAL_WINDOWS_EVIDENCE",
++  "authenticode": "PENDING_CERTIFICATE_POLICY",
++  "finalDualWindowsEnvelope": "PENDING_TWO_OS_REPORTS",
++  "currentValidationRuntime": {
++    "platform": "non-Windows",
++    "node": "22.16.0",
++    "npm": "10.9.2"
++  },
++  "officialReleaseRuntime": {
++    "node": "24.14.1",
++    "npm": "11.11.0"
++  },
++  "releaseInputGate": "LOCKFILE_REQUIRED",
++  "strictWindowsUat": "PENDING_WINDOWS",
++  "stagedFinalizer": "SOURCE_TESTED",
++  "artifactOwnerReportBinding": "SOURCE_TESTED"
++}
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RELEASE_READINESS_v1.0.0-rc1.json
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/RELEASE_READINESS_v1.0.0-rc1.json	2026-08-15 15:15:17.218109425 +0000
+@@ -1,20 +1,23 @@
+ {
+-  "schemaVersion": "workspace-agent-release-readiness-v2",
++  "schemaVersion": "workspace-agent-release-readiness-v3",
+   "version": "1.0.0-rc1",
+   "channel": "rc",
+-  "toolingRevision": "cert-kit3",
++  "toolingRevision": "cert-kit4",
+   "featureFreeze": true,
+   "baselineVersion": "0.9.8",
+   "dataEpoch": 1,
+   "sourceContract": "PASS",
+-  "regression": "PASS_61_OF_61",
+-  "syntax": "PASS_185_FILES",
++  "regression": "PASS_63_OF_63",
++  "syntax": "PASS_189_FILES",
+   "jsx": "PASS",
+   "sourceHygiene": "PASS",
+   "dependencyPins": "PASS",
+   "resilienceHardening": "SOURCE_TESTED",
+-  "upgradeGuard_0_9_8_to_rc1": "SOURCE_TESTED",
+-  "downgradeGuard_rc1_to_0_9_8": "SOURCE_TESTED",
++  "releaseManifestContract": "SOURCE_TESTED",
++  "nsisPortableExactArtifactContract": "SOURCE_TESTED",
++  "releaseEvidenceSnapshots": "SOURCE_TESTED",
++  "manualEvidenceV2": "SOURCE_TESTED",
++  "upgradeInstallerHashBinding": "SOURCE_TESTED",
+   "packageLock": "PENDING_REGISTRY_ENVIRONMENT",
+   "npmCi": "PENDING_REGISTRY_ENVIRONMENT",
+   "windows10Certification": "PENDING_WINDOWS",
+@@ -26,7 +29,8 @@
+   "nsis": "PENDING_WINDOWS_BUILD",
+   "portable": "PENDING_WINDOWS_BUILD",
+   "realUpgradeFrom0_9_8": "PENDING_MANUAL_WINDOWS_EVIDENCE",
+-  "authenticode": "PENDING_CERTIFICATE",
++  "authenticode": "PENDING_CERTIFICATE_POLICY",
++  "finalDualWindowsEnvelope": "PENDING_TWO_OS_REPORTS",
+   "currentValidationRuntime": {
+     "platform": "non-Windows",
+     "node": "22.16.0",
+@@ -37,5 +41,7 @@
+     "npm": "11.11.0"
+   },
+   "releaseInputGate": "LOCKFILE_REQUIRED",
+-  "strictWindowsUat": "PENDING_WINDOWS"
++  "strictWindowsUat": "PENDING_WINDOWS",
++  "stagedFinalizer": "SOURCE_TESTED",
++  "artifactOwnerReportBinding": "SOURCE_TESTED"
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/ROADMAP_FA.md /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/ROADMAP_FA.md
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/ROADMAP_FA.md	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/ROADMAP_FA.md	2026-08-15 15:14:44.197485911 +0000
+@@ -2,46 +2,37 @@
+ 
+ ## v1.0.0-rc1 — Feature Freeze
+ 
+-تا Stable فقط این دسته تغییرات مجازند: bug fix، security hardening، migration compatibility، Windows certification، reproducible build، installer/portable/signing fixes.
++تا Stable فقط bug fix، security/resilience hardening، migration compatibility، Windows certification، reproducible build و installer/signing fix مجاز است.
+ 
+-## وضعیت بعد از cert-kit3
++## وضعیت بعد از cert-kit4
+ 
+-Source-side خلأهای مهم Certification بسته شده‌اند:
++Source-side اکنون این موارد را enforce می‌کند:
+ 
+-- dual Windows 10/11 evidence aggregation
+-- 100k + 1M mandatory scale matrix
+-- clean-room artifact build
+-- lockfile/report/release-manifest cross binding
+-- stronger manual evidence provenance
+-- real upgrade evidence requirement
+-- automatic recursive syntax/test discovery
++- dual Windows 10/11 evidence aggregation؛
++- Scale اجباری 100k + 1M؛
++- clean-room build؛
++- lockfile/report/source-fingerprint cross binding؛
++- قرارداد دقیق دو Artifact: NSIS x64 + Portable x64؛
++- `release-manifest.json` v7 + `SHA256SUMS.txt` و verifier مستقل؛
++- بازبینی دوباره Manifest در RC1 orchestrator و Final Envelope؛
++- snapshot کردن Release Manifest، SHA256SUMS و Peer Report در Session؛
++- Manual Evidence v2 و bind شدن `installerSha256` upgrade واقعی به NSIS همان build؛
++- `finalize:rc1` برای Final Envelope مرحله‌ای بعد از ساخته‌شدن installer و انجام upgrade واقعی؛
++- bind شدن Artifact-owner Certification Report به SHA256 خود Release Manifest؛
++- hardeningهای cert-kit3 برای cycle/recovery/batch.
+ 
+ ## Gateهای باقی‌مانده تا v1.0.0 Stable
+ 
+-1. تولید package-lock روی Release Lane pin شده؛
++1. تولید `package-lock.json` روی Windows Release Lane با Node `24.14.1` و npm `11.11.0`؛
+ 2. `npm ci` واقعی؛
+-3. Run کامل cert-kit3 روی Windows 10؛
+-4. Run کامل cert-kit3 روی Windows 11 با Peer Report؛
+-5. PASS واقعی 100k و 1M؛
+-6. NSIS/Portable و packaged smoke؛
+-7. upgrade واقعی از v0.9.8؛
+-8. Authenticode در صورت تصمیم به signing؛
+-9. Final Envelope PASS بدون INCOMPLETE.
++3. Run کامل cert-kit4 روی Windows 10؛
++4. Run کامل cert-kit4 روی Windows 11 با Peer Report خانواده دیگر؛
++5. PASS واقعی Scale 100k و 1M؛
++6. تولید و Smoke واقعی NSIS + Portable؛
++7. upgrade واقعی `0.9.8 → 1.0.0-rc1` با installer SHA همان Release و Self-Check قبل/بعد؛
++8. Authenticode در صورت policy اجباری؛
++9. Final Envelope `PASS` بدون هیچ `INCOMPLETE`.
+ 
+ ## بعد از Stable
+ 
+-Skill Pack بعدی می‌تواند CorelDRAW باشد. تا قبل از بسته‌شدن Stable، capability اصلی جدید به Core اضافه نمی‌شود.
+-
+-## Production hardening افزوده‌شده در cert-kit3
+-
+-پیش از ورود به Windows Certification یک دور audit محصولی روی مسیرهای طولانی و Recovery انجام شد. موارد زیر اکنون source-tested هستند:
+-
+-- active-runtime accounting برای Cycleهای Pause/Resume؛
+-- retention محافظه‌کارانه برای cycle/transactionهای non-terminal؛
+-- exact undo conflict semantics بدون alternate-name success؛
+-- SHA-256 guard برای copy recovery rollback؛
+-- truthful `rollback-failed` state برای rollback ناقص؛
+-- auto-continue کنترل‌شده Advanced Batch در UI با Pause/Cancel روی checkpoint؛
+-- حذف version labelهای قدیمی UI.
+-
+-Gate بعدی همچنان اجرای همین Source Fingerprint روی Windows 10 و Windows 11 است، نه افزودن Feature جدید.
++Skill Pack بعدی می‌تواند CorelDRAW باشد. تا قبل از Stable capability اصلی جدید به Core اضافه نمی‌شود.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/VALIDATION_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/docs/VALIDATION_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/docs/VALIDATION_v1.0.0-rc1-cert-kit4-release-lane-closure_FA.md	2026-08-15 15:15:17.220783164 +0000
+@@ -0,0 +1,33 @@
++# Validation — v1.0.0-rc1 / cert-kit4 Release Lane Closure
++
++## Source-side gates
++
++| Gate | نتیجه |
++|---|---|
++| `check:rc1-source` | PASS |
++| `check:source-hygiene` | PASS |
++| Recursive JS syntax | PASS — 189 فایل |
++| JSX syntax gate | PASS |
++| dependency pins | PASS — 10 pin |
++| Source tests | PASS — 63/63 |
++
++## Regression جدید
++
++`rc1-release-artifact-contract.test.cjs` قرارداد NSIS + Portable، manifest v7، ترتیب fingerprint بعد از lock resolution و evidence snapshotها را پوشش می‌دهد.
++
++`manual-evidence-rc1.test.cjs` اکنون schema v2 و bind شدن SHA256 installer upgrade به NSIS Release را تست می‌کند.
++
++`rc1-finalizer-contract.test.cjs` تضمین می‌کند Finalizer همیشه Dual-Windows، Artifact Contract و Manual Evidence را اجباری کند.
++
++## محدودیت اعتبار
++
++این Validation Source-side است و Windows Release Lane رسمی در این محیط اجرا نشده است. موارد زیر PENDING هستند:
++
++- `package-lock.json` رسمی با Node 24.14.1 / npm 11.11.0؛
++- `npm ci` رسمی؛
++- Windows 10 و Windows 11؛
++- دو Volume واقعی NTFS؛
++- Scale واقعی 100k و 1M؛
++- win-unpacked / NSIS / Portable؛
++- upgrade واقعی v0.9.8 → rc1؛
++- Authenticode در صورت policy.
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/package.json /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/package.json
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/package.json	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/package.json	2026-08-15 15:13:59.820982556 +0000
+@@ -2,7 +2,7 @@
+   "name": "windows-workspace-agent",
+   "version": "1.0.0-rc1",
+   "private": true,
+-  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit3 dual-Windows release matrix, full 100k/1M scale gates, hardened evidence provenance, and clean-room artifact certification plus production resilience hardening.",
++  "description": "Feature-frozen Windows workspace agent v1.0.0-rc1 source candidate with cert-kit4 release-lane closure: dual-Windows/100k+1M certification, deterministic NSIS+Portable artifact contracts, release-manifest integrity binding, evidence snapshots, and production resilience hardening.",
+   "main": "electron/main.cjs",
+   "scripts": {
+     "dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+@@ -74,7 +74,9 @@
+     "verify:manual-evidence:rc1": "node scripts/verify-manual-evidence-rc1.cjs",
+     "certify:envelope:rc1": "node scripts/rc1-certification-envelope.cjs",
+     "certify:windows:rc1": "powershell -ExecutionPolicy Bypass -File scripts/windows-rc1-certify.ps1",
+-    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs"
++    "test:rc1-certkit": "node tests/manual-evidence-rc1.test.cjs && node tests/rc1-certification-envelope.test.cjs && node tests/rc1-release-matrix-contract.test.cjs && node tests/rc1-release-artifact-contract.test.cjs",
++    "verify:release-manifest:rc1": "node scripts/verify-release-manifest-rc1.cjs",
++    "finalize:rc1": "node scripts/rc1-finalize.cjs"
+   },
+   "dependencies": {
+     "react": "19.2.8",
+@@ -133,6 +135,6 @@
+     "dataEpoch": 1,
+     "releaseCandidate": "rc1",
+     "coreFeatureAdditionsAllowed": false,
+-    "toolingRevision": "cert-kit3"
++    "toolingRevision": "cert-kit4"
+   }
+ }
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/rc1-certification-envelope.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/rc1-certification-envelope.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/rc1-certification-envelope.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/rc1-certification-envelope.cjs	2026-08-15 15:13:37.346810121 +0000
+@@ -32,15 +32,20 @@
+   if(lockSha&&String(peer.packageLockSha256||'').toLowerCase()!==String(lockSha).toLowerCase())reasons.push('PEER_LOCK_HASH_MISMATCH');
+   return{complete:true,ok:reasons.length===0,currentFamily,peerFamily,reasons};
+ }
+-function verifyManual(manualPath,required){
++function verifyManual(manualPath,required,{releaseManifestPath='',requireArtifactBinding=false}={}){
+   if(!manualPath)return{provided:false,ok:!required,incomplete:required,meta:null,error:null};
+   if(!fs.existsSync(manualPath))return{provided:true,ok:false,incomplete:false,meta:null,error:'MANUAL_EVIDENCE_FILE_MISSING'};
+   try{
+-    const args=['scripts/verify-manual-evidence-rc1.cjs',manualPath];if(required)args.push('--require-all');
++    const args=['scripts/verify-manual-evidence-rc1.cjs',manualPath];if(required)args.push('--require-all');if(requireArtifactBinding){args.push('--require-artifact-binding');if(releaseManifestPath)args.push(`--release-manifest=${releaseManifestPath}`);}
+     const text=cp.execFileSync(process.execPath,args,{cwd:root,encoding:'utf8'});const meta=JSON.parse(text);
+     return{provided:true,ok:meta.status==='PASS'||(!required&&meta.status==='INCOMPLETE'),incomplete:required&&meta.status!=='PASS',meta,error:null};
+   }catch(e){return{provided:true,ok:false,incomplete:false,meta:null,error:String(e.stderr||e.message||'MANUAL_EVIDENCE_INVALID')}}
+ }
++
++function verifyReleaseManifest(manifestPath,requireSigning){
++  if(!manifestPath||!fs.existsSync(manifestPath))return{ok:false,error:'RELEASE_MANIFEST_MISSING'};
++  try{const args=['scripts/verify-release-manifest-rc1.cjs',`--manifest=${manifestPath}`];if(requireSigning)args.push('--require-signing');const text=cp.execFileSync(process.execPath,args,{cwd:root,encoding:'utf8'});return{ok:true,meta:JSON.parse(text),error:null};}catch(e){return{ok:false,meta:null,error:String(e.stderr||e.stdout||e.message||'RELEASE_MANIFEST_INVALID')}}
++}
+ function main(){
+   const pkg=readJson(path.join(root,'package.json'));
+   if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('RC1_CONTRACT_REQUIRED','Envelope فقط برای RC1 feature-frozen ساخته می‌شود.');
+@@ -77,11 +82,21 @@
+     }
+   }
+   const requiredArtifacts=has('require-artifacts');
+-  if(requiredArtifacts){if(!releaseManifest||artifactRows.length===0)incomplete.push('ARTIFACTS_REQUIRED');else if(artifactRows.some(x=>!x.actual||!x.match))hardFailures.push('ARTIFACT_INTEGRITY_MISMATCH')}
+   const requireSigning=has('require-signing');
+-  if(requireSigning){const sigs=releaseManifest?.signatures;if(!Array.isArray(sigs)||sigs.length===0)incomplete.push('SIGNATURES_REQUIRED');else if(sigs.some(x=>String(x.status)!=='Valid'))hardFailures.push('SIGNATURE_INVALID')}
++  const releaseContract=(requiredArtifacts||requireSigning)?verifyReleaseManifest(releaseManifestPath,requireSigning):{ok:true,meta:null,error:null};
++  if(requiredArtifacts){if(!releaseManifest||artifactRows.length===0)incomplete.push('ARTIFACTS_REQUIRED');else if(artifactRows.some(x=>!x.actual||!x.match))hardFailures.push('ARTIFACT_INTEGRITY_MISMATCH');if(releaseManifest&&!releaseContract.ok)hardFailures.push('RELEASE_MANIFEST_CONTRACT_FAILED')}
++  if(requireSigning){const sigs=releaseManifest?.signatures;if(!Array.isArray(sigs)||sigs.length===0)incomplete.push('SIGNATURES_REQUIRED');else if(sigs.some(x=>String(x.status)!=='Valid'))hardFailures.push('SIGNATURE_INVALID');if(releaseManifest&&!releaseContract.ok&&!hardFailures.includes('RELEASE_MANIFEST_CONTRACT_FAILED'))hardFailures.push('RELEASE_MANIFEST_CONTRACT_FAILED')}
++  const releaseManifestMeta=releaseManifest?fileMeta(releaseManifestPath):null;
++  let reportArtifactBindingOk=!requiredArtifacts;
++  if(requiredArtifacts&&releaseManifest){
++    if(!/^[a-f0-9]{64}$/i.test(String(report.releaseManifestSha256||'')))hardFailures.push('REPORT_RELEASE_MANIFEST_HASH_REQUIRED');
++    else if(String(report.releaseManifestSha256).toLowerCase()!==String(releaseManifestMeta?.sha256||'').toLowerCase())hardFailures.push('REPORT_RELEASE_MANIFEST_HASH_MISMATCH');
++    const rr=Array.isArray(report.artifacts)?report.artifacts:[],mm=Array.isArray(releaseManifest.artifacts)?releaseManifest.artifacts:[];const rmap=new Map(rr.map(x=>[String(x.file||''),x]));
++    const artifactBindingErrors=[];for(const m of mm){const r=rmap.get(String(m.file||''));if(!r)artifactBindingErrors.push(`REPORT_ARTIFACT_MISSING:${String(m.file||'')}`);else if(String(r.sha256||'').toLowerCase()!==String(m.sha256||'').toLowerCase()||Number(r.bytes)!==Number(m.bytes))artifactBindingErrors.push(`REPORT_ARTIFACT_MISMATCH:${String(m.file||'')}`)}
++    if(rr.length!==mm.length)artifactBindingErrors.push(`REPORT_ARTIFACT_COUNT_MISMATCH:${rr.length}:${mm.length}`);if(artifactBindingErrors.length)hardFailures.push(...artifactBindingErrors);reportArtifactBindingOk=artifactBindingErrors.length===0&&String(report.releaseManifestSha256||'').toLowerCase()===String(releaseManifestMeta?.sha256||'').toLowerCase();
++  }
+ 
+-  const manualRequired=has('require-manual-evidence');const manualCheck=verifyManual(manualPath,manualRequired);
++  const manualRequired=has('require-manual-evidence');const manualCheck=verifyManual(manualPath,manualRequired,{releaseManifestPath,requireArtifactBinding:manualRequired&&has('require-artifacts')});
+   if(manualCheck.error)hardFailures.push('MANUAL_EVIDENCE_INVALID');else if(manualCheck.incomplete)incomplete.push('MANUAL_EVIDENCE_REQUIRED');
+   const requireDual=has('require-dual-windows');
+   const pair=validatePeerPair(report,peer,{fingerprint:fp.sha256,lockSha,version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision});
+@@ -90,9 +105,9 @@
+   else if(peer&& !pair.ok)hardFailures.push(...pair.reasons);
+ 
+   let overall='PASS';if(hardFailures.length)overall='FAIL';else if(incomplete.length)overall='INCOMPLETE';
+-  const checks={reportStatus,sourceFingerprintMatch:sourceHash(report)===String(fp.sha256),lockPresent:Boolean(lock),reportLockHashMatch:Boolean(lock)&&String(report.packageLockSha256||'').toLowerCase()===lockSha.toLowerCase(),releaseManifestPresent:Boolean(releaseManifest),releaseManifestFingerprintMatch:Boolean(releaseManifest)&&String(releaseManifest.sourceFingerprint||'')===String(fp.sha256),releaseManifestLockHashMatch:Boolean(releaseManifest&&lock)&&String(releaseManifest.packageLockSha256||'').toLowerCase()===lockSha.toLowerCase(),artifactsOk:!requiredArtifacts||(artifactRows.length>0&&artifactRows.every(x=>x.actual&&x.match)),signingOk:!requireSigning||Boolean(releaseManifest?.signatures?.length)&&releaseManifest.signatures.every(x=>String(x.status)==='Valid'),manualEvidenceOk:manualCheck.ok,dualWindowsOk:!requireDual||(pair.complete&&pair.ok),windowsFamilies:{current:pair.currentFamily,peer:pair.peerFamily},hardFailures,incomplete};
++  const checks={reportStatus,sourceFingerprintMatch:sourceHash(report)===String(fp.sha256),lockPresent:Boolean(lock),reportLockHashMatch:Boolean(lock)&&String(report.packageLockSha256||'').toLowerCase()===lockSha.toLowerCase(),releaseManifestPresent:Boolean(releaseManifest),releaseManifestFingerprintMatch:Boolean(releaseManifest)&&String(releaseManifest.sourceFingerprint||'')===String(fp.sha256),releaseManifestLockHashMatch:Boolean(releaseManifest&&lock)&&String(releaseManifest.packageLockSha256||'').toLowerCase()===lockSha.toLowerCase(),artifactsOk:!requiredArtifacts||(artifactRows.length>0&&artifactRows.every(x=>x.actual&&x.match)&&releaseContract.ok),releaseManifestContractOk:releaseContract.ok,reportArtifactBindingOk,signingOk:!requireSigning||Boolean(releaseManifest?.signatures?.length)&&releaseManifest.signatures.every(x=>String(x.status)==='Valid'),manualEvidenceOk:manualCheck.ok,dualWindowsOk:!requireDual||(pair.complete&&pair.ok),windowsFamilies:{current:pair.currentFamily,peer:pair.peerFamily},hardFailures,incomplete};
+   const manualMeta=manualPath&&fs.existsSync(manualPath)?fileMeta(manualPath):null;
+-  const envelope={schemaVersion:'workspace-agent-rc1-certification-envelope-v2',version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,createdAt:new Date().toISOString(),overall,checks,source:{fingerprint:String(fp.sha256||''),files:Number(fp.files||0)},inputs:{certificationReport:fileMeta(reportPath),peerWindowsReport:peer?fileMeta(peerPath):null,packageLock:lock,releaseManifest:fileMeta(releaseManifestPath),manualEvidence:manualMeta},certification:{overall:report.overall||null,evidenceId:report.evidenceId||null,schemaVersion:report.schemaVersion||null,windowsFamily:detectWindowsFamily(report),peerEvidenceId:peer?.evidenceId||null,peerWindowsFamily:peer?detectWindowsFamily(peer):null},release:{artifacts:artifactRows,signatures:releaseManifest?.signatures||[]},manualEvidence:{required:manualRequired,requiredKeys:MANUAL_KEYS,verifier:manualCheck.meta}};
++  const envelope={schemaVersion:'workspace-agent-rc1-certification-envelope-v2',version:pkg.version,toolingRevision:pkg.workspaceAgentRelease?.toolingRevision||null,createdAt:new Date().toISOString(),overall,checks,source:{fingerprint:String(fp.sha256||''),files:Number(fp.files||0)},inputs:{certificationReport:fileMeta(reportPath),peerWindowsReport:peer?fileMeta(peerPath):null,packageLock:lock,releaseManifest:releaseManifestMeta,manualEvidence:manualMeta},certification:{overall:report.overall||null,evidenceId:report.evidenceId||null,schemaVersion:report.schemaVersion||null,windowsFamily:detectWindowsFamily(report),peerEvidenceId:peer?.evidenceId||null,peerWindowsFamily:peer?detectWindowsFamily(peer):null},release:{artifacts:artifactRows,signatures:releaseManifest?.signatures||[],contract:releaseContract.meta,error:releaseContract.error},manualEvidence:{required:manualRequired,requiredKeys:MANUAL_KEYS,verifier:manualCheck.meta}};
+   const noId=JSON.parse(JSON.stringify(envelope));envelope.evidenceId=shaBuf(Buffer.from(stable(noId)));
+   const out=arg('out')?path.resolve(root,arg('out')):path.join(path.dirname(reportPath),'rc1-certification-envelope.json');fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify(envelope,null,2));
+   console.log(JSON.stringify({ok:overall==='PASS',overall,evidenceId:envelope.evidenceId,out:path.relative(root,out).replace(/\\/g,'/'),checks},null,2));
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/rc1-finalize.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/rc1-finalize.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/rc1-finalize.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/rc1-finalize.cjs	2026-08-15 15:13:59.274678533 +0000
+@@ -0,0 +1,21 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++const cp=require('child_process');
++const root=path.resolve(__dirname,'..');
++function arg(name){const p=process.argv.find(x=>x.startsWith(`--${name}=`));return p?p.slice(name.length+3):''}
++function shaFile(p){return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')}
++function meta(p){const a=path.resolve(root,p),s=fs.statSync(a);return{path:a,bytes:s.size,sha256:shaFile(a)}}
++function fail(code,message,extra={}){console.error(JSON.stringify({ok:false,code,message,...extra},null,2));process.exit(1)}
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
++if(pkg.version!=='1.0.0-rc1'||pkg.workspaceAgentRelease?.toolingRevision!=='cert-kit4'||pkg.workspaceAgentRelease?.featureFreeze!==true)fail('CERT_KIT4_RC1_REQUIRED','Finalizer فقط برای RC1 / cert-kit4 معتبر است.');
++const artifactReport=arg('artifact-report'),peerReport=arg('peer-report'),releaseManifest=arg('release-manifest'),manualEvidence=arg('manual-evidence');
++for(const [name,value] of Object.entries({artifactReport,peerReport,releaseManifest,manualEvidence}))if(!value||!fs.existsSync(path.resolve(root,value)))fail('FINALIZATION_INPUT_REQUIRED',`${name} معتبر لازم است.`,{name,value});
++const requireSigning=process.argv.includes('--require-signing');
++const out=path.resolve(root,arg('out')||'final-certification/rc1-final-envelope.json');fs.mkdirSync(path.dirname(out),{recursive:true});
++const envArgs=['scripts/rc1-certification-envelope.cjs',`--report=${path.resolve(root,artifactReport)}`,`--peer-report=${path.resolve(root,peerReport)}`,`--release-manifest=${path.resolve(root,releaseManifest)}`,`--manual-evidence=${path.resolve(root,manualEvidence)}`,`--out=${out}`,'--require-dual-windows','--require-artifacts','--require-manual-evidence'];if(requireSigning)envArgs.push('--require-signing');
++const r=cp.spawnSync(process.execPath,envArgs,{cwd:root,encoding:'utf8'});if(r.stdout)process.stdout.write(r.stdout);if(r.stderr)process.stderr.write(r.stderr);if(r.status!==0)process.exit(r.status||1);
++const envelope=JSON.parse(fs.readFileSync(out,'utf8'));if(envelope.overall!=='PASS')fail('FINAL_ENVELOPE_NOT_PASS','Final Envelope باید PASS باشد.',{overall:envelope.overall});
++const verdict={schemaVersion:'workspace-agent-rc1-final-verdict-v1',version:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,createdAt:new Date().toISOString(),overall:'PASS',envelope:{path:out,sha256:shaFile(out),evidenceId:envelope.evidenceId},inputs:{artifactReport:meta(artifactReport),peerReport:meta(peerReport),releaseManifest:meta(releaseManifest),manualEvidence:meta(manualEvidence)},windowsFamilies:envelope.checks?.windowsFamilies||null,signingRequired:requireSigning};
++const stable=JSON.stringify(verdict);verdict.finalizationId=crypto.createHash('sha256').update(stable).digest('hex');const verdictPath=path.join(path.dirname(out),'rc1-final-verdict.json');fs.writeFileSync(verdictPath,JSON.stringify(verdict,null,2));
++console.log(JSON.stringify({ok:true,overall:'PASS',finalizationId:verdict.finalizationId,envelope:out,verdict:verdictPath},null,2));
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/verify-manual-evidence-rc1.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/verify-manual-evidence-rc1.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/verify-manual-evidence-rc1.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/verify-manual-evidence-rc1.cjs	2026-08-15 15:07:22.806658546 +0000
+@@ -3,12 +3,17 @@
+ const crypto=require('crypto');
+ const file=process.argv[2];
+ const requireAll=process.argv.includes('--require-all');
++const requireArtifactBinding=process.argv.includes('--require-artifact-binding');
++const releaseManifestArg=process.argv.find(x=>x.startsWith('--release-manifest='));
++const releaseManifestPath=releaseManifestArg?path.resolve(releaseManifestArg.slice('--release-manifest='.length)):'';
+ const expectedVersion='1.0.0-rc1';
+-const schema='workspace-agent-manual-evidence-rc1-v1';
++const schema='workspace-agent-manual-evidence-rc1-v2';
+ const keys=['physicalUsbDisconnectReconnect','actualDiskFullRecovery','realAclReadOnlyRecovery','uncleanShutdownPowerLoss','realUpgradeFrom0_9_8'];
+ function fail(code,extra={}){console.error(JSON.stringify({status:'FAIL',code,...extra},null,2));process.exit(1)}
+ function sha256(p){return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')}
+ function nonEmpty(v,min=1){return typeof v==='string'&&v.trim().length>=min}
++function validIso(v){const ms=Date.parse(String(v||''));return Number.isFinite(ms)&&ms<=Date.now()+24*60*60*1000?new Date(ms).toISOString():null}
++function hex64(v){return /^[a-f0-9]{64}$/i.test(String(v||''))}
+ if(!file||!fs.existsSync(file)){
+   if(requireAll)fail('MANUAL_EVIDENCE_REQUIRED');
+   console.log(JSON.stringify({status:'SKIP',code:'MANUAL_EVIDENCE_NOT_PROVIDED'}));process.exit(0);
+@@ -18,19 +23,42 @@
+ const metadataErrors=[];
+ if(!nonEmpty(d.operator,2))metadataErrors.push('operator');
+ if(!nonEmpty(d.machine,2))metadataErrors.push('machine');
+-const createdMs=Date.parse(String(d.createdAt||''));
+-if(!Number.isFinite(createdMs))metadataErrors.push('createdAt');
+-else if(createdMs>Date.now()+24*60*60*1000)metadataErrors.push('createdAt_future');
++const createdAt=validIso(d.createdAt);if(!createdAt)metadataErrors.push('createdAt');
+ if(metadataErrors.length)fail('MANUAL_EVIDENCE_METADATA_INVALID',{fields:metadataErrors});
+-const pending=[],failed=[],weak=[];
++const pending=[],failed=[],weak=[],timing=[];
+ for(const k of keys){
+   const item=d.evidence?.[k]||{};
+   const s=String(item.status||'').toUpperCase();
+   if(s==='FAIL')failed.push(k);
+   else if(s!=='PASS')pending.push(k);
+-  else if(!nonEmpty(item.notes,8)&&!nonEmpty(item.attachment,1))weak.push(k);
++  else{
++    if(!nonEmpty(item.notes,8)&&!nonEmpty(item.attachment,1))weak.push(k);
++    if(!validIso(item.observedAt))timing.push(k);
++  }
+ }
+ if(failed.length)fail('MANUAL_EVIDENCE_FAILED',{failed});
+ if(weak.length)fail('MANUAL_EVIDENCE_PROVENANCE_WEAK',{weak,message:'PASS evidence must include meaningful notes or an attachment reference.'});
++if(timing.length)fail('MANUAL_EVIDENCE_OBSERVED_AT_INVALID',{items:timing});
++const up=d.evidence?.realUpgradeFrom0_9_8||{};
++if(String(up.status||'').toUpperCase()==='PASS'){
++  const upgradeErrors=[];
++  if(String(up.fromVersion||'')!=='0.9.8')upgradeErrors.push('fromVersion');
++  if(String(up.toVersion||'')!==expectedVersion)upgradeErrors.push('toVersion');
++  if(!hex64(up.installerSha256))upgradeErrors.push('installerSha256');
++  if(String(up.preSelfCheckOverall||'').toLowerCase()!=='pass')upgradeErrors.push('preSelfCheckOverall');
++  if(String(up.postSelfCheckOverall||'').toLowerCase()!=='pass')upgradeErrors.push('postSelfCheckOverall');
++  if(up.statePreserved!==true)upgradeErrors.push('statePreserved');
++  if(upgradeErrors.length)fail('UPGRADE_EVIDENCE_STRUCTURE_INVALID',{fields:upgradeErrors});
++}
+ if(requireAll&&pending.length)fail('MANUAL_EVIDENCE_INCOMPLETE',{pending});
+-console.log(JSON.stringify({status:pending.length?'INCOMPLETE':'PASS',pending,operator:String(d.operator||''),machine:String(d.machine||''),createdAt:new Date(createdMs).toISOString(),sha256:sha256(path.resolve(file)),requiredKeys:keys},null,2));
++let artifactBinding={required:requireArtifactBinding,checked:false,ok:!requireArtifactBinding,releaseManifestSha256:null};
++if(requireArtifactBinding){
++  if(!releaseManifestPath||!fs.existsSync(releaseManifestPath))fail('RELEASE_MANIFEST_REQUIRED_FOR_MANUAL_EVIDENCE_BINDING');
++  let m;try{m=JSON.parse(fs.readFileSync(releaseManifestPath,'utf8'))}catch{fail('RELEASE_MANIFEST_INVALID_FOR_MANUAL_EVIDENCE_BINDING')}
++  const setup=(m.artifacts||[]).find(x=>String(x.kind||'')==='nsis');
++  if(!setup||!hex64(setup.sha256))fail('NSIS_ARTIFACT_REQUIRED_FOR_UPGRADE_BINDING');
++  if(String(up.status||'').toUpperCase()!=='PASS')fail('UPGRADE_EVIDENCE_REQUIRED_FOR_ARTIFACT_BINDING');
++  if(String(up.installerSha256||'').toLowerCase()!==String(setup.sha256).toLowerCase())fail('UPGRADE_INSTALLER_HASH_MISMATCH',{evidenceSha256:up.installerSha256,releaseSha256:setup.sha256,file:setup.file});
++  artifactBinding={required:true,checked:true,ok:true,releaseManifestSha256:sha256(releaseManifestPath),installerFile:setup.file,installerSha256:setup.sha256};
++}
++console.log(JSON.stringify({status:pending.length?'INCOMPLETE':'PASS',pending,operator:String(d.operator||''),machine:String(d.machine||''),createdAt,sha256:sha256(path.resolve(file)),requiredKeys:keys,artifactBinding},null,2));
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/verify-rc1-source.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/verify-rc1-source.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/verify-rc1-source.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/verify-rc1-source.cjs	2026-08-15 15:14:13.845965645 +0000
+@@ -7,12 +7,12 @@
+ const rc=pkg.workspaceAgentRelease||{};
+ if(pkg.version!=='1.0.0-rc1')fail('RC1_VERSION_REQUIRED','Source candidate باید دقیقاً version=1.0.0-rc1 باشد.',{version:pkg.version});
+ if(rc.channel!=='rc'||rc.releaseCandidate!=='rc1'||rc.featureFreeze!==true||rc.coreFeatureAdditionsAllowed!==false)fail('RC1_FREEZE_CONTRACT_INVALID','RC channel / feature-freeze contract نامعتبر است.',{workspaceAgentRelease:rc});
+-if(rc.toolingRevision!=='cert-kit3')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit3 باشد.',{toolingRevision:rc.toolingRevision});
++if(rc.toolingRevision!=='cert-kit4')fail('RC1_TOOLING_REVISION_INVALID','RC1 Certification Kit tooling revision باید cert-kit4 باشد.',{toolingRevision:rc.toolingRevision});
+ if(rc.baselineVersion!=='0.9.8'||compareVersions(pkg.version,rc.baselineVersion)<=0)fail('RC1_BASELINE_INVALID','Baseline باید 0.9.8 و RC جدیدتر از آن باشد.',{baseline:rc.baselineVersion,version:pkg.version});
+ if(Number(rc.dataEpoch)!==Number(DATA_EPOCH))fail('RC1_DATA_EPOCH_MISMATCH','Data Epoch package با Update Guard تطابق ندارد.',{packageEpoch:rc.dataEpoch,runtimeEpoch:DATA_EPOCH});
+ if(pkg.build?.appId!=='com.workspaceagent.windows')fail('RC1_APP_ID_CHANGED','App ID در RC نباید تغییر کند.',{appId:pkg.build?.appId});
+ if(pkg.engines?.node!=='24.14.1'||pkg.engines?.npm!=='11.11.0'||pkg.packageManager!=='npm@11.11.0')fail('RC1_RUNTIME_PINS_CHANGED','Runtime pins RC با lane مصوب تطابق ندارد.',{engines:pkg.engines,packageManager:pkg.packageManager});
+-for(const file of ['scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/check-source-syntax.cjs','scripts/run-source-tests.cjs','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
+-for(const s of ['check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','verify:manual-evidence:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
++for(const file of ['scripts/windows-rc1-certify.ps1','scripts/rc1-certification-envelope.cjs','scripts/rc1-finalize.cjs','scripts/verify-manual-evidence-rc1.cjs','scripts/verify-release-manifest-rc1.cjs','scripts/check-source-syntax.cjs','scripts/run-source-tests.cjs','docs/MANUAL_CERTIFICATION_EVIDENCE_RC1.template.json'])if(!fs.existsSync(path.join(root,file)))fail('RC1_CERTIFICATION_KIT_FILE_MISSING','Certification Kit file لازم وجود ندارد.',{file});
++for(const s of ['check:release-inputs','certify:windows:v097','certify:windows:rc1','certify:envelope:rc1','finalize:rc1','verify:manual-evidence:rc1','verify:release-manifest:rc1','release:win','release:win:rc1','test:rc1','test:rc1-certkit'])if(!pkg.scripts?.[s])fail('RC1_REQUIRED_SCRIPT_MISSING','Release script موردنیاز وجود ندارد.',{script:s});
+ if(compareVersions('1.0.0-rc1','1.0.0')>=0)fail('RC1_SEMVER_ORDER_INVALID','RC باید از نسخه stable همان ورژن کوچک‌تر باشد.');
+ console.log('verify-rc1-source PASS',{version:pkg.version,channel:rc.channel,featureFreeze:rc.featureFreeze,baseline:rc.baselineVersion,dataEpoch:DATA_EPOCH,toolingRevision:rc.toolingRevision,lockfile:fs.existsSync(path.join(root,'package-lock.json'))?'present':'pending'});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/verify-release-manifest-rc1.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/verify-release-manifest-rc1.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/verify-release-manifest-rc1.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/verify-release-manifest-rc1.cjs	2026-08-15 15:12:25.212390382 +0000
+@@ -0,0 +1,73 @@
++const fs=require('fs');
++const path=require('path');
++const crypto=require('crypto');
++const cp=require('child_process');
++const root=path.resolve(__dirname,'..');
++function shaFile(p){return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');}
++function fail(code,message,extra={}){const out={ok:false,code,message,...extra};console.error(JSON.stringify(out,null,2));process.exitCode=1;return out;}
++function exactArtifactNames(pkg){
++  const v=String(pkg.version||'');
++  return {
++    nsis:`Workspace-Agent-Setup-${v}-x64.exe`,
++    portable:`Workspace-Agent-Portable-${v}-x64.exe`
++  };
++}
++function validateArtifactRows({pkg,manifest,manifestDir,requireSigning=false,readFileMeta=true}){
++  const errors=[];const expected=exactArtifactNames(pkg);const rows=Array.isArray(manifest?.artifacts)?manifest.artifacts:[];
++  const expectedFiles=new Set(Object.values(expected));if(rows.length!==expectedFiles.size)errors.push(`ARTIFACT_TOTAL_COUNT:${rows.length}`);for(const row of rows)if(!expectedFiles.has(String(row?.file||'')))errors.push(`ARTIFACT_UNEXPECTED:${String(row?.file||'')}`);
++  const seen=new Set();
++  for(const row of rows){const f=String(row?.file||'');if(!f||seen.has(f))errors.push(`ARTIFACT_DUPLICATE_OR_EMPTY:${f}`);seen.add(f);}
++  for(const [kind,name] of Object.entries(expected)){
++    const matches=rows.filter(x=>String(x?.file||'')===name);
++    if(matches.length!==1){errors.push(`ARTIFACT_${kind.toUpperCase()}_COUNT:${matches.length}`);continue;}
++    const row=matches[0];
++    if(String(row.kind||'')!==kind)errors.push(`ARTIFACT_${kind.toUpperCase()}_KIND_MISMATCH`);
++    if(String(row.arch||'')!=='x64')errors.push(`ARTIFACT_${kind.toUpperCase()}_ARCH_MISMATCH`);
++    if(readFileMeta){
++      const p=path.join(manifestDir,name);
++      if(!fs.existsSync(p)){errors.push(`ARTIFACT_${kind.toUpperCase()}_MISSING_FILE`);continue;}
++      const st=fs.statSync(p),sha=shaFile(p);
++      if(Number(row.bytes)!==Number(st.size))errors.push(`ARTIFACT_${kind.toUpperCase()}_SIZE_MISMATCH`);
++      if(String(row.sha256||'').toLowerCase()!==sha)errors.push(`ARTIFACT_${kind.toUpperCase()}_SHA_MISMATCH`);
++    }
++  }
++  const sigs=Array.isArray(manifest?.signatures)?manifest.signatures:[];if(sigs.length!==expectedFiles.size)errors.push(`SIGNATURE_TOTAL_COUNT:${sigs.length}`);for(const sig of sigs)if(!expectedFiles.has(String(sig?.file||'')))errors.push(`SIGNATURE_UNEXPECTED:${String(sig?.file||'')}`);
++  for(const name of Object.values(expected)){
++    const s=sigs.filter(x=>String(x?.file||'')===name);
++    if(s.length!==1)errors.push(`SIGNATURE_ROW_COUNT:${name}:${s.length}`);
++    else if(requireSigning&&String(s[0]?.status||'')!=='Valid')errors.push(`SIGNATURE_INVALID:${name}:${String(s[0]?.status||'')}`);
++  }
++  return{ok:errors.length===0,errors,expected,artifactCount:rows.length,signatureCount:sigs.length};
++}
++function main(){
++  const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
++  const arg=(name)=>{const p=process.argv.find(x=>x.startsWith(`--${name}=`));return p?p.slice(name.length+3):''};
++  const requireSigning=process.argv.includes('--require-signing');
++  const manifestPath=path.resolve(root,arg('manifest')||'release/release-manifest.json');
++  const lockPath=path.join(root,'package-lock.json');
++  if(!fs.existsSync(manifestPath))return fail('RELEASE_MANIFEST_REQUIRED','release-manifest.json پیدا نشد.',{manifestPath});
++  if(!fs.existsSync(lockPath))return fail('PACKAGE_LOCK_REQUIRED','package-lock.json برای verify manifest لازم است.');
++  let manifest;try{manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'))}catch{return fail('RELEASE_MANIFEST_INVALID_JSON','release-manifest.json معتبر نیست.');}
++  const errors=[];
++  if(String(manifest.schemaVersion||'')!=='workspace-agent-release-v7')errors.push('MANIFEST_SCHEMA_MISMATCH');
++  if(String(manifest.version||'')!==String(pkg.version||''))errors.push('MANIFEST_VERSION_MISMATCH');
++  if(String(manifest.toolingRevision||'')!==String(pkg.workspaceAgentRelease?.toolingRevision||''))errors.push('MANIFEST_TOOLING_MISMATCH');
++  if(manifest.featureFreeze!==true)errors.push('MANIFEST_FEATURE_FREEZE_MISMATCH');
++  const lockSha=shaFile(lockPath);if(String(manifest.packageLockSha256||'').toLowerCase()!==lockSha)errors.push('MANIFEST_LOCK_HASH_MISMATCH');
++  let fp={};try{fp=JSON.parse(cp.execFileSync(process.execPath,['scripts/source-tree-fingerprint.cjs'],{cwd:root,encoding:'utf8'}))}catch{errors.push('SOURCE_FINGERPRINT_FAILED');}
++  if(String(manifest.sourceFingerprint||'')!==String(fp.sha256||''))errors.push('MANIFEST_SOURCE_FINGERPRINT_MISMATCH');
++  if(Number(manifest.sourceFiles||0)!==Number(fp.files||0))errors.push('MANIFEST_SOURCE_FILE_COUNT_MISMATCH');
++  if(String(manifest.architecture||'')!=='x64')errors.push('MANIFEST_ARCH_MISMATCH');
++  const artifactCheck=validateArtifactRows({pkg,manifest,manifestDir:path.dirname(manifestPath),requireSigning,readFileMeta:true});errors.push(...artifactCheck.errors);
++  const sumsPath=path.join(path.dirname(manifestPath),'SHA256SUMS.txt');
++  if(!fs.existsSync(sumsPath))errors.push('SHA256SUMS_MISSING');
++  else{
++    const map=new Map(fs.readFileSync(sumsPath,'utf8').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(line=>{const m=line.match(/^([a-fA-F0-9]{64})\s{2}(.+)$/);return m?[m[2],m[1].toLowerCase()]:['',''];}));
++    for(const row of manifest.artifacts||[])if(map.get(String(row.file||''))!==String(row.sha256||'').toLowerCase())errors.push(`SHA256SUMS_MISMATCH:${String(row.file||'')}`);
++  }
++  if(errors.length)return fail('RELEASE_MANIFEST_INVALID','Release manifest contract failed.',{errors,manifestPath});
++  const out={ok:true,version:pkg.version,toolingRevision:pkg.workspaceAgentRelease.toolingRevision,manifestSha256:shaFile(manifestPath),packageLockSha256:lockSha,sourceFingerprint:fp.sha256,artifacts:manifest.artifacts.map(x=>({kind:x.kind,file:x.file,sha256:x.sha256,bytes:x.bytes})),signingRequired:requireSigning};
++  console.log(JSON.stringify(out,null,2));
++}
++if(require.main===module)main();
++module.exports={exactArtifactNames,validateArtifactRows};
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/windows-certification-v097.ps1 /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/windows-certification-v097.ps1
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/windows-certification-v097.ps1	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/windows-certification-v097.ps1	2026-08-15 15:08:02.152343801 +0000
+@@ -36,11 +36,12 @@
+ 
+ $expectedNode=(Get-Content .nvmrc -Raw).Trim();$actualNode=(node -p "process.versions.node").Trim();$expectedNpm=([string]$pkg.packageManager).Replace('npm@','');$actualNpm=(npm -v).Trim();$runtimeOk=($actualNode -eq $expectedNode -and $actualNpm -eq $expectedNpm);Add-Gate 'runtime-version' $(if($runtimeOk){'PASS'}else{'FAIL'}) $true $(if($runtimeOk){0}else{1}) '' ([pscustomobject]@{expectedNode=$expectedNode;actualNode=$actualNode;expectedNpm=$expectedNpm;actualNpm=$actualNpm})
+ 
+-$fpFile=Join-Path $out 'source-fingerprint.json';Run-NodeGate 'source-fingerprint' @('scripts/source-tree-fingerprint.cjs',"--out=$fpFile") $true | Out-Null
+ Run-NpmGate 'check:dependency-pins' $true | Out-Null
+ Run-NpmGate 'check:source-hygiene' $true | Out-Null
+ if($GenerateLockfile){Run-NpmGate 'release:lock' $true | Out-Null}
+ Run-NpmGate 'check:release-inputs' $true | Out-Null
++$fpFile=Join-Path $out 'source-fingerprint.json';Run-NodeGate 'source-fingerprint' @('scripts/source-tree-fingerprint.cjs',"--out=$fpFile") $true | Out-Null
++$sourceFingerprint=$null;try{$sourceFingerprint=Get-Content $fpFile -Raw|ConvertFrom-Json}catch{}
+ $packageLockSha256=$null
+ if(Test-Path package-lock.json){try{$packageLockSha256=(Get-FileHash package-lock.json -Algorithm SHA256).Hash.ToLowerInvariant()}catch{}}
+ if(($gates|Where-Object{$_.name -eq 'check:release-inputs' -and $_.status -eq 'PASS'}).Count){
+@@ -63,23 +64,45 @@
+ if($ManualEvidenceFile){$log=Join-Path $out 'gate-manual-evidence.log';$manualVerifier=if($pkg.version -eq '1.0.0-rc1'){'scripts/verify-manual-evidence-rc1.cjs'}else{'scripts/verify-manual-evidence-v097.cjs'};$args=@($manualVerifier,$ManualEvidenceFile);if($RequireManualEvidence){$args+='--require-all'};$lines=& node @args 2>&1;$code=$LASTEXITCODE;$text=($lines|Out-String);$lines|Set-Content $log -Encoding utf8;$status=Classify $code $text $RequireManualEvidence;if(!$RequireManualEvidence -and $text -match 'INCOMPLETE'){$status='SKIP'};Add-Gate 'manual-evidence' $status ([bool]$RequireManualEvidence) $code $log $text}
+ else{Add-Gate 'manual-evidence' $(if($RequireManualEvidence){'INCOMPLETE'}else{'SKIP'}) ([bool]$RequireManualEvidence) 3 '' 'manual evidence file not provided'}
+ 
+-$artifacts=@();$signatures=@()
++$artifacts=@();$signatures=@();$releaseManifestSha256=$null
+ if($BuildArtifacts){
+   if(Test-Path release){Remove-Item release -Recurse -Force -ErrorAction Stop};Add-Gate 'artifact-clean-room' 'PASS' $true 0 '' 'release directory reset before packaging'
+   Run-NpmGate 'build' $true | Out-Null;Run-NpmGate 'pack:win:dir' $true | Out-Null
+   $worker=Join-Path (Get-Location) 'release\win-unpacked\resources\app.asar.unpacked\electron\services\hash-worker.cjs';if(Test-Path $worker){Run-NodeGate 'packaged-worker-smoke' @('tests/packaged-worker-smoke-v082.cjs',$worker) $true|Out-Null}else{Add-Gate 'packaged-worker-smoke' 'FAIL' $true 2 '' "missing $worker"}
+   $exe=(Get-ChildItem 'release\win-unpacked' -Filter '*.exe' -File -ErrorAction SilentlyContinue|Select-Object -First 1).FullName;if($exe){Run-NodeGate 'packaged-app-smoke' @('tests/packaged-app-smoke-v084.cjs',$exe) $true|Out-Null}else{Add-Gate 'packaged-app-smoke' 'FAIL' $true 2 '' 'win-unpacked exe missing'}
+   Run-NpmGate 'pack:win' $true | Out-Null
+-  $files=Get-ChildItem release -File -ErrorAction SilentlyContinue|Where-Object{$_.Extension -in '.exe','.msi','.zip'}|Sort-Object Name
+-  foreach($f in $files){$h=Get-FileHash $f.FullName -Algorithm SHA256;$sig=Get-AuthenticodeSignature $f.FullName;$artifacts += [pscustomobject]@{file=$f.Name;bytes=$f.Length;sha256=$h.Hash.ToLowerInvariant()};$signatures += [pscustomobject]@{file=$f.Name;status=[string]$sig.Status;subject=if($sig.SignerCertificate){$sig.SignerCertificate.Subject}else{$null};thumbprint=if($sig.SignerCertificate){$sig.SignerCertificate.Thumbprint}else{$null}}}
+-  $sigOk=(!$RequireSigning -or (($signatures|Where-Object{$_.status -ne 'Valid'}).Count -eq 0 -and $signatures.Count -gt 0));Add-Gate 'artifact-signature' $(if($sigOk){'PASS'}else{'FAIL'}) $true $(if($sigOk){0}else{1}) '' ([pscustomobject]@{requireSigning=[bool]$RequireSigning;count=$signatures.Count})
++  $expected=@(
++    [pscustomobject]@{kind='nsis';arch='x64';file="Workspace-Agent-Setup-$($pkg.version)-x64.exe"},
++    [pscustomobject]@{kind='portable';arch='x64';file="Workspace-Agent-Portable-$($pkg.version)-x64.exe"}
++  )
++  $artifactErrors=@()
++  foreach($e in $expected){
++    $matches=@(Get-ChildItem release -File -ErrorAction SilentlyContinue|Where-Object{$_.Name -eq $e.file})
++    if($matches.Count -ne 1){$artifactErrors += "$($e.kind): expected exactly one $($e.file), found $($matches.Count)";continue}
++    $f=$matches[0];$h=Get-FileHash $f.FullName -Algorithm SHA256;$sig=Get-AuthenticodeSignature $f.FullName
++    $artifacts += [pscustomobject]@{kind=$e.kind;arch=$e.arch;file=$f.Name;bytes=$f.Length;sha256=$h.Hash.ToLowerInvariant()}
++    $signatures += [pscustomobject]@{file=$f.Name;status=[string]$sig.Status;subject=if($sig.SignerCertificate){$sig.SignerCertificate.Subject}else{$null};thumbprint=if($sig.SignerCertificate){$sig.SignerCertificate.Thumbprint}else{$null}}
++  }
++  if($artifactErrors.Count){Add-Gate 'artifact-contract' 'FAIL' $true 2 '' $artifactErrors}else{Add-Gate 'artifact-contract' 'PASS' $true 0 '' @{required=@($expected|ForEach-Object{$_.file})}}
++  $sigOk=(!$RequireSigning -or (($signatures|Where-Object{$_.status -ne 'Valid'}).Count -eq 0 -and $signatures.Count -eq $expected.Count));Add-Gate 'artifact-signature' $(if($sigOk){'PASS'}else{'FAIL'}) $true $(if($sigOk){0}else{1}) '' ([pscustomobject]@{requireSigning=[bool]$RequireSigning;count=$signatures.Count})
++  if(-not $artifactErrors.Count){
++    $artifacts|ForEach-Object{"$($_.sha256)  $($_.file)"}|Set-Content 'release\SHA256SUMS.txt' -Encoding ascii
++    $ro=$null;$rf='UNKNOWN';try{$ro=Get-CimInstance Win32_OperatingSystem;$rf=if([string]$ro.Caption -match 'Windows 11'){'Windows11'}elseif([string]$ro.Caption -match 'Windows 10'){'Windows10'}else{'UNKNOWN'}}catch{}
++    $manifest=[ordered]@{
++      schemaVersion='workspace-agent-release-v7';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;featureFreeze=[bool]$pkg.workspaceAgentRelease.featureFreeze;createdAt=(Get-Date).ToUniversalTime().ToString('o');
++      node=(node -v);npm=(npm -v);packageManager=$pkg.packageManager;packageLockSha256=$packageLockSha256;sourceFingerprint=if($sourceFingerprint){$sourceFingerprint.sha256}else{$null};sourceFiles=if($sourceFingerprint){$sourceFingerprint.files}else{0};electron=$pkg.devDependencies.electron;architecture='x64';
++      builderWindowsFamily=$rf;builderOs=if($ro){[ordered]@{caption=$ro.Caption;version=$ro.Version;build=$ro.BuildNumber}}else{$null};scaleMatrix=$scaleMatrix;signingRequired=[bool]$RequireSigning;signatures=$signatures;artifacts=$artifacts
++    }
++    $manifestPath=Join-Path (Get-Location) 'release\release-manifest.json';$manifest|ConvertTo-Json -Depth 10|Set-Content $manifestPath -Encoding utf8
++    $manifestArgs=@('scripts/verify-release-manifest-rc1.cjs');if($RequireSigning){$manifestArgs+='--require-signing'};Run-NodeGate 'release-manifest-contract' $manifestArgs $true|Out-Null
++    if(Test-Path $manifestPath){$releaseManifestSha256=(Get-FileHash $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()}
++  }else{Add-Gate 'release-manifest-contract' 'FAIL' $true 2 '' 'artifact contract failed before manifest generation'}
+ }else{Add-Gate 'packaged-release' 'INCOMPLETE' $true 3 '' 'Run certification with -BuildArtifacts'}
+ 
+ $requiredFail=@($gates|Where-Object{$_.required -and $_.status -eq 'FAIL'});$requiredIncomplete=@($gates|Where-Object{$_.required -and $_.status -in @('INCOMPLETE','SKIP','PENDING_MANUAL')});$overall=if($requiredFail.Count){'FAIL'}elseif($requiredIncomplete.Count){'INCOMPLETE'}else{'PASS'}
+-$sourceFingerprint=$null;try{$sourceFingerprint=Get-Content $fpFile -Raw|ConvertFrom-Json}catch{}
+ $osInfo=$null;$computer=$null;$volumes=@();$windowsFamily='UNKNOWN';try{$o=Get-CimInstance Win32_OperatingSystem;$osInfo=[pscustomobject]@{caption=$o.Caption;version=$o.Version;build=$o.BuildNumber;lastBoot=$o.LastBootUpTime};if([string]$o.Caption -match 'Windows 11'){$windowsFamily='Windows11'}elseif([string]$o.Caption -match 'Windows 10'){$windowsFamily='Windows10'}}catch{};try{$c=Get-CimInstance Win32_ComputerSystem;$computer=[pscustomobject]@{manufacturer=$c.Manufacturer;model=$c.Model;ramBytes=[int64]$c.TotalPhysicalMemory;processors=$c.NumberOfLogicalProcessors}}catch{};try{$volumes=Get-Volume|Select-Object DriveLetter,FileSystemLabel,FileSystem,DriveType,HealthStatus,OperationalStatus,UniqueId,Size,SizeRemaining}catch{}
+ $summary=[ordered]@{PASS=@($gates|Where-Object status -eq 'PASS').Count;FAIL=@($gates|Where-Object status -eq 'FAIL').Count;INCOMPLETE=@($gates|Where-Object status -eq 'INCOMPLETE').Count;SKIP=@($gates|Where-Object status -eq 'SKIP').Count}
+-$report=[ordered]@{schemaVersion='workspace-agent-windows-certification-v4';workspaceAgentVersion=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;featureFreeze=[bool]$pkg.workspaceAgentRelease.featureFreeze;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;summary=$summary;sourceFingerprint=$sourceFingerprint;packageLockSha256=$packageLockSha256;windowsFamily=$windowsFamily;runtime=[ordered]@{node=$actualNode;npm=$actualNpm;electron=$pkg.devDependencies.electron;arch=$env:PROCESSOR_ARCHITECTURE};os=$osInfo;computer=$computer;volumes=$volumes;options=[ordered]@{rootA=$RootA;rootB=$RootB;runScale=[bool]$RunScale;scaleFilesRequested=$ScaleFiles;scaleMatrix=$scaleMatrix;buildArtifacts=[bool]$BuildArtifacts;requireSigning=[bool]$RequireSigning;requireManualEvidence=[bool]$RequireManualEvidence};gates=$gates;artifacts=$artifacts;signatures=$signatures}
++$report=[ordered]@{schemaVersion='workspace-agent-windows-certification-v4';workspaceAgentVersion=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;featureFreeze=[bool]$pkg.workspaceAgentRelease.featureFreeze;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;summary=$summary;sourceFingerprint=$sourceFingerprint;packageLockSha256=$packageLockSha256;windowsFamily=$windowsFamily;runtime=[ordered]@{node=$actualNode;npm=$actualNpm;electron=$pkg.devDependencies.electron;arch=$env:PROCESSOR_ARCHITECTURE};os=$osInfo;computer=$computer;volumes=$volumes;options=[ordered]@{rootA=$RootA;rootB=$RootB;runScale=[bool]$RunScale;scaleFilesRequested=$ScaleFiles;scaleMatrix=$scaleMatrix;buildArtifacts=[bool]$BuildArtifacts;requireSigning=[bool]$RequireSigning;requireManualEvidence=[bool]$RequireManualEvidence};gates=$gates;artifacts=$artifacts;signatures=$signatures;releaseManifestSha256=$releaseManifestSha256}
+ $withoutId=$report|ConvertTo-Json -Depth 12 -Compress;$sha=[System.Security.Cryptography.SHA256]::Create();$bytes=[Text.Encoding]::UTF8.GetBytes($withoutId);$report['evidenceId']=([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant();$sha.Dispose()
+ $json=Join-Path $out 'certification-report.json';$report|ConvertTo-Json -Depth 12|Set-Content $json -Encoding utf8
+ $md=Join-Path $out 'certification-report.md';$lines=@("# Workspace Agent Windows Certification","","- Version: $($pkg.version)","- Overall: **$overall**","- Windows family: **$windowsFamily**","- Evidence ID: $($report.evidenceId)","- Created: $($report.createdAt)","","## Gates","");foreach($g in $gates){$lines += "- $($g.status) — $($g.name)"};$lines += @("","## Rule","","A required SKIP/PENDING prerequisite is INCOMPLETE, never PASS. Actual destructive evidence is never auto-triggered.");$lines|Set-Content $md -Encoding utf8
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/windows-rc1-certify.ps1 /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/windows-rc1-certify.ps1
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/windows-rc1-certify.ps1	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/windows-rc1-certify.ps1	2026-08-15 15:14:06.219869183 +0000
+@@ -97,17 +97,24 @@
+   $certJson=Get-Content $report.FullName -Raw|ConvertFrom-Json
+   $certStatus=[string]$certJson.overall
+   Add-Check 'windows-certification' $certStatus @{exitCode=$certCode;report=$report.FullName;evidenceId=$certJson.evidenceId;windowsFamily=$certJson.windowsFamily}
++  $releaseManifest=Join-Path (Get-Location) 'release\release-manifest.json'
++  if(-not $NoBuildArtifacts){$rmArgs=@('scripts/verify-release-manifest-rc1.cjs');if($RequireSigning){$rmArgs+='--require-signing'};$rmLines=& node @rmArgs 2>&1;$rmCode=$LASTEXITCODE;$rmLines|Set-Content (Join-Path $session 'release-manifest-verification.log') -Encoding utf8;if($rmCode -ne 0){Add-Check 'release-manifest' 'FAIL' @{file=$releaseManifest};throw 'Release manifest/artifact contract verification failed in RC1 orchestrator.'};Add-Check 'release-manifest' 'PASS' @{file=$releaseManifest}}
+   $envOut=Join-Path $session 'rc1-certification-envelope.json'
+   $envArgs=@('scripts/rc1-certification-envelope.cjs',"--report=$($report.FullName)","--out=$envOut",'--require-dual-windows')
++  if(-not $NoBuildArtifacts){$envArgs+="--release-manifest=$releaseManifest"}
+   if($PeerWindowsReport){$envArgs+="--peer-report=$PeerWindowsReport"}
+   if(-not $NoBuildArtifacts){$envArgs+='--require-artifacts'}
+   if($RequireSigning){$envArgs+='--require-signing'}
+   if($ManualEvidenceFile){$envArgs+="--manual-evidence=$ManualEvidenceFile"}
+-  if($RequireManualEvidence){$envArgs+='--require-manual-evidence'}
++  $envArgs+='--require-manual-evidence'
+   $envLines=& node @envArgs 2>&1;$envCode=$LASTEXITCODE;$envLines|Set-Content (Join-Path $session 'envelope.log') -Encoding utf8
+   $envelope=if(Test-Path $envOut){Get-Content $envOut -Raw|ConvertFrom-Json}else{$null}
++  $releaseManifestSnapshot=$null;$shaSumsSnapshot=$null;$peerSnapshot=$null
++  if(Test-Path $releaseManifest){$releaseManifestSnapshot=Join-Path $session 'release-manifest.snapshot.json';Copy-Item -LiteralPath $releaseManifest -Destination $releaseManifestSnapshot -Force}
++  $shaSums=Join-Path (Get-Location) 'release\SHA256SUMS.txt';if(Test-Path $shaSums){$shaSumsSnapshot=Join-Path $session 'SHA256SUMS.snapshot.txt';Copy-Item -LiteralPath $shaSums -Destination $shaSumsSnapshot -Force}
++  if($PeerWindowsReport -and (Test-Path -LiteralPath $PeerWindowsReport)){$peerSnapshot=Join-Path $session 'peer-windows-report.snapshot.json';Copy-Item -LiteralPath $PeerWindowsReport -Destination $peerSnapshot -Force}
+   $overall=if($certCode -eq 1 -or $envCode -eq 1){'FAIL'}elseif($certCode -ne 0 -or $envCode -ne 0){'INCOMPLETE'}else{'PASS'}
+-  $final=[ordered]@{schemaVersion='workspace-agent-rc1-certification-kit-result-v2';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;windowsFamily=$windowsFamily;peerWindowsReport=if($PeerWindowsReport){$PeerWindowsReport}else{$null};preflight=$pre;certificationReport=$report.FullName;certificationEvidenceId=$certJson.evidenceId;envelope=$envOut;envelopeEvidenceId=if($envelope){$envelope.evidenceId}else{$null};packageLockSha256=$lockHash;transcript=$transcript}
++  $final=[ordered]@{schemaVersion='workspace-agent-rc1-certification-kit-result-v3';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;createdAt=(Get-Date).ToUniversalTime().ToString('o');overall=$overall;windowsFamily=$windowsFamily;peerWindowsReport=if($PeerWindowsReport){$PeerWindowsReport}else{$null};peerWindowsReportSnapshot=$peerSnapshot;preflight=$pre;certificationReport=$report.FullName;certificationEvidenceId=$certJson.evidenceId;envelope=$envOut;envelopeEvidenceId=if($envelope){$envelope.evidenceId}else{$null};packageLockSha256=$lockHash;releaseManifest=if(Test-Path $releaseManifest){$releaseManifest}else{$null};releaseManifestSnapshot=$releaseManifestSnapshot;sha256SumsSnapshot=$shaSumsSnapshot;transcript=$transcript}
+   $finalPath=Join-Path $session 'rc1-certification-result.json';$final|ConvertTo-Json -Depth 8|Set-Content $finalPath -Encoding utf8
+   Write-Host "RC1 Certification Kit: $overall" -ForegroundColor $(if($overall -eq 'PASS'){'Green'}elseif($overall -eq 'INCOMPLETE'){'Yellow'}else{'Red'})
+   Write-Host "Result: $finalPath"
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/windows-release.ps1 /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/windows-release.ps1
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/scripts/windows-release.ps1	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/scripts/windows-release.ps1	2026-08-15 15:08:20.617049429 +0000
+@@ -65,24 +65,36 @@
+ if (-not $packagedExe) { throw 'Packaged app executable not found.' }
+ node tests/packaged-app-smoke-v084.cjs $packagedExe; if ($LASTEXITCODE -ne 0) { throw 'Packaged application startup smoke failed.' }
+ npm run pack:win; if ($LASTEXITCODE -ne 0) { throw 'Windows NSIS/Portable build failed.' }
+-$artifacts = Get-ChildItem release -File | Where-Object { $_.Extension -in '.exe','.msi','.zip' } | Sort-Object Name
+-if (-not $artifacts) { throw 'Release artifact پیدا نشد.' }
++$expectedArtifacts=@(
++  [pscustomobject]@{kind='nsis';arch='x64';file="Workspace-Agent-Setup-$($pkg.version)-x64.exe"},
++  [pscustomobject]@{kind='portable';arch='x64';file="Workspace-Agent-Portable-$($pkg.version)-x64.exe"}
++)
++$artifacts=@()
++foreach($e in $expectedArtifacts){
++  $m=@(Get-ChildItem release -File -ErrorAction SilentlyContinue|Where-Object{$_.Name -eq $e.file})
++  if($m.Count -ne 1){throw "Release artifact contract failed for $($e.kind): expected exactly one $($e.file), got $($m.Count)"}
++  $artifacts += [pscustomobject]@{kind=$e.kind;arch=$e.arch;file=$m[0].Name;path=$m[0].FullName;bytes=$m[0].Length}
++}
+ $signatures=@();
+-foreach($f in $artifacts){
+-  $sig=Get-AuthenticodeSignature $f.FullName
+-  $signatures += [pscustomobject]@{file=$f.Name;status=[string]$sig.Status;subject=if($sig.SignerCertificate){$sig.SignerCertificate.Subject}else{$null};thumbprint=if($sig.SignerCertificate){$sig.SignerCertificate.Thumbprint}else{$null}}
+-  if($RequireSigning -and $sig.Status -ne 'Valid'){throw "Signature verification failed: $($f.Name) => $($sig.Status)"}
++foreach($a in $artifacts){
++  $sig=Get-AuthenticodeSignature $a.path
++  $signatures += [pscustomobject]@{file=$a.file;status=[string]$sig.Status;subject=if($sig.SignerCertificate){$sig.SignerCertificate.Subject}else{$null};thumbprint=if($sig.SignerCertificate){$sig.SignerCertificate.Thumbprint}else{$null}}
++  if($RequireSigning -and $sig.Status -ne 'Valid'){throw "Signature verification failed: $($a.file) => $($sig.Status)"}
+ }
+-$rows = foreach ($f in $artifacts) { $h=Get-FileHash $f.FullName -Algorithm SHA256; [pscustomobject]@{file=$f.Name;bytes=$f.Length;sha256=$h.Hash.ToLowerInvariant()} }
++$rows = foreach ($a in $artifacts) { $h=Get-FileHash $a.path -Algorithm SHA256; [pscustomobject]@{kind=$a.kind;arch=$a.arch;file=$a.file;bytes=$a.bytes;sha256=$h.Hash.ToLowerInvariant()} }
+ $rows | ForEach-Object { "$($_.sha256)  $($_.file)" } | Set-Content release\SHA256SUMS.txt -Encoding ascii
+ $lockHash=(Get-FileHash package-lock.json -Algorithm SHA256).Hash.ToLowerInvariant()
+ $fpJson=(node scripts/source-tree-fingerprint.cjs | ConvertFrom-Json)
++$os=$null;$wf='UNKNOWN';try{$os=Get-CimInstance Win32_OperatingSystem;$wf=if([string]$os.Caption -match 'Windows 11'){'Windows11'}elseif([string]$os.Caption -match 'Windows 10'){'Windows10'}else{'UNKNOWN'}}catch{}
+ $manifest=[ordered]@{
+-  schemaVersion='workspace-agent-release-v6';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;featureFreeze=[bool]$pkg.workspaceAgentRelease.featureFreeze;createdAt=(Get-Date).ToUniversalTime().ToString('o');
+-  node=(node -v);npm=(npm -v);packageManager=$pkg.packageManager;packageLockSha256=$lockHash;sourceFingerprint=$fpJson.sha256;sourceFiles=$fpJson.files;electron=$pkg.devDependencies.electron;
++  schemaVersion='workspace-agent-release-v7';version=$pkg.version;toolingRevision=$pkg.workspaceAgentRelease.toolingRevision;featureFreeze=[bool]$pkg.workspaceAgentRelease.featureFreeze;createdAt=(Get-Date).ToUniversalTime().ToString('o');
++  node=(node -v);npm=(npm -v);packageManager=$pkg.packageManager;packageLockSha256=$lockHash;sourceFingerprint=$fpJson.sha256;sourceFiles=$fpJson.files;electron=$pkg.devDependencies.electron;architecture='x64';builderWindowsFamily=$wf;builderOs=if($os){[ordered]@{caption=$os.Caption;version=$os.Version;build=$os.BuildNumber}}else{$null};
+   signingRequired=[bool]$RequireSigning;signingConfigured=[bool]($env:CSC_LINK -or $env:WIN_CSC_LINK);systemResilienceUat=$true;twoVolumeCertUat=$true;scaleUat=[bool]$RunScaleUat;scaleUatCounts=$scaleUatCounts;manualEvidenceRequired=[bool]$RequireManualEvidence;signatures=$signatures;artifacts=$rows
+ }
+ $manifest | ConvertTo-Json -Depth 8 | Set-Content release\release-manifest.json -Encoding utf8
++$verifyArgs=@('scripts/verify-release-manifest-rc1.cjs');if($RequireSigning){$verifyArgs+='--require-signing'}
++node @verifyArgs
++if($LASTEXITCODE -ne 0){throw 'Release manifest/artifact contract verification failed.'}
+ Write-Host 'Release gate PASS' -ForegroundColor Green
+ $rows | Format-Table -AutoSize
+ $signatures | Format-Table -AutoSize
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/manual-evidence-rc1.test.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/manual-evidence-rc1.test.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/manual-evidence-rc1.test.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/manual-evidence-rc1.test.cjs	2026-08-15 15:09:21.604822867 +0000
+@@ -1,8 +1,11 @@
+ const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');const cp=require('child_process');const cwd=path.resolve(__dirname,'..');
+-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-rc1-evidence-')),file=path.join(dir,'e.json');
+-const item=()=>({status:'PASS',notes:'Verified on controlled Windows certification machine.'});
+-const base={schemaVersion:'workspace-agent-manual-evidence-rc1-v1',version:'1.0.0-rc1',operator:'qa-operator',machine:'win11-cert',createdAt:new Date().toISOString(),evidence:{physicalUsbDisconnectReconnect:item(),actualDiskFullRecovery:item(),realAclReadOnlyRecovery:item(),uncleanShutdownPowerLoss:item(),realUpgradeFrom0_9_8:{status:'PASS',notes:'Installed v0.9.8, preserved userData, upgraded to rc1 and RC Self-Check passed.'}}};
+-fs.writeFileSync(file,JSON.stringify(base));let r=JSON.parse(cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all'],{cwd,encoding:'utf8'}));assert.equal(r.status,'PASS');assert(/^[a-f0-9]{64}$/.test(r.sha256));assert(r.requiredKeys.includes('realUpgradeFrom0_9_8'));
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wa-rc1-evidence-')),file=path.join(dir,'e.json'),manifest=path.join(dir,'release-manifest.json');
++const now=()=>new Date().toISOString();const item=()=>({status:'PASS',observedAt:now(),notes:'Verified on controlled Windows certification machine.'});const installerSha='a'.repeat(64);
++const base={schemaVersion:'workspace-agent-manual-evidence-rc1-v2',version:'1.0.0-rc1',operator:'qa-operator',machine:'win11-cert',createdAt:now(),evidence:{physicalUsbDisconnectReconnect:item(),actualDiskFullRecovery:item(),realAclReadOnlyRecovery:item(),uncleanShutdownPowerLoss:item(),realUpgradeFrom0_9_8:{status:'PASS',observedAt:now(),notes:'Installed v0.9.8, preserved userData, upgraded with the certified NSIS installer and both RC Self-Checks passed.',fromVersion:'0.9.8',toVersion:'1.0.0-rc1',installerSha256:installerSha,preSelfCheckOverall:'pass',postSelfCheckOverall:'pass',statePreserved:true}}};
++fs.writeFileSync(file,JSON.stringify(base));fs.writeFileSync(manifest,JSON.stringify({artifacts:[{kind:'nsis',file:'Workspace-Agent-Setup-1.0.0-rc1-x64.exe',sha256:installerSha}]}));
++let r=JSON.parse(cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all'],{cwd,encoding:'utf8'}));assert.equal(r.status,'PASS');assert(/^[a-f0-9]{64}$/.test(r.sha256));assert(r.requiredKeys.includes('realUpgradeFrom0_9_8'));
++r=JSON.parse(cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all','--require-artifact-binding',`--release-manifest=${manifest}`],{cwd,encoding:'utf8'}));assert.equal(r.artifactBinding.ok,true);assert.equal(r.artifactBinding.installerSha256,installerSha);
+ base.evidence.actualDiskFullRecovery.status='PENDING_MANUAL';fs.writeFileSync(file,JSON.stringify(base));let failed=false;try{cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all'],{cwd,stdio:'pipe'})}catch(e){failed=true;assert(String(e.stderr).includes('MANUAL_EVIDENCE_INCOMPLETE'))}assert(failed);
+-base.evidence.actualDiskFullRecovery={status:'PASS',notes:''};fs.writeFileSync(file,JSON.stringify(base));failed=false;try{cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all'],{cwd,stdio:'pipe'})}catch(e){failed=true;assert(String(e.stderr).includes('MANUAL_EVIDENCE_PROVENANCE_WEAK'))}assert(failed);
+-fs.rmSync(dir,{recursive:true,force:true});console.log('manual-evidence-rc1.test.cjs PASS');
++base.evidence.actualDiskFullRecovery={status:'PASS',observedAt:now(),notes:''};fs.writeFileSync(file,JSON.stringify(base));failed=false;try{cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all'],{cwd,stdio:'pipe'})}catch(e){failed=true;assert(String(e.stderr).includes('MANUAL_EVIDENCE_PROVENANCE_WEAK'))}assert(failed);
++base.evidence.actualDiskFullRecovery=item();base.evidence.realUpgradeFrom0_9_8.installerSha256='b'.repeat(64);fs.writeFileSync(file,JSON.stringify(base));failed=false;try{cp.execFileSync(process.execPath,['scripts/verify-manual-evidence-rc1.cjs',file,'--require-all','--require-artifact-binding',`--release-manifest=${manifest}`],{cwd,stdio:'pipe'})}catch(e){failed=true;assert(String(e.stderr).includes('UPGRADE_INSTALLER_HASH_MISMATCH'))}assert(failed);
++fs.rmSync(dir,{recursive:true,force:true});console.log('manual-evidence-rc1.test.cjs PASS',{schema:'v2',artifactBoundUpgrade:true});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-certification-kit-contract.test.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-certification-kit-contract.test.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-certification-kit-contract.test.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-certification-kit-contract.test.cjs	2026-08-15 15:09:22.539995981 +0000
+@@ -4,7 +4,7 @@
+ const root=path.resolve(__dirname,'..');
+ const p=path.join(root,'scripts','windows-rc1-certify.ps1');
+ const s=fs.readFileSync(p,'utf8');
+-for(const required of ['verify-rc1-source.cjs','Get-Volume','NTFS','UniqueId','release:lock','verify-release-inputs.cjs','windows-certification-v097.ps1','rc1-certification-envelope.cjs','package-lock.json','WA_CERT_ROOT_A','WA_CERT_ROOT_B'])assert(s.includes(required),`missing certification invariant: ${required}`);
++for(const required of ['verify-rc1-source.cjs','Get-Volume','NTFS','UniqueId','release:lock','verify-release-inputs.cjs','windows-certification-v097.ps1','rc1-certification-envelope.cjs','package-lock.json','verify-release-manifest-rc1.cjs','WA_CERT_ROOT_A','WA_CERT_ROOT_B'])assert(s.includes(required),`missing certification invariant: ${required}`);
+ for(const forbidden of ['Format-Volume','Remove-Partition','Clear-Disk','Initialize-Disk','Stop-Computer','Restart-Computer','Remove-PhysicalDisk'])assert(!s.includes(forbidden),`destructive command forbidden in certification harness: ${forbidden}`);
+ assert(/RootA و RootB باید روی دو Volume واقعی متفاوت باشند/.test(s));
+ assert(/CSC_LINK|WIN_CSC_LINK/.test(s),'signing must come from environment, not embedded key material');
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-finalizer-contract.test.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-finalizer-contract.test.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-finalizer-contract.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-finalizer-contract.test.cjs	2026-08-15 15:13:59.946678567 +0000
+@@ -0,0 +1,6 @@
++const assert=require('assert');const fs=require('fs');const path=require('path');const cp=require('child_process');const root=path.resolve(__dirname,'..');
++const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert(pkg.scripts['finalize:rc1']);
++const s=fs.readFileSync(path.join(root,'scripts','rc1-finalize.cjs'),'utf8');for(const token of ['--require-dual-windows','--require-artifacts','--require-manual-evidence','artifact-report','peer-report','release-manifest','manual-evidence','rc1-final-verdict.json'])assert(s.includes(token),`finalizer invariant missing: ${token}`);
++const r=cp.spawnSync(process.execPath,['scripts/rc1-finalize.cjs'],{cwd:root,encoding:'utf8'});assert.equal(r.status,1);assert(/FINALIZATION_INPUT_REQUIRED/.test(r.stderr));
++const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');assert(orchestrator.includes("$envArgs+='--require-manual-evidence'"),'RC1 orchestrator final envelope must never PASS without manual evidence');
++console.log('rc1-finalizer-contract.test.cjs PASS',{stagedFinalization:true,manualEvidenceMandatory:true});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-release-artifact-contract.test.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-release-artifact-contract.test.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-release-artifact-contract.test.cjs	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-release-artifact-contract.test.cjs	2026-08-15 15:12:33.849934666 +0000
+@@ -0,0 +1,13 @@
++const assert=require('assert');const fs=require('fs');const path=require('path');
++const root=path.resolve(__dirname,'..');const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
++const {exactArtifactNames,validateArtifactRows}=require('../scripts/verify-release-manifest-rc1.cjs');
++const names=exactArtifactNames(pkg);assert.equal(names.nsis,'Workspace-Agent-Setup-1.0.0-rc1-x64.exe');assert.equal(names.portable,'Workspace-Agent-Portable-1.0.0-rc1-x64.exe');
++const manifest={artifacts:[{kind:'nsis',arch:'x64',file:names.nsis,bytes:1,sha256:'a'.repeat(64)},{kind:'portable',arch:'x64',file:names.portable,bytes:1,sha256:'b'.repeat(64)}],signatures:[{file:names.nsis,status:'Valid'},{file:names.portable,status:'Valid'}]};
++let r=validateArtifactRows({pkg,manifest,manifestDir:root,requireSigning:true,readFileMeta:false});assert(r.ok,r.errors.join(','));
++r=validateArtifactRows({pkg,manifest:{...manifest,artifacts:manifest.artifacts.slice(0,1)},manifestDir:root,readFileMeta:false});assert(!r.ok&&r.errors.some(x=>x.startsWith('ARTIFACT_PORTABLE_COUNT')));
++r=validateArtifactRows({pkg,manifest:{...manifest,signatures:[{file:names.nsis,status:'Valid'},{file:names.portable,status:'NotSigned'}]},manifestDir:root,requireSigning:true,readFileMeta:false});assert(!r.ok&&r.errors.some(x=>x.startsWith('SIGNATURE_INVALID')));
++r=validateArtifactRows({pkg,manifest:{...manifest,artifacts:[...manifest.artifacts,{kind:'extra',arch:'x64',file:'unexpected.exe',bytes:1,sha256:'c'.repeat(64)}]},manifestDir:root,readFileMeta:false});assert(!r.ok&&r.errors.some(x=>x.startsWith('ARTIFACT_TOTAL_COUNT'))&&r.errors.some(x=>x.startsWith('ARTIFACT_UNEXPECTED')));
++const cert=fs.readFileSync(path.join(root,'scripts','windows-certification-v097.ps1'),'utf8');for(const token of ['workspace-agent-release-v7','release-manifest-contract','Workspace-Agent-Setup-$($pkg.version)-x64.exe','Workspace-Agent-Portable-$($pkg.version)-x64.exe','SHA256SUMS.txt'])assert(cert.includes(token),`missing artifact lane invariant: ${token}`);
++assert(cert.indexOf("Run-NpmGate 'check:release-inputs'")<cert.indexOf("source-fingerprint.json"),'source fingerprint must be captured after lockfile resolution');
++const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');assert(orchestrator.includes('--release-manifest=$releaseManifest'));assert(orchestrator.includes('release-manifest.snapshot.json'));assert(orchestrator.includes('peer-windows-report.snapshot.json'));
++console.log('rc1-release-artifact-contract.test.cjs PASS',{nsis:true,portable:true,manifestV7:true,snapshots:true});
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-release-matrix-contract.test.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-release-matrix-contract.test.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-release-matrix-contract.test.cjs	2026-08-15 15:09:22.539937813 +0000
+@@ -5,9 +5,9 @@
+ const {detectWindowsFamily,validatePeerPair,MANUAL_KEYS}=require('../scripts/rc1-certification-envelope.cjs');
+ assert.equal(detectWindowsFamily({windowsFamily:'Windows10'}),'Windows10');
+ assert.equal(detectWindowsFamily({os:{caption:'Microsoft Windows 11 Pro',build:'26100'}}),'Windows11');
+-const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit3',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit3',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
+-let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit3'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit3'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
++const current={windowsFamily:'Windows11',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit4',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++const peer={windowsFamily:'Windows10',overall:'PASS',workspaceAgentVersion:'1.0.0-rc1',toolingRevision:'cert-kit4',sourceFingerprint:{sha256:'abc'},packageLockSha256:'lock'};
++let pair=validatePeerPair(current,peer,{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit4'});assert(pair.ok&&pair.complete);pair=validatePeerPair(current,{...peer,windowsFamily:'Windows11'},{fingerprint:'abc',lockSha:'lock',version:'1.0.0-rc1',toolingRevision:'cert-kit4'});assert(!pair.ok&&pair.reasons.includes('WINDOWS_FAMILIES_NOT_DISTINCT'));
+ assert(MANUAL_KEYS.includes('realUpgradeFrom0_9_8'),'real packaged upgrade evidence must be required');
+ const orchestrator=fs.readFileSync(path.join(root,'scripts','windows-rc1-certify.ps1'),'utf8');
+ for(const token of ['PeerWindowsReport','--require-dual-windows','100000,1000000','yyyyMMdd-HHmmss-fff','windows-runs'])assert(orchestrator.includes(token),`missing RC1 matrix invariant: ${token}`);
+diff -ruN '--exclude=DIFF_v1.0.0-rc1-cert-kit4.txt' /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-source-contract.test.cjs /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-source-contract.test.cjs
+--- /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit3-resilience-hardening-source/tests/rc1-source-contract.test.cjs	2026-08-15 04:30:00.000000000 +0000
++++ /mnt/data/wa_certkit4_work/windows-workspace-agent-v1.0.0-rc1-cert-kit4-release-lane-closure-source/tests/rc1-source-contract.test.cjs	2026-08-15 15:14:13.846125081 +0000
+@@ -8,7 +8,7 @@
+ assert.equal(pkg.workspaceAgentRelease.channel,'rc');
+ assert.equal(pkg.workspaceAgentRelease.featureFreeze,true);
+ assert.equal(pkg.workspaceAgentRelease.coreFeatureAdditionsAllowed,false);
+-assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit3');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);
++assert.equal(pkg.workspaceAgentRelease.baselineVersion,'0.9.8');assert.equal(pkg.workspaceAgentRelease.toolingRevision,'cert-kit4');assert(pkg.scripts['certify:windows:rc1']);assert(pkg.scripts['certify:envelope:rc1']);assert(pkg.scripts['finalize:rc1']);
+ const out=cp.execFileSync(process.execPath,['scripts/verify-rc1-source.cjs'],{cwd:root,encoding:'utf8'});
+ assert(/PASS/.test(out));
+ console.log('rc1-source-contract.test.cjs PASS',{version:pkg.version,featureFreeze:true});

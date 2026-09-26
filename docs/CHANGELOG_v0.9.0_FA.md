@@ -1,0 +1,23 @@
+# Changelog v0.9.0 — Local AI Foundation
+
+- Local OpenAI-compatible provider abstraction با loopback-only policy.
+- تنظیمات محلی AI با atomic persistence؛ secret/API key storage مسدود.
+- llama.cpp-compatible `/models` health و `/chat/completions` transport.
+- schema-constrained JSON planning.
+- Skill Retriever روی Registry موجود + reliability boost از Skill Memory.
+- AI Plan Validator با allowlist و حذف inputهای path/shell/secret.
+- Ephemeral AI Plan token با TTL ده دقیقه و binding به Workspace root.
+- Mission Cycle پشتیبانی از `workspace-ai-goal-plan-v1` فقط از مسیر token داخلی.
+- Generic IPC injection برای AI goalPlan مسدود.
+- Local AI rate/prompt/timeout/single-flight/circuit guards.
+- Secret redaction قبل از Provider.
+- Skill Memory بدون ذخیره prompt/path/content.
+- Local Vision advisory روی فایل تصویری انتخاب‌شده توسط کاربر؛ no background capture.
+- UI تب Local AI و نمایش Health/Model/Circuit/Plan/Vision.
+- Certification runtime report شامل Local AI status.
+- Capability Registry به v9.0 ارتقا یافت.
+- Base URL hardening: loopback + `/v1` path required؛ HTTP redirects blocked.
+- Provider response-size ceiling برای جلوگیری از memory abuse توسط local server خراب.
+- AI Skill input به safe-key allowlist محدود شد؛ unknown key/prototype keys حذف می‌شوند.
+- AI Plan به Workspace موجود و صریح نیاز دارد.
+- `local-ai-server-v090.uat.cjs` برای UAT واقعی llama.cpp/Qwen اضافه شد؛ بدون env صریح SKIP می‌شود.

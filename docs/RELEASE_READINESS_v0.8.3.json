@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "workspace-agent-release-readiness-v3",
+  "version": "0.8.3",
+  "validatedAt": "2026-08-13",
+  "source": {
+    "dependencyPins": "pass",
+    "sourceHygiene": "pass",
+    "syntax": "pass",
+    "jsx": "pass",
+    "regression": "pass",
+    "schemaMigrationV1ToV2": "pass",
+    "rootInterruptionSafety": "pass",
+    "volumeIdentityPolicySimulation": "pass",
+    "suspendResumePolicySimulation": "pass",
+    "delayedDriveRelocationSimulation": "pass",
+    "writeRootPreflight": "pass",
+    "rollbackRootPreflight": "pass",
+    "probeCadence": "pass"
+  },
+  "windows": {
+    "systemResilienceUat": "pending-windows",
+    "physicalSleepResume": "pending-windows",
+    "physicalRemovableDrive": "pending-windows",
+    "driveLetterChange": "pending-windows",
+    "longPathUnicodeUat": "pending-windows",
+    "junctionReparseUat": "pending-windows",
+    "uiaUat": "pending-windows",
+    "ntfs100k": "pending-windows",
+    "ntfs500k": "pending-windows",
+    "ntfs1m": "pending-windows"
+  },
+  "release": {
+    "packageLock": "pending-online-generation",
+    "winUnpackedBuild": "pending-lock-and-windows",
+    "packagedWorkerSmoke": "pending-build",
+    "nsis": "pending-build",
+    "portable": "pending-build",
+    "authenticode": "pending-signed-build",
+    "defenderSmartScreen": "pending-signed-build"
+  },
+  "releaseEligible": false,
+  "reason": "Windows physical/system matrix, real package-lock and binary/signature verification are still required.",
+  "validationContext": {
+    "platform": "linux-non-windows",
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "projectReleaseLane": {
+      "node": "24.14.1",
+      "npm": "11.11.0"
+    },
+    "fullSourceCheck": "pass",
+    "regressionTestFiles": 22,
+    "windowsUats": "skipped-windows-only",
+    "strictReleaseInputGate": "expected-lockfile-required",
+    "binaryBuild": "not-validated-missing-local-node_modules"
+  }
+}

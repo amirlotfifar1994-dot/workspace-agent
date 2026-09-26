@@ -1,0 +1,11 @@
+const assert=require('assert');
+const {WindowsActionSessionStore}=require('../electron/services/windows-action-session-store.cjs');
+const {windowsUiActionCycle}=require('../electron/services/workspace-cycles.cjs');
+const {buildActionPlan}=require('../electron/services/windows-action-policy.cjs');
+const store=new WindowsActionSessionStore({ttlMs:60000});
+const selector={processId:7,windowName:'App',windowClassName:'Win',automationId:'save',name:'Save',className:'Button',controlType:'Button',frameworkId:'Win32'};
+const context={grounding:{sessionToken:'g1',intentHash:'a'.repeat(64),intentClass:'activate',candidateId:'uia-1',signature:'b'.repeat(32),confidence:.91}};
+const session=store.create({action:'invoke',selector,value:'',sensitive:false},{context});assert(session.ok);let learned=null;
+const target={...selector,runtimeId:[1,2,3],isEnabled:true,isOffscreen:false,isPassword:false};
+const handler=windowsUiActionCycle({sessionStore:store,prepareAction:async req=>{const b=buildActionPlan(req,target);return{supported:true,ok:true,plan:b.plan,target,value:b.value}},executeAction:async()=>({ok:true,code:'UIA_ACTION_VERIFIED',verification:{ok:true,mode:'invoke-returned',detail:'verified'},before:target,after:target}),onVerified:async x=>{learned=x;return{success:1}}});
+(async()=>{let cycle={id:'c1',type:'windows-ui-action',status:'running',input:{sessionToken:session.token},steps:[],evidence:[]};const p=await handler.next(cycle);assert.equal(p.status,'waiting-confirmation');const steps=p.steps.map(x=>x.id==='confirm'?{...x,status:'approved'}:x);cycle={...cycle,...p,status:'running',steps};const done=await handler.next(cycle);assert.equal(done.status,'completed');assert.equal(done.result.groundingLearned,true);assert(learned?.context?.grounding?.signature);assert.equal(learned.plan.action,'invoke');console.log('ui-grounded-action-v092.test.cjs PASS',{groundingLearned:done.result.groundingLearned});})().catch(e=>{console.error(e);process.exit(1)});

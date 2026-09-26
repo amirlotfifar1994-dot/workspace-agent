@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "workspace-release-readiness-v1",
+  "version": "0.9.2",
+  "date": "2026-08-13",
+  "coreSource": "ready",
+  "regression": "pass",
+  "sourceHygiene": "pass",
+  "semanticGroundingCore": "pass",
+  "visionCandidateAllowlist": "pass",
+  "groundingMemoryPrivacy": "pass",
+  "groundedActionBinding": "pass",
+  "postActionVerifierCore": "pass",
+  "windowsGroundingUat": "pending-windows",
+  "realLocalVisionUat": "pending-windows-model",
+  "multiMonitorDpiUat": "pending-windows",
+  "packageLock": "pending",
+  "nsisBuild": "pending-windows",
+  "portableBuild": "pending-windows",
+  "authenticode": "pending-certificate",
+  "notes": [
+    "Vision cannot create targets or coordinates.",
+    "No automatic screenshot capture is enabled.",
+    "Windows-specific UAT is not counted as PASS in the Linux validation environment."
+  ],
+  "groundingScaleBenchmark": {
+    "elements": 1500,
+    "runs": 30,
+    "p50Ms": 20.53,
+    "p95Ms": 35.13,
+    "rssMB": 101.3,
+    "expectedTargetRank": 1
+  },
+  "releaseInputGate": "fail-closed-lockfile-required",
+  "localBuild": "not-run-missing-node-modules-vite"
+}

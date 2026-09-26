@@ -1,0 +1,22 @@
+# v0.7.1 changed/new files
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/README_FA.md and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/README_FA.md differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/docs/ARCHITECTURE_FA.md and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/docs/ARCHITECTURE_FA.md differ
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/docs: CHANGELOG_v0.7.1_FA.md
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/docs: DIFF_v0.7.1.txt
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/docs/ROADMAP_FA.md and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/docs/ROADMAP_FA.md differ
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/docs: UPSTREAM_INTEGRATION_FA.md
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/docs: UPSTREAM_PROVENANCE.md
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/docs: VALIDATION_v0.7.1_FA.md
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/electron/ipc.cjs and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/ipc.cjs differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/electron/main.cjs and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/main.cjs differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/electron/preload.cjs and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/preload.cjs differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/electron/services/capability-registry.cjs and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/services/capability-registry.cjs differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/electron/services/cycle-engine.cjs and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/services/cycle-engine.cjs differ
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/services: mission-compiler.cjs
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/services: skill-registry.cjs
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/services: windows-uia.cjs
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/electron/services/workspace-cycles.cjs and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/electron/services/workspace-cycles.cjs differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/package.json and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/package.json differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/src/App.jsx and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/src/App.jsx differ
+Files /mnt/data/wwa070_review/windows-workspace-agent-v0.7.0/src/styles/app.css and /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/src/styles/app.css differ
+Only in /mnt/data/windows-workspace-agent-v0.7.1-upstream-foundation/tests: upstream-foundation-v071.test.cjs

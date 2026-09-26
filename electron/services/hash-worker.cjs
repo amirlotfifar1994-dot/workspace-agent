@@ -1,0 +1,8 @@
+const {parentPort}=require('worker_threads');
+const fs=require('fs');
+const fsp=fs.promises;
+const crypto=require('crypto');
+const {toFsPath}=require('./windows-path-utils.cjs');
+function hashFile(filePath){return new Promise((resolve,reject)=>{const h=crypto.createHash('sha256');const s=fs.createReadStream(toFsPath(filePath));s.on('data',d=>h.update(d));s.on('error',reject);s.on('end',()=>resolve(h.digest('hex')));});}
+async function stable(file){const target=toFsPath(file.path);const before=await fsp.lstat(target);if(before.isSymbolicLink())throw Object.assign(new Error('Hash روی symbolic link/reparse target مجاز نیست.'),{code:'HASH_LINK_BLOCKED'});if(!before.isFile())throw Object.assign(new Error('Hash فقط روی فایل معمولی اجرا می‌شود.'),{code:'HASH_NOT_REGULAR_FILE'});const hash=await hashFile(file.path);const after=await fsp.lstat(target);const identityChanged=(Number.isFinite(before.ino)&&Number.isFinite(after.ino)&&Number(before.ino)!==Number(after.ino))||(Number.isFinite(before.dev)&&Number.isFinite(after.dev)&&Number(before.dev)!==Number(after.dev));if(after.isSymbolicLink()||!after.isFile()||identityChanged||Number(before.size)!==Number(after.size)||Math.abs(Number(before.mtimeMs)-Number(after.mtimeMs))>2)throw Object.assign(new Error('فایل هنگام Hash تغییر کرد یا Target آن عوض شد.'),{code:'FILE_CHANGED_DURING_HASH'});return{...file,size:Number(after.size),mtimeMs:Number(after.mtimeMs),hash};}
+parentPort.on('message',async msg=>{const id=msg?.id;try{const result=await stable(msg.file);parentPort.postMessage({id,ok:true,result});}catch(error){parentPort.postMessage({id,ok:false,error:{code:error.code||'HASH_WORKER_FAILED',message:error.message}});}});
