@@ -35,3 +35,10 @@ html[data-theme="light"] .theme-toggle{border-color:#cdd7ef;color:#26355f}
 html[data-theme="light"] .theme-toggle:hover{background:#eef2fc}
 html[data-theme="light"] .command,html[data-theme="light"] textarea.command{background:#fbfcff;color:#101a33;border:1px solid #cdd7ef}
 html[data-theme="light"] .providers select{background:#fbfcff;color:#101a33;border-color:#cdd7ef}
+
+.page-hero{display:flex;align-items:center;gap:22px;margin:0 0 6px;padding:10px 24px;border-radius:20px;background:linear-gradient(120deg,rgba(109,93,252,.16),rgba(34,193,195,.10));border:1px solid var(--hero-line)}
+.page-hero svg{flex:none;filter:drop-shadow(0 8px 16px rgba(80,90,220,.25))}
+.page-hero p{margin:0;font-size:15px;line-height:1.9;color:inherit;opacity:.9}
+html[data-theme="light"] .page-hero{background:linear-gradient(120deg,#eef1ff,#e6f8f7);border-color:#cfd9f3}
+html[data-theme="light"] .page-hero p{color:#26355f;opacity:1}
+@media(max-width:900px){.page-hero svg{width:120px;height:auto}}
