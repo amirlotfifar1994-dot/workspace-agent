@@ -1,5 +1,6 @@
 const assert=require('assert');const fs=require('fs');const os=require('os');const path=require('path');
 const {ClaudeFileAgent,makeTools,resolveInside}=require('../electron/services/claude-file-agent.cjs');
+const PDF=['%PDF-1.4','1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj','2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj','3 0 obj<</Type/Page/Parent 2 0 R/Contents 4 0 R>>endobj','4 0 obj<</Length 44>>stream','BT /F1 12 Tf (Contract for Project Alpha) Tj ET','endstream endobj','trailer<</Root 1 0 R>>','%%EOF'].join(String.fromCharCode(10));
 (async()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'wa-agent-'));
   try{
@@ -10,9 +11,10 @@ const {ClaudeFileAgent,makeTools,resolveInside}=require('../electron/services/cl
     const st={};const t=makeTools(root,st);
     const found=t.find_files({query:'alpha'});assert.equal(found.total,3);assert(found.files.every(f=>!path.isAbsolute(f.path)));
     assert.equal(t.find_files({query:'alpha',extensions:['pdf']}).total,1);
-    assert.throws(()=>t.read_text_snippet({path:'alpha-invoice.pdf'}),e=>e.code==='AGENT_NOT_TEXT');
-    assert.throws(()=>t.read_text_snippet({path:'../../Windows/win.ini'}),e=>e.code==='AGENT_PATH_ESCAPE');
-    assert(t.read_text_snippet({path:'alpha-notes.txt'}).text.includes('Alpha'));
+    await assert.rejects(()=>t.read_text_snippet({path:'other.jpg'}),e=>e.code==='AGENT_NOT_TEXT');
+    fs.writeFileSync(path.join(root,'contract.pdf'),PDF);const pdfText=await t.read_text_snippet({path:'contract.pdf'});assert(/Project Alpha/.test(pdfText.text),'PDF text should be extracted: '+JSON.stringify(pdfText));fs.unlinkSync(path.join(root,'contract.pdf'));
+    await assert.rejects(()=>t.read_text_snippet({path:'../../Windows/win.ini'}),e=>e.code==='AGENT_PATH_ESCAPE');
+    assert((await t.read_text_snippet({path:'alpha-notes.txt'})).text.includes('Alpha'));
     // plan validation: escape, missing, same-dir, collision
     let r=t.propose_moves({summary:'s',moves:[{from:'alpha-invoice.pdf',to_folder:'../evil'}]});assert.equal(r.ok,false);
     r=t.propose_moves({summary:'s',moves:[{from:'nope.pdf',to_folder:'Alpha'}]});assert.equal(r.ok,false);
@@ -20,6 +22,11 @@ const {ClaudeFileAgent,makeTools,resolveInside}=require('../electron/services/cl
     fs.mkdirSync(path.join(root,'Alpha'));fs.writeFileSync(path.join(root,'Alpha','alpha-invoice.pdf'),'dup');
     r=t.propose_moves({summary:'s',moves:[{from:'alpha-invoice.pdf',to_folder:'Alpha'}]});assert.equal(r.ok,false);
     fs.rmSync(path.join(root,'Alpha'),{recursive:true});
+    // rename validation
+    for(const bad of ['../x.pdf','a/b.pdf','CON.pdf','x.txt','a:b.pdf','x.pdf.','']){r=t.propose_moves({summary:'s',moves:[{from:'alpha-invoice.pdf',new_name:bad||' '}]});assert.equal(r.ok,false,'should reject '+JSON.stringify(bad));}
+    r=t.propose_moves({summary:'s',moves:[{from:'alpha-invoice.pdf'}]});assert.equal(r.ok,false,'needs folder or name');
+    r=t.propose_moves({summary:'s',moves:[{from:'alpha-invoice.pdf',new_name:'alpha-notes.txt'}]});assert.equal(r.ok,false);
+    r=t.propose_moves({summary:'s',moves:[{from:'alpha-invoice.pdf',new_name:'Alpha Invoice 2026.pdf'}]});assert.equal(r.ok,true,JSON.stringify(r));assert.equal(st.plan.moves[0].newName,'Alpha Invoice 2026.pdf');
     // missing key
     const prev=process.env.ANTHROPIC_API_KEY;delete process.env.ANTHROPIC_API_KEY;
     await assert.rejects(()=>new ClaudeFileAgent().run({command:'find alpha',root}),e=>e.code==='AGENT_API_KEY_MISSING');
